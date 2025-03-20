@@ -17,7 +17,8 @@ export const LoginPage = () => {
 	})
 
 	const [isLoading, setIsLoading] = useState<boolean>(false)
-	const [error, setError] = useState<string | null>(null)
+	const [validationError, setValidationError] = useState<string | null>(null)
+	const [authError, setAuthError] = useState<string | null>(null)
 	const [isErrorVisible, setIsErrorVisible] = useState<boolean>(false)
 	const [fieldErrors, setFieldErrors] = useState({
 		email: false,
@@ -26,12 +27,12 @@ export const LoginPage = () => {
 
 	// Эффект для плавного появления ошибки
 	useEffect(() => {
-		if (error) {
+		if (validationError || authError) {
 			setTimeout(() => setIsErrorVisible(true), 50)
 		} else {
 			setIsErrorVisible(false)
 		}
-	}, [error])
+	}, [validationError, authError])
 
 	// Валидация формы
 	const validateForm = (): boolean => {
@@ -43,32 +44,78 @@ export const LoginPage = () => {
 		setFieldErrors(errors)
 
 		if (errors.email || errors.password) {
-			setError('Необходимо заполнить все подсвеченные поля')
+			setValidationError('Необходимо заполнить все подсвеченные поля')
 			return false
 		}
 
 		return true
 	}
 
+	// Обработчики изменения полей
+	const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const value = e.target.value
+		setFormData({...formData, email: value})
+
+		// Сбрасываем ошибку поля
+		if (value.trim()) {
+			setFieldErrors({...fieldErrors, email: false})
+		}
+
+		// Если исправляется ошибка, сбрасываем сообщения об ошибке
+		if (validationError && fieldErrors.email) {
+			// Проверяем, осталось ли другое поле с ошибкой
+			if (!fieldErrors.password || formData.password.trim()) {
+				setValidationError(null)
+			}
+		}
+
+		// Сбрасываем ошибку аутентификации при любом изменении
+		if (authError) {
+			setAuthError(null)
+		}
+	}
+
+	const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const value = e.target.value
+		setFormData({...formData, password: value})
+
+		// Сбрасываем ошибку поля
+		if (value.trim()) {
+			setFieldErrors({...fieldErrors, password: false})
+		}
+
+		// Если исправляется ошибка, сбрасываем сообщения об ошибке
+		if (validationError && fieldErrors.password) {
+			// Проверяем, осталось ли другое поле с ошибкой
+			if (!fieldErrors.email || formData.email.trim()) {
+				setValidationError(null)
+			}
+		}
+
+		// Сбрасываем ошибку аутентификации при любом изменении
+		if (authError) {
+			setAuthError(null)
+		}
+	}
+
 	const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault()
 
-		// Проверяем валидность формы до сброса ошибки
-		if (!validateForm()) {
-			// Если валидация не прошла, то НЕ сбрасываем ошибку
-			// Только обновляем видимость для анимации
+		// Проверяем валидность формы
+		const isValid = validateForm()
+
+		// Если форма невалидна, просто обновляем анимацию и выходим
+		if (!isValid) {
+			// Эти строки для обновления анимации (мигание)
 			setIsErrorVisible(false)
 			setTimeout(() => setIsErrorVisible(true), 50)
 			return
 		}
-		setError(null)
+
+		// Очищаем все предыдущие ошибки, только если форма валидна
+		setValidationError(null)
+		setAuthError(null)
 		setIsErrorVisible(false)
-
-		// Проверяем валидность формы
-		if (!validateForm()) {
-			return
-		}
-
 		setIsLoading(true)
 
 		try {
@@ -85,7 +132,9 @@ export const LoginPage = () => {
 			navigate('/home')
 		} catch (err: any) {
 			const apiError = err as ApiError
-			setError(apiError.message || 'Неверное имя пользователя или пароль')
+			setAuthError(apiError.message || 'Неверное имя пользователя или пароль')
+			// Активируем анимацию
+			setIsErrorVisible(true)
 		} finally {
 			setIsLoading(false)
 		}
@@ -109,12 +158,7 @@ export const LoginPage = () => {
 							type='email'
 							placeholder='Электронная почта'
 							value={formData.email}
-							onChange={e => {
-								setFormData({...formData, email: e.target.value})
-								if (e.target.value.trim()) {
-									setFieldErrors({...fieldErrors, email: false})
-								}
-							}}
+							onChange={handleEmailChange}
 							icon={<IoMailOutline />}
 							error={fieldErrors.email}
 						/>
@@ -122,19 +166,13 @@ export const LoginPage = () => {
 							type='password'
 							placeholder='Пароль'
 							value={formData.password}
-							onChange={e => {
-								setFormData({...formData, password: e.target.value})
-								if (e.target.value.trim()) {
-									setFieldErrors({...fieldErrors, password: false})
-								}
-							}}
+							onChange={handlePasswordChange}
 							icon={<SlLock />}
 							error={fieldErrors.password}
 						/>
 					</div>
 
-					{/* Переместили сообщение об ошибке после полей ввода */}
-					{error && (
+					{validationError && (
 						<div
 							className={`mt-3 flex items-start space-x-2 text-red-500 text-sm transition-opacity duration-300 ease-in-out ${
 								isErrorVisible ? 'opacity-100' : 'opacity-0'
@@ -148,7 +186,18 @@ export const LoginPage = () => {
 						</div>
 					)}
 
-					<div className='mt-5'>
+					{/* Сообщение об ошибке аутентификации */}
+					{authError && (
+						<div
+							className={`mt-3.5 flex items-start space-x-2 text-red-500 text-sm transition-opacity duration-300 ease-in-out ${
+								isErrorVisible ? 'opacity-100' : 'opacity-0'
+							}`}>
+							<MdOutlineInfo className='text-xl flex-shrink-0 mt-0' />
+							<p className='text-sm text-left'>{authError}</p>
+						</div>
+					)}
+
+					<div className='mt-3'>
 						<Button type='submit' fullWidth disabled={isLoading}>
 							{isLoading ? 'Вход...' : 'Войти'}
 						</Button>

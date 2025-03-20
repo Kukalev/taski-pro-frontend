@@ -9,7 +9,7 @@ import {Button} from '../../components/ui/Button'
 import {Input} from '../../components/ui/Input'
 import {register} from '../../services/auth/register'
 import {RegisterFormData, RegisterRequest} from '../../types/auth.types'
-import {isEmailValid, isNameValid, isPasswordValid, validateRegisterForm} from '../../utils/validation'
+import {isEmailValid, isNameValid, isPasswordValid} from '../../utils/validation'
 
 export const RegisterPage = () => {
 	const navigate = useNavigate()
@@ -29,49 +29,191 @@ export const RegisterPage = () => {
 	})
 
 	const [isLoading, setIsLoading] = useState<boolean>(false)
-	const [error, setError] = useState<string | null>(null)
+	const [serverError, setServerError] = useState<string | null>(null)
 	const [validationError, setValidationError] = useState<string | null>(null)
 	const [success, setSuccess] = useState<string | null>(null)
 	const [isErrorVisible, setIsErrorVisible] = useState<boolean>(false)
 
+	// Для конкретных сообщений об ошибках валидации
+	const [errorType, setErrorType] = useState<'empty' | 'format' | 'server' | null>(null)
+
 	// Эффект для плавного появления ошибки
 	useEffect(() => {
-		if (validationError) {
+		if (validationError || serverError) {
 			setTimeout(() => setIsErrorVisible(true), 50)
 		} else {
 			setIsErrorVisible(false)
 		}
-	}, [validationError])
+	}, [validationError, serverError])
 
-	// Валидация формы с использованием утилиты
+	// Валидация формы с детальными ошибками
 	const validateForm = (): boolean => {
-		const validationResult = validateRegisterForm(formData)
-		setFieldErrors(validationResult.fieldErrors)
-		setValidationError(validationResult.message)
-		return validationResult.isValid
+		const errors: Record<keyof RegisterFormData, boolean> = {
+			firstName: false,
+			lastName: false,
+			email: false,
+			password: false
+		}
+
+		let hasErrors = false
+
+		// Проверка на пустые поля
+		for (const field in formData) {
+			const key = field as keyof RegisterFormData
+			if (!formData[key].trim()) {
+				errors[key] = true
+				hasErrors = true
+			}
+		}
+
+		// Если есть пустые поля, показываем общую ошибку
+		if (hasErrors) {
+			setFieldErrors(errors)
+			setValidationError('Необходимо заполнить все подсвеченные поля')
+			setErrorType('empty')
+			return false
+		}
+
+		// Проверка формата полей, если все заполнены
+		if (!isEmailValid(formData.email)) {
+			errors.email = true
+			setFieldErrors(errors)
+			setValidationError('Неверный формат электронной почты')
+			setErrorType('format')
+			return false
+		}
+
+		if (!isPasswordValid(formData.password)) {
+			errors.password = true
+			setFieldErrors(errors)
+			setValidationError('Пароль должен быть не менее 6 символов')
+			setErrorType('format')
+			return false
+		}
+
+		if (!isNameValid(formData.firstName)) {
+			errors.firstName = true
+			setFieldErrors(errors)
+			setValidationError('Имя содержит недопустимые символы')
+			setErrorType('format')
+			return false
+		}
+
+		if (!isNameValid(formData.lastName)) {
+			errors.lastName = true
+			setFieldErrors(errors)
+			setValidationError('Фамилия содержит недопустимые символы')
+			setErrorType('format')
+			return false
+		}
+
+		// Если все в порядке
+		setFieldErrors(errors)
+		setValidationError(null)
+		setErrorType(null)
+		return true
+	}
+
+	// Обработчики изменения полей
+	const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const value = e.target.value
+		setFormData({...formData, email: value})
+
+		// Проверка и сброс ошибок
+		if (fieldErrors.email) {
+			// При вводе правильного email сбрасываем ошибку
+			if (isEmailValid(value)) {
+				setFieldErrors({...fieldErrors, email: false})
+
+				// Если это была единственная ошибка формата, сбрасываем сообщение
+				if (errorType === 'format' && validationError === 'Неверный формат электронной почты') {
+					setValidationError(null)
+				}
+			}
+		}
+
+		// Сбрасываем серверную ошибку при любом изменении
+		if (serverError) {
+			setServerError(null)
+		}
+	}
+
+	// Аналогичные обработчики для других полей
+	const handleFirstNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const value = e.target.value
+		setFormData({...formData, firstName: value})
+
+		if (fieldErrors.firstName) {
+			if (isNameValid(value)) {
+				setFieldErrors({...fieldErrors, firstName: false})
+
+				if (errorType === 'format' && validationError === 'Имя содержит недопустимые символы') {
+					setValidationError(null)
+				}
+			}
+		}
+
+		if (serverError) {
+			setServerError(null)
+		}
+	}
+
+	const handleLastNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const value = e.target.value
+		setFormData({...formData, lastName: value})
+
+		if (fieldErrors.lastName) {
+			if (isNameValid(value)) {
+				setFieldErrors({...fieldErrors, lastName: false})
+
+				if (errorType === 'format' && validationError === 'Фамилия содержит недопустимые символы') {
+					setValidationError(null)
+				}
+			}
+		}
+
+		if (serverError) {
+			setServerError(null)
+		}
+	}
+
+	const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const value = e.target.value
+		setFormData({...formData, password: value})
+
+		if (fieldErrors.password) {
+			if (isPasswordValid(value)) {
+				setFieldErrors({...fieldErrors, password: false})
+
+				if (errorType === 'format' && validationError === 'Пароль должен быть не менее 6 символов') {
+					setValidationError(null)
+				}
+			}
+		}
+
+		if (serverError) {
+			setServerError(null)
+		}
 	}
 
 	const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
 		e.preventDefault()
 
-		// Проверяем валидность формы до сброса ошибки
-		if (!validateForm()) {
-			// Если валидация не прошла, то НЕ сбрасываем ошибку
-			// Только обновляем видимость для анимации
+		// Проверяем валидность формы
+		const isValid = validateForm()
+
+		if (!isValid) {
+			// Обновляем анимацию для повторного появления сообщения
 			setIsErrorVisible(false)
 			setTimeout(() => setIsErrorVisible(true), 50)
 			return
 		}
-		setError(null)
+
+		// Если форма валидна
 		setValidationError(null)
+		setServerError(null)
 		setSuccess(null)
 		setIsErrorVisible(false)
-
-		// Проверяем валидность формы
-		if (!validateForm()) {
-			return
-		}
-
 		setIsLoading(true)
 
 		try {
@@ -90,8 +232,10 @@ export const RegisterPage = () => {
 			// Перенаправляем после успешной регистрации
 			navigate('/home')
 		} catch (err: any) {
-			// Прямо отображаем сообщение об ошибке с бэка
-			setError(err.message)
+			// Показываем ошибку с сервера
+			setServerError(err.message)
+			setErrorType('server')
+			setIsErrorVisible(true)
 		} finally {
 			setIsLoading(false)
 		}
@@ -106,36 +250,18 @@ export const RegisterPage = () => {
 				</div>
 
 				<form onSubmit={handleSubmit} className='bg-gray-100 rounded-xl p-5 shadow-sm'>
-					{error && (
-						<div className='mb-4 p-2 bg-red-100 text-red-700 rounded-md text-sm transition-opacity duration-300 ease-in-out'>
-							{error}
-						</div>
-					)}
-
 					<div className='grid grid-cols-2 gap-4 mb-4'>
 						<Input
 							placeholder='Имя'
 							value={formData.firstName}
-							onChange={e => {
-								setFormData({...formData, firstName: e.target.value})
-								if (isNameValid(e.target.value)) {
-									setFieldErrors({...fieldErrors, firstName: false})
-									if (validationError) validateForm()
-								}
-							}}
+							onChange={handleFirstNameChange}
 							icon={<PiSmiley />}
 							error={fieldErrors.firstName}
 						/>
 						<Input
 							placeholder='Фамилия'
 							value={formData.lastName}
-							onChange={e => {
-								setFormData({...formData, lastName: e.target.value})
-								if (isNameValid(e.target.value)) {
-									setFieldErrors({...fieldErrors, lastName: false})
-									if (validationError) validateForm()
-								}
-							}}
+							onChange={handleLastNameChange}
 							error={fieldErrors.lastName}
 						/>
 					</div>
@@ -145,13 +271,7 @@ export const RegisterPage = () => {
 							type='email'
 							placeholder='Электронная почта'
 							value={formData.email}
-							onChange={e => {
-								setFormData({...formData, email: e.target.value})
-								if (isEmailValid(e.target.value)) {
-									setFieldErrors({...fieldErrors, email: false})
-									if (validationError) validateForm()
-								}
-							}}
+							onChange={handleEmailChange}
 							icon={<IoMailOutline />}
 							error={fieldErrors.email}
 						/>
@@ -159,34 +279,34 @@ export const RegisterPage = () => {
 							type='password'
 							placeholder='Пароль'
 							value={formData.password}
-							onChange={e => {
-								setFormData({...formData, password: e.target.value})
-								if (isPasswordValid(e.target.value)) {
-									setFieldErrors({...fieldErrors, password: false})
-									if (validationError) validateForm()
-								}
-							}}
+							onChange={handlePasswordChange}
 							icon={<SlLock />}
 							error={fieldErrors.password}
 						/>
 					</div>
 
-					{/* Плавно анимированное сообщение о валидации */}
-					{validationError && (
+					{/* Сообщение об ошибке валидации или серверной ошибке */}
+					{(validationError || serverError) && (
 						<div
 							className={`mt-3 flex items-start space-x-2 text-red-500 text-sm transition-opacity duration-300 ease-in-out ${
 								isErrorVisible ? 'opacity-100' : 'opacity-0'
 							}`}>
-							<MdOutlineInfo className='text-xl flex-shrink-0 mt-2.5 .5' />
+							<MdOutlineInfo className={`text-xl flex-shrink-0 ${errorType === 'empty' ? 'mt-2.5' : 'mt-0'}`} />
 							<p className='text-sm text-left'>
-								Необходимо заполнить все подсвеченные
-								<br />
-								поля
+								{errorType === 'empty' ? (
+									<>
+										Необходимо заполнить все подсвеченные
+										<br />
+										поля
+									</>
+								) : (
+									validationError || serverError
+								)}
 							</p>
 						</div>
 					)}
 
-					<div className='mt-5'>
+					<div className='mt-3'>
 						<Button type='submit' fullWidth disabled={isLoading}>
 							{isLoading ? 'Регистрация...' : 'Создать аккаунт'}
 						</Button>
