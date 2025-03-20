@@ -1,54 +1,41 @@
-import axios from 'axios'
+import axios, { AxiosError, AxiosInstance, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
+import { ApiError } from '../types/auth.types';
 
 // Базовый URL API
-const BASE_URL = '/api' // Замените на ваш URL
+const BASE_URL = '/api';
 
-// Интерфейсы для запросов
-interface RegisterRequest {
-	username: string
-	email: string
-	password: string
-	firstname: string
-	lastname: string
-}
+// Создаем экземпляр axios с базовым URL
+const api: AxiosInstance = axios.create({
+  baseURL: BASE_URL,
+  headers: {
+    'Content-Type': 'application/json'
+  }
+});
 
-interface LoginRequest {
-	username: string
-	password: string
-}
+// Интерцептор для добавления токена к запросам
+api.interceptors.request.use(
+  (config: InternalAxiosRequestConfig) => {
+    const token = localStorage.getItem('token');
+    if (token && config.headers) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  }
+);
 
-// API для работы с аутентификацией
-const authAPI = {
-	// Регистрация пользователя
-	register: async (userData: RegisterRequest): Promise<string> => {
-		try {
-			const response = await axios.post(`${BASE_URL}/auth/registration`, userData)
-			return response.data
-		} catch (error: any) {
-			// Обрабатываем ошибку и возвращаем сообщение
-			if (error.response) {
-				throw new Error(error.response.data)
-			}
-			throw new Error('Ошибка при регистрации')
-		}
-	},
+// Интерцептор для обработки ошибок
+api.interceptors.response.use(
+  (response: AxiosResponse) => response,
+  (error: AxiosError) => {
+    const apiError: ApiError = {
+      message: typeof error.response?.data === 'string'
+        ? error.response.data
+        : 'Произошла ошибка при выполнении запроса',
+      status: error.response?.status
+    };
+    
+    return Promise.reject(apiError);
+  }
+);
 
-	// Аутентификация пользователя
-	login: async (data: LoginRequest) => {
-		try {
-			const response = await axios.post(`${BASE_URL}/auth/login`, data)
-
-			// Если в ответе приходит токен, можно сохранить его
-			if (response.data.token) {
-				localStorage.setItem('token', response.data.token)
-			}
-
-			return response.data
-		} catch (error) {
-			console.error('Ошибка при входе:', error)
-			throw new Error('Ошибка при входе')
-		}
-	}
-}
-
-export default authAPI
+export default api;
