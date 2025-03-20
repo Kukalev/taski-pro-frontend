@@ -230,7 +230,7 @@ export const RegisterPage = () => {
 			const response = await register(requestData)
 
 			// Перенаправляем после успешной регистрации
-			navigate('/home')
+			navigate('/welcome')
 		} catch (err: any) {
 			// Показываем ошибку с сервера
 			setServerError(err.message)

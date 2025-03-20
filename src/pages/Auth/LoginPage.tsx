@@ -129,7 +129,7 @@ export const LoginPage = () => {
 			const response = await login(requestData)
 
 			// После успешного входа перенаправляем на главную страницу
-			navigate('/home')
+			navigate('/welcome')
 		} catch (err: any) {
 			const apiError = err as ApiError
 			setAuthError(apiError.message || 'Неверное имя пользователя или пароль')
