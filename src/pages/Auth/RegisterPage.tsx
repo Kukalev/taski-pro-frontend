@@ -7,7 +7,7 @@ import {WiStars} from 'react-icons/wi'
 import {Link, useNavigate} from 'react-router-dom'
 import {Button} from '../../components/ui/Button'
 import {Input} from '../../components/ui/Input'
-import {register} from '../../services/auth/register'
+import {register} from '../../services/auth/Register'
 import {RegisterFormData, RegisterRequest} from '../../types/auth.types'
 import {isEmailValid, isNameValid, isPasswordValid} from '../../utils/validation'
 

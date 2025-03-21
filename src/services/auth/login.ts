@@ -13,6 +13,7 @@ export const login = async (data: LoginRequest): Promise<AuthResponse> => {
         localStorage.setItem('refreshToken', response.data.refreshToken);
       }
     }
+    localStorage.setItem('username', data.username)
     
     return response.data;
   } catch (error) {

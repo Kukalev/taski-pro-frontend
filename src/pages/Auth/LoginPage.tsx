@@ -5,7 +5,7 @@ import {SlLock} from 'react-icons/sl'
 import {Link, useNavigate} from 'react-router-dom'
 import {Button} from '../../components/ui/Button'
 import {Input} from '../../components/ui/Input'
-import {login} from '../../services/auth/login'
+import {login} from '../../services/auth/Login'
 import {ApiError, LoginFormData} from '../../types/auth.types'
 
 export const LoginPage = () => {
