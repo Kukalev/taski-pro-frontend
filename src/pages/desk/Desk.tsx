@@ -1,5 +1,3 @@
-import { useState } from 'react'
-import { SuccessModal } from '../../components/modals/SuccessModal'
 import { AllDesks } from '../tasks/allDesks/AllDesks'
 
 // Типы данных
@@ -13,25 +11,16 @@ interface DeskData {
 }
 
 export const Desk = () => {
-	const [isSuccessModalOpen, setIsSuccessModalOpen] = useState<boolean>(false)
-	const [successMessage, setSuccessMessage] = useState<string>('')
-
 	// Обработчик создания новой доски
 	const handleDeskCreated = (newDesk: any) => {
 		console.log('Desk: Получена новая доска:', newDesk)
-
-		// Показываем сообщение об успехе
-		setSuccessMessage(`Доска "${newDesk.deskName}" успешно создана!`)
-		setIsSuccessModalOpen(true)
+		// Можно добавить toast уведомление здесь, если нужно
 	}
 
 	return (
 		<div className='h-full'>
 			{/* Используем компонент AllDesks для отображения досок в табличном виде */}
 			<AllDesks onDeskCreated={handleDeskCreated} />
-
-			{/* Модальное окно успеха */}
-			<SuccessModal isOpen={isSuccessModalOpen} onClose={() => setIsSuccessModalOpen(false)} message={successMessage} autoCloseTime={3000} />
 		</div>
 	)
 }

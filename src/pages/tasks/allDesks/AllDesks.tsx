@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { CreateDeskModal } from '../../../components/modals/CreateDeskModal'
+import { CreateDeskModal } from '../../../components/modals/createDeskModal/CreateDeskModal'
 import { useDesks } from '../../../contexts/DeskContext'
 import { AuthService } from '../../../services/auth/Auth'
 import { DeskTable } from './components/DeskTable'

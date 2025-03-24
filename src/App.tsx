@@ -7,7 +7,7 @@ import { RegisterPage } from './pages/auth/RegisterPage'
 import { Desk } from './pages/desk/Desk'
 import { AllTasks } from './pages/tasks/AllTasks'
 import { MyTasks } from './pages/tasks/MyTasks'
-import { Team } from './pages/welcome/Team'
+import { Team } from './pages/welcome/team/Team'
 import { Welcome } from './pages/welcome/Welcome'
 import { AuthService } from './services/auth/Auth'
 

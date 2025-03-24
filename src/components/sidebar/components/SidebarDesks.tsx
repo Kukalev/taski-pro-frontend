@@ -1,5 +1,5 @@
 import { useLocation } from 'react-router-dom'
-import { getDeskColor } from '../../utils/deskColors'
+import { getDeskColor } from '../../../utils/deskColors'
 
 // Интерфейс для доски
 interface DeskData {
@@ -43,9 +43,7 @@ export const SidebarDesks = ({ desks, loading, onDeskClick, onAddClick }: Sideba
 									onClick={() => onDeskClick(desk.id)}
 									className={`w-full h-[32px] text-left px-4 py-1 rounded-md flex items-center gap-2 cursor-pointer text-[13px] transition-all duration-200 hover:bg-gray-100
 										${location.pathname === `/desk/${desk.id}` ? 'bg-gray-200 text-gray-900' : 'text-gray-700'}`}>
-									<div className={`w-5 h-5 rounded flex items-center justify-center ${getDeskColor(desk.id)}`}>
-										{desk.deskName.charAt(0).toUpperCase()}
-									</div>
+									<div className={`w-5 h-5 rounded flex items-center justify-center ${getDeskColor(desk.id)}`}>{desk.deskName.charAt(0).toUpperCase()}</div>
 									<span className='truncate'>{desk.deskName}</span>
 								</button>
 							</li>
