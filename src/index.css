@@ -1,1 +1,12 @@
-@import "tailwindcss";
+@import 'tailwindcss';
+html,
+body {
+	height: 100%;
+	margin: 0;
+	overflow: hidden; /* Отключаем скролл для body */
+}
+
+#root {
+	height: 100%;
+	overflow: hidden; /* Отключаем скролл для корневого элемента */
+}

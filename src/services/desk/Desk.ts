@@ -21,7 +21,7 @@ interface DeskUpdateDto {
 	deskFinishDate: Date
 }
 
-const BASE_URL = '/desk'
+const BASE_URL = '/api/v1/desk'
 
 export const DeskService = {
 	handleError(error: any): never {
@@ -36,8 +36,15 @@ export const DeskService = {
 
 	// Создание новой доски
 	async createDesk(data: DeskCreateDto): Promise<string> {
-		const response = await api.post(`${BASE_URL}/create`, data)
-		return response.data
+		try {
+			console.log('DeskService.createDesk вызван с данными:', data)
+			const response = await api.post(`${BASE_URL}/create`, data)
+			console.log('Ответ от сервера:', response.data)
+			return response.data
+		} catch (error) {
+			console.error('Ошибка в DeskService.createDesk:', error)
+			throw error
+		}
 	},
 
 	// Удаление доски по ID
@@ -60,6 +67,12 @@ export const DeskService = {
 	// Обновление доски
 	async updateDesk(id: number, data: DeskUpdateDto): Promise<string> {
 		const response = await api.put(`${BASE_URL}/${id}`, data)
+		return response.data
+	},
+
+	// Получение всех досок
+	async getAllDesks(): Promise<DeskResponseDto[]> {
+		const response = await api.get(`${BASE_URL}`)
 		return response.data
 	}
 }

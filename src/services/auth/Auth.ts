@@ -10,11 +10,6 @@ export const AuthService = {
 		return localStorage.getItem('username') || ''
 	},
 
-	getCurrentUser() {
-		const userStr = localStorage.getItem('user')
-		return userStr ? JSON.parse(userStr) : null
-	},
-
 	logout() {
 		localStorage.removeItem('token')
 		localStorage.removeItem('refreshToken')

@@ -1,6 +1,6 @@
-import {AuthResponse, RegisterRequest} from '../../types/auth.types'
+import { AuthResponse, RegisterRequest } from '../../types/auth.types'
 import api from '../api'
-import {login} from './Login'
+import { login } from './Login'
 
 export const register = async (data: RegisterRequest): Promise<AuthResponse> => {
 	try {
