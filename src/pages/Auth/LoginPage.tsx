@@ -132,7 +132,11 @@ export const LoginPage = () => {
 			navigate('/welcome')
 		} catch (err: any) {
 			const apiError = err as ApiError
-			setAuthError(apiError.message || 'Неверное имя пользователя или пароль')
+			if (apiError.status === 500) {
+				setAuthError('Ошибка сервера')
+			} else {
+				setAuthError(apiError.message || 'Неверное имя пользователя или пароль')
+			}
 			// Активируем анимацию
 			setIsErrorVisible(true)
 		} finally {
