@@ -7,6 +7,16 @@ export interface DeskData {
 	userLimit?: number
 }
 
+// Убедитесь, что в sidebar.types.ts есть этот интерфейс:
+export interface SidebarDesksProps {
+	desks: DeskData[]
+	loading: boolean
+	onDeskClick: (id: number) => void
+	onAddClick: () => void
+	onRename: (id: number) => void
+	onDelete: (id: number) => void
+}
+
 export interface SidebarSearchProps {
 	placeholder?: string
 }

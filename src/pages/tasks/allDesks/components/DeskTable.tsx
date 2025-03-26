@@ -6,15 +6,17 @@ interface DeskTableProps {
 	desks: DeskData[]
 	loading: boolean
 	username: string
+	onRename?: (id: number) => void
+	onDelete?: (id: number) => void
 }
 
-export const DeskTable = ({ desks, loading, username }: DeskTableProps) => {
+export const DeskTable = ({ desks, loading, username, onRename, onDelete }: DeskTableProps) => {
 	return (
 		<div className='w-full bg-white rounded-lg shadow-sm border border-gray-200 flex-1 overflow-hidden'>
 			<div className='overflow-auto h-full'>
 				<table className='w-full table-fixed'>
 					<TableHeader />
-					<TableBody desks={desks} loading={loading} username={username} />
+					<TableBody desks={desks} loading={loading} username={username} onRename={onRename} onDelete={onDelete} />
 				</table>
 			</div>
 		</div>

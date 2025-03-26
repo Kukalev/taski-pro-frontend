@@ -2,9 +2,12 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { NotFound } from './components/NotFound'
 import { DeskProvider } from './contexts/DeskContext'
 import { DeskLayout } from './layouts/DeskLayout'
-import { LoginPage } from './pages/auth/LoginPage'
-import { RegisterPage } from './pages/auth/RegisterPage'
+import { LoginPage } from './pages/Auth/LoginPage'
+import { RegisterPage } from './pages/Auth/RegisterPage'
 import { Desk } from './pages/desk/Desk'
+import { DeskDetails } from './pages/desk/DeskDetails'
+import { DeskOverview } from './pages/desk/deskDetails/DeskOverview'
+import { DeskBoard } from './pages/desk/deskDetails/DeskBoard'
 import { AllTasks } from './pages/tasks/AllTasks'
 import { MyTasks } from './pages/tasks/MyTasks'
 import { Team } from './pages/welcome/team/Team'
@@ -22,89 +25,93 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 function App() {
 	return (
 		<BrowserRouter>
-			<DeskProvider>
-				<Routes>
-					{/* Публичные роуты */}
-					<Route path='/login' element={<LoginPage />} />
-					<Route path='/register' element={<RegisterPage />} />
+			<Routes>
+				{/* Публичные роуты */}
+				<Route path='/login' element={<LoginPage />} />
+				<Route path='/register' element={<RegisterPage />} />
 
-					{/* Защищенные welcome роуты */}
-					<Route
-						path='/welcome'
-						element={
-							<ProtectedRoute>
-								<Welcome />
-							</ProtectedRoute>
-						}
-					/>
-					<Route
-						path='/welcome/team'
-						element={
-							<ProtectedRoute>
-								<Team />
-							</ProtectedRoute>
-						}
-					/>
+				{/* Защищенные welcome роуты */}
+				<Route
+					path='/welcome'
+					element={
+						<ProtectedRoute>
+							<Welcome />
+						</ProtectedRoute>
+					}
+				/>
+				<Route
+					path='/welcome/team'
+					element={
+						<ProtectedRoute>
+							<Team />
+						</ProtectedRoute>
+					}
+				/>
 
-					{/* Корневой маршрут desk */}
-					<Route
-						path='/desk'
-						element={
-							<ProtectedRoute>
+				{/* Корневой маршрут desk */}
+				<Route
+					path='/desk'
+					element={
+						<ProtectedRoute>
+							<DeskProvider>
 								<DeskLayout>
 									<Desk />
 								</DeskLayout>
-							</ProtectedRoute>
-						}
-					/>
+							</DeskProvider>
+						</ProtectedRoute>
+					}
+				/>
 
-					{/* Допустимые подмаршруты desk */}
-					<Route
-						path='/desk/myTasks'
-						element={
-							<ProtectedRoute>
+				{/* Маршруты для конкретной доски по ID */}
+				<Route
+					path='/desk/:id'
+					element={
+						<ProtectedRoute>
+							<DeskProvider>
+								<DeskLayout>
+									<DeskDetails />
+								</DeskLayout>
+							</DeskProvider>
+						</ProtectedRoute>
+					}
+				>
+					<Route path="overview" element={<DeskOverview />} />
+					<Route path="board" element={<DeskBoard />} />
+					<Route index element={<Navigate to="board" replace />} />
+				</Route>
+
+				{/* Специальные подмаршруты desk */}
+				<Route
+					path='/desk/myTasks'
+					element={
+						<ProtectedRoute>
+							<DeskProvider>
 								<DeskLayout>
 									<MyTasks />
 								</DeskLayout>
-							</ProtectedRoute>
-						}
-					/>
-					<Route
-						path='/desk/allTasks'
-						element={
-							<ProtectedRoute>
+							</DeskProvider>
+						</ProtectedRoute>
+					}
+				/>
+				<Route
+					path='/desk/allTasks'
+					element={
+						<ProtectedRoute>
+							<DeskProvider>
 								<DeskLayout>
 									<AllTasks />
 								</DeskLayout>
-							</ProtectedRoute>
-						}
-					/>
-					<Route
-						path='/desk/allDesks'
-						element={
-							<ProtectedRoute>
-								<Navigate to='/desk' replace />
-							</ProtectedRoute>
-						}
-					/>
+							</DeskProvider>
+						</ProtectedRoute>
+					}
+				/>
 
-					{/* Обработка всех остальных маршрутов desk/* как 404 */}
-					<Route
-						path='/desk/*'
-						element={
-							<ProtectedRoute>
-								<NotFound />
-							</ProtectedRoute>
-						}
-					/>
+				{/* Редирект с главной */}
+				<Route path='/' element={AuthService.isAuthenticated() ? <Navigate to='/welcome' replace /> : <Navigate to='/register' replace />} />
 
-					{/* Редирект с главной */}
-					<Route path='/' element={AuthService.isAuthenticated() ? <Navigate to='/welcome' replace /> : <Navigate to='/register' replace />} />
-
-					{/* Глобальный 404 для всех остальных маршрутов */}
-					<Route path='*' element={<NotFound />} />
-				</Routes>
-			</DeskProvider>
+				{/* Глобальный 404 для всех остальных маршрутов */}
+				<Route path='*' element={<NotFound />} />
+			</Routes>
 		</BrowserRouter>
 	)
 }

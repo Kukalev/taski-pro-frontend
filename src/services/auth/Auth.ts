@@ -1,19 +1,22 @@
+import { login } from './api/LoginApi'
+import { register } from './api/RegisterApi'
+import { clearTokens } from './utils/TokenStorage'
+
 export const AuthService = {
+	login,
+	register,
+
 	isAuthenticated(): boolean {
 		const token = localStorage.getItem('token')
 		return !!token
 	},
 
-	// Добавим новый метод для получения имени пользователя
 	getUsername(): string {
-		// Напрямую получаем имя пользователя из localStorage
 		return localStorage.getItem('username') || ''
 	},
 
 	logout() {
-		localStorage.removeItem('token')
-		localStorage.removeItem('refreshToken')
-		localStorage.removeItem('username') // Важно очищать и username при выходе
+		clearTokens()
 		window.location.href = '/register'
 	}
 }

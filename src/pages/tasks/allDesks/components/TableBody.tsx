@@ -5,9 +5,11 @@ interface TableBodyProps {
 	desks: DeskData[]
 	loading: boolean
 	username: string
+	onRename?: (id: number) => void
+	onDelete?: (id: number) => void
 }
 
-export const TableBody = ({ desks, loading, username }: TableBodyProps) => {
+export const TableBody = ({ desks, loading, username, onRename, onDelete }: TableBodyProps) => {
 	if (loading) {
 		return (
 			<tbody>
@@ -35,7 +37,7 @@ export const TableBody = ({ desks, loading, username }: TableBodyProps) => {
 	return (
 		<tbody>
 			{desks.map(desk => (
-				<DeskRow key={desk.id} desk={desk} username={username} />
+				<DeskRow key={desk.id} desk={desk} username={username} onRename={onRename} onDelete={onDelete} />
 			))}
 		</tbody>
 	)

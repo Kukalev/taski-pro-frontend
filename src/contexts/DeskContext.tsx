@@ -19,6 +19,7 @@ interface DeskContextType {
 	error: string | null
 	loadDesks: () => Promise<void>
 	addDesk: (desk: DeskData) => void
+	removeDesk: (id: number) => void
 }
 
 const DeskContext = createContext<DeskContextType | undefined>(undefined)
@@ -38,6 +39,7 @@ export function DeskProvider({ children }: { children: ReactNode }) {
 			setLoading(true)
 			setError(null)
 			const data = await DeskService.getAllDesks()
+			console.log('Доски успешно загружены:', data)
 			setDesks(data)
 		} catch (error: any) {
 			console.error('Ошибка при загрузке досок:', error)
@@ -50,15 +52,17 @@ export function DeskProvider({ children }: { children: ReactNode }) {
 	const addDesk = (desk: DeskData) => {
 		setDesks(prev => [...prev, desk])
 	}
+	
+	const removeDesk = (id: number) => {
+		setDesks(prev => prev.filter(desk => desk.id !== id))
+	}
 
 	// Загружаем доски при первом рендере, но только если пользователь авторизован
 	useEffect(() => {
-		if (AuthService.isAuthenticated()) {
-			loadDesks()
-		}
+		loadDesks()
 	}, [])
 
-	return <DeskContext.Provider value={{ desks, loading, error, loadDesks, addDesk }}>{children}</DeskContext.Provider>
+	return <DeskContext.Provider value={{ desks, loading, error, loadDesks, addDesk, removeDesk }}>{children}</DeskContext.Provider>
 }
 
 // Хук для использования контекста

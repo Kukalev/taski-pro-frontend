@@ -1,15 +1,15 @@
-import {FormEvent, useEffect, useState} from 'react'
-import {IoMailOutline} from 'react-icons/io5'
-import {MdOutlineInfo} from 'react-icons/md'
-import {PiSmiley} from 'react-icons/pi'
-import {SlLock} from 'react-icons/sl'
-import {WiStars} from 'react-icons/wi'
-import {Link, useNavigate} from 'react-router-dom'
-import {Button} from '../../components/ui/Button'
-import {Input} from '../../components/ui/Input'
-import {register} from '../../services/auth/Register'
-import {RegisterFormData, RegisterRequest} from '../../types/auth.types'
-import {isEmailValid, isNameValid, isPasswordValid} from '../../utils/validation'
+import { FormEvent, useEffect, useState } from 'react'
+import { IoMailOutline } from 'react-icons/io5'
+import { MdOutlineInfo } from 'react-icons/md'
+import { PiSmiley } from 'react-icons/pi'
+import { SlLock } from 'react-icons/sl'
+import { WiStars } from 'react-icons/wi'
+import { Link, useNavigate } from 'react-router-dom'
+import { Button } from '../../components/ui/Button'
+import { Input } from '../../components/ui/Input'
+import { AuthService } from '../../services/auth/Auth'
+import { RegisterFormData, RegisterRequest } from '../../types/auth.types'
+import { isEmailValid, isNameValid, isPasswordValid } from '../../utils/validation'
 
 export const RegisterPage = () => {
 	const navigate = useNavigate()
@@ -117,13 +117,13 @@ export const RegisterPage = () => {
 	// Обработчики изменения полей
 	const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const value = e.target.value
-		setFormData({...formData, email: value})
+		setFormData({ ...formData, email: value })
 
 		// Проверка и сброс ошибок
 		if (fieldErrors.email) {
 			// При вводе правильного email сбрасываем ошибку
 			if (isEmailValid(value)) {
-				setFieldErrors({...fieldErrors, email: false})
+				setFieldErrors({ ...fieldErrors, email: false })
 
 				// Если это была единственная ошибка формата, сбрасываем сообщение
 				if (errorType === 'format' && validationError === 'Неверный формат электронной почты') {
@@ -141,11 +141,11 @@ export const RegisterPage = () => {
 	// Аналогичные обработчики для других полей
 	const handleFirstNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const value = e.target.value
-		setFormData({...formData, firstName: value})
+		setFormData({ ...formData, firstName: value })
 
 		if (fieldErrors.firstName) {
 			if (isNameValid(value)) {
-				setFieldErrors({...fieldErrors, firstName: false})
+				setFieldErrors({ ...fieldErrors, firstName: false })
 
 				if (errorType === 'format' && validationError === 'Имя содержит недопустимые символы') {
 					setValidationError(null)
@@ -160,11 +160,11 @@ export const RegisterPage = () => {
 
 	const handleLastNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const value = e.target.value
-		setFormData({...formData, lastName: value})
+		setFormData({ ...formData, lastName: value })
 
 		if (fieldErrors.lastName) {
 			if (isNameValid(value)) {
-				setFieldErrors({...fieldErrors, lastName: false})
+				setFieldErrors({ ...fieldErrors, lastName: false })
 
 				if (errorType === 'format' && validationError === 'Фамилия содержит недопустимые символы') {
 					setValidationError(null)
@@ -179,11 +179,11 @@ export const RegisterPage = () => {
 
 	const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const value = e.target.value
-		setFormData({...formData, password: value})
+		setFormData({ ...formData, password: value })
 
 		if (fieldErrors.password) {
 			if (isPasswordValid(value)) {
-				setFieldErrors({...fieldErrors, password: false})
+				setFieldErrors({ ...fieldErrors, password: false })
 
 				if (errorType === 'format' && validationError === 'Пароль должен быть не менее 6 символов') {
 					setValidationError(null)
@@ -227,7 +227,7 @@ export const RegisterPage = () => {
 			}
 
 			// Используем функцию register
-			const response = await register(requestData)
+			const response = await AuthService.register(requestData)
 
 			// Перенаправляем после успешной регистрации
 			navigate('/welcome')
@@ -251,46 +251,18 @@ export const RegisterPage = () => {
 
 				<form onSubmit={handleSubmit} className='bg-gray-100 rounded-xl p-5 shadow-sm'>
 					<div className='grid grid-cols-2 gap-4 mb-4'>
-						<Input
-							placeholder='Имя'
-							value={formData.firstName}
-							onChange={handleFirstNameChange}
-							icon={<PiSmiley />}
-							error={fieldErrors.firstName}
-						/>
-						<Input
-							placeholder='Фамилия'
-							value={formData.lastName}
-							onChange={handleLastNameChange}
-							error={fieldErrors.lastName}
-						/>
+						<Input placeholder='Имя' value={formData.firstName} onChange={handleFirstNameChange} icon={<PiSmiley />} error={fieldErrors.firstName} />
+						<Input placeholder='Фамилия' value={formData.lastName} onChange={handleLastNameChange} error={fieldErrors.lastName} />
 					</div>
 
 					<div className='space-y-4'>
-						<Input
-							type='email'
-							placeholder='Электронная почта'
-							value={formData.email}
-							onChange={handleEmailChange}
-							icon={<IoMailOutline />}
-							error={fieldErrors.email}
-						/>
-						<Input
-							type='password'
-							placeholder='Пароль'
-							value={formData.password}
-							onChange={handlePasswordChange}
-							icon={<SlLock />}
-							error={fieldErrors.password}
-						/>
+						<Input type='email' placeholder='Электронная почта' value={formData.email} onChange={handleEmailChange} icon={<IoMailOutline />} error={fieldErrors.email} />
+						<Input type='password' placeholder='Пароль' value={formData.password} onChange={handlePasswordChange} icon={<SlLock />} error={fieldErrors.password} />
 					</div>
 
 					{/* Сообщение об ошибке валидации или серверной ошибке */}
 					{(validationError || serverError) && (
-						<div
-							className={`mt-3 flex items-start space-x-2 text-red-500 text-sm transition-opacity duration-300 ease-in-out ${
-								isErrorVisible ? 'opacity-100' : 'opacity-0'
-							}`}>
+						<div className={`mt-3 flex items-start space-x-2 text-red-500 text-sm transition-opacity duration-300 ease-in-out ${isErrorVisible ? 'opacity-100' : 'opacity-0'}`}>
 							<MdOutlineInfo className={`text-xl flex-shrink-0 ${errorType === 'empty' ? 'mt-2.5' : 'mt-0'}`} />
 							<p className='text-sm text-left'>
 								{errorType === 'empty' ? (
@@ -314,9 +286,7 @@ export const RegisterPage = () => {
 				</form>
 				<p className='text-center text-xm text-gray-500 mt-4'>
 					Уже зарегистрированы?{' '}
-					<Link
-						to='/login'
-						className='font-medium text-blue-300 underline underline-offset-[3.5px] decoration-[1.5px] decoration-blue-200 hover:text-blue-600 hover:decoration-blue-500 transition-all duration-200'>
+					<Link to='/login' className='font-medium text-blue-300 underline underline-offset-[3.5px] decoration-[1.5px] decoration-blue-200 hover:text-blue-600 hover:decoration-blue-500 transition-all duration-200'>
 						Войти в аккаунт
 					</Link>
 				</p>
