@@ -1,14 +1,5 @@
-import { AllDesks } from '../tasks/allDesks/AllDesks'
+import {AllDesks} from '../tasks/allDesks/AllDesks'
 
-// Типы данных
-interface DeskData {
-	id: number
-	deskName: string
-	deskDescription: string
-	deskCreateDate: Date
-	deskFinishDate: Date | null
-	userLimit?: number
-}
 
 export const Desk = () => {
 	// Обработчик создания новой доски

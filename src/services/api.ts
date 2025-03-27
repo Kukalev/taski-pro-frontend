@@ -1,40 +1,77 @@
-import axios, { AxiosError, AxiosInstance, AxiosResponse, InternalAxiosRequestConfig } from 'axios';
-import { ApiError } from '../types/auth.types';
+import axios from 'axios'
+import {getTokens, saveTokens} from './auth/utils/TokenStorage'
 
-// Базовый URL API
-const BASE_URL = '/api';
-
-// Создаем экземпляр axios с базовым URL
-const api: AxiosInstance = axios.create({
-  baseURL: BASE_URL,
-  headers: {
-    'Content-Type': 'application/json'
-  }
+// Создаем экземпляр axios
+const api = axios.create({
+  baseURL: '/api',
+  headers: { 'Content-Type': 'application/json' }
 });
 
-// Интерцептор для добавления токена к запросам
-api.interceptors.request.use(
-  (config: InternalAxiosRequestConfig) => {
-    const token = localStorage.getItem('token');
-    if (token && config.headers) {
-      config.headers.Authorization = `Bearer ${token}`;
+// Добавляем токен к запросам
+api.interceptors.request.use(config => {
+  const tokens = getTokens();
+  if (tokens?.accessToken) {
+    config.headers.Authorization = `Bearer ${tokens.accessToken}`;
+  }
+  return config;
+});
+
+// Прямой метод для запроса обновления токена
+const refreshTokenRequest = async () => {
+  const tokens = getTokens();
+
+  if (!tokens?.refreshToken) return null;
+
+  try {
+    // Используем проксированный путь вместо прямого URL
+    const response = await axios.post('/api/auth/refresh_token', {}, {
+      headers: { 
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${tokens.refreshToken}`
+      }
+    });
+    
+    if (response.data?.accessToken) {
+      saveTokens({
+        accessToken: response.data.accessToken,
+        refreshToken: response.data.refreshToken,
+        username: tokens?.username || ''
+      });
+      return response.data.accessToken;
     }
-    return config;
+  } catch (error) {
+    console.error('Ошибка при обновлении токена:', error);
+  }
+  
+  return null;
+};
+
+// Обработка обновления токена при ошибке 401
+api.interceptors.response.use(
+  response => response,
+  async error => {
+    // Пропускаем запросы с меткой или повторные попытки
+    if (error.config?._skipAuthRefresh || 
+        error.config?._isRetry || 
+        error.response?.status !== 401) {
+      return Promise.reject(error);
+    }
+    
+    error.config._isRetry = true;
+    
+    try {
+      // Используем нашу прямую функцию для обновления токена
+      const newToken = await refreshTokenRequest();
+      if (newToken) {
+        // Повторяем оригинальный запрос с новым токеном
+        return api(error.config);
+      }
+    } catch (error: unknown) {
+      console.error(error, 'Не удалось обновить токен');
+    }
+    
+    return Promise.reject(error);
   }
 );
 
-// Интерцептор для обработки ошибок
-api.interceptors.response.use(
-  (response: AxiosResponse) => response,
-  (error: AxiosError) => {
-    const apiError: ApiError = {
-      message: typeof error.response?.data === 'string'
-        ? error.response.data
-        : 'Произошла ошибка при выполнении запроса',
-      status: error.response?.status
-    };
-    
-    return Promise.reject(apiError);
-  }
-);
 export default api;

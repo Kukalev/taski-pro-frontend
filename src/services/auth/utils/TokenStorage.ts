@@ -1,4 +1,4 @@
-import { TokenStorage } from '../types/Auth.types'
+import {TokenStorage} from '../types/Auth.types'
 
 export const saveTokens = (data: TokenStorage): void => {
 	localStorage.setItem('token', data.accessToken)

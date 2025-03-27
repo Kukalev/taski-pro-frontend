@@ -1,6 +1,6 @@
 import api from '../../api'
-import { AuthResponse, LoginRequest } from '../types/Auth.types'
-import { saveTokens } from '../utils/TokenStorage'
+import {AuthResponse, LoginRequest} from '../types/Auth.types'
+import {saveTokens} from '../utils/TokenStorage.ts'
 
 export const login = async (data: LoginRequest): Promise<AuthResponse> => {
 	try {
