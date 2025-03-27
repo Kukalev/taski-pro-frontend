@@ -28,3 +28,16 @@ export const createTask = async (deskId: number, taskName: string, statusType: s
 	}
 };
 
+// Обновить задачу - одна общая функция для любых обновлений
+export const updateTask = async (deskId: number, taskId: number, updateData: Partial<Task>): Promise<Task> => {
+	try {
+		console.log(`Обновляем задачу ${taskId} в доске ${deskId}:`, updateData);
+		const response = await api.put(`${BASE_URL}/${deskId}/tasks/${taskId}`, updateData);
+		console.log('Ответ сервера:', response.data);
+		return response.data;
+	} catch (error) {
+		console.error('Ошибка при обновлении задачи:', error);
+		throw error;
+	}
+};
+
