@@ -1,14 +1,14 @@
-import { useEffect, useState } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
-import { useDesks } from '../../contexts/DeskContext'
-import { DeskService } from '../../services/desk/Desk'
-import { CreateDeskModal } from '../modals/createDeskModal/CreateDeskModal'
-import { DeleteDeskModal } from '../modals/deleteDeskModal/DeleteDeskModal'
-import { RenameDeskModal } from '../modals/renameDeskModal/RenameDeskModal'
-import { SidebarDesks } from './components/SidebarDesks'
-import { SidebarFooter } from './components/SidebarFooter'
-import { SidebarMenu } from './components/SidebarMenu'
-import { SidebarSearch } from './components/SidebarSearch'
+import {useEffect, useState} from 'react'
+import {useLocation, useNavigate} from 'react-router-dom'
+import {useDesks} from '../../contexts/DeskContext'
+import {DeskService} from '../../services/desk/Desk'
+import {CreateDeskModal} from '../modals/createDeskModal/CreateDeskModal'
+import {DeleteDeskModal} from '../modals/deleteDeskModal/DeleteDeskModal'
+import {RenameDeskModal} from '../modals/renameDeskModal/RenameDeskModal'
+import {SidebarDesks} from './components/SidebarDesks'
+import {SidebarFooter} from './components/SidebarFooter'
+import {SidebarMenu} from './components/SidebarMenu'
+import {SidebarSearch} from './components/SidebarSearch'
 
 export const Sidebar = () => {
 	const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
@@ -94,7 +94,7 @@ export const Sidebar = () => {
 
 	return (
 		<>
-			<div className='w-70 min-w-[300px] bg-gray-50 h-[calc(100vh-3.5rem)] p-4 flex flex-col'>
+			<div className='w-70 min-w-[300px] bg-gray-50 h-[calc(100vh-3.5rem)] p-4 flex flex-col border-r border-gray-200'>
 				{/* Поиск */}
 				<SidebarSearch />
 

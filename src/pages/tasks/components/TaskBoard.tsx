@@ -30,15 +30,14 @@ export const TaskBoard: React.FC<TaskBoardProps> = ({ deskId }) => {
 	const [tasks, setTasks] = useState<Task[]>([]);
 	const [loading, setLoading] = useState(true);
 
-	// Загрузка задач
+	// Загрузка задач только при первом рендере и изменении deskId
 	useEffect(() => {
 		const loadTasks = async () => {
 			if (!deskId) return;
-			
+
 			setLoading(true);
 			try {
 				const fetchedTasks = await getTasksByDeskId(deskId);
-				console.log('Полученные задачи:', fetchedTasks);
 				setTasks(fetchedTasks || []);
 			} catch (error) {
 				console.error('Ошибка при загрузке задач:', error);
@@ -50,13 +49,21 @@ export const TaskBoard: React.FC<TaskBoardProps> = ({ deskId }) => {
 		loadTasks();
 	}, [deskId]);
 
-	// Создание новой задачи
+	// Создание новой задачи - добавляем сразу в локальный массив
 	const handleKeyDown = async (e: React.KeyboardEvent<HTMLInputElement>, status: typeof STATUSES[0]) => {
 		if (e.key === 'Enter' && newTaskText.trim()) {
 			try {
+				// 1. Отправляем запрос на создание задачи на сервер
 				const newTask = await createTask(deskId, newTaskText.trim(), status.type);
-				console.log('Создана новая задача:', newTask);
-				setTasks(prev => [...prev, newTask]);
+
+				// 2. Добавляем полученный объект задачи в локальный массив
+				setTasks(prev => {
+					const updated = [...prev, newTask];
+					console.log('Обновленный список задач:', updated);
+					return updated;
+				});
+
+				// 3. Очищаем форму и закрываем поле ввода
 				setNewTaskText('');
 				setAddingInColumn(null);
 			} catch (error) {

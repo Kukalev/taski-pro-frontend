@@ -1,12 +1,18 @@
-import { useState } from 'react'
-import { CreateDeskModal } from '../../../components/modals/createDeskModal/CreateDeskModal'
-import { RenameDeskModal } from '../../../components/modals/renameDeskModal/RenameDeskModal'
-import { DeleteDeskModal } from '../../../components/modals/deleteDeskModal/DeleteDeskModal'
-import { useDesks } from '../../../contexts/DeskContext'
-import { AuthService } from '../../../services/auth/Auth'
-import { DeskService } from '../../../services/desk/Desk'
-import { DeskTable } from './components/DeskTable'
-import { SearchPanel } from './components/SearchPanel'
+import {useState} from 'react'
+import {
+	CreateDeskModal
+} from '../../../components/modals/createDeskModal/CreateDeskModal'
+import {
+	RenameDeskModal
+} from '../../../components/modals/renameDeskModal/RenameDeskModal'
+import {
+	DeleteDeskModal
+} from '../../../components/modals/deleteDeskModal/DeleteDeskModal'
+import {useDesks} from '../../../contexts/DeskContext'
+import {AuthService} from '../../../services/auth/Auth'
+import {DeskService} from '../../../services/desk/Desk'
+import {DeskTable} from './components/DeskTable'
+import {SearchPanel} from './components/SearchPanel'
 
 export const AllDesks = () => {
 	const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
@@ -70,9 +76,9 @@ export const AllDesks = () => {
 	const filteredDesks = desks.filter(desk => desk.deskName.toLowerCase().includes(searchQuery.toLowerCase()))
 
 	return (
-		<div className='w-full h-screen flex flex-col overflow-hidden'>
+		<div className='w-full h-screen flex flex-col overflow-hidden '>
 			<div className='w-full pb-4'>
-				<div className='mb-4'>
+				<div className='mb-4 ml-2'>
 					<h1 className='text-2xl font-semibold text-gray-900'>Все доски</h1>
 				</div>
 
