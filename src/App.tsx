@@ -1,18 +1,18 @@
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
-import { NotFound } from './components/NotFound'
-import { DeskProvider } from './contexts/DeskContext'
-import { DeskLayout } from './layouts/DeskLayout'
-import { LoginPage } from './pages/Auth/LoginPage'
-import { RegisterPage } from './pages/Auth/RegisterPage'
-import { Desk } from './pages/desk/Desk'
-import { DeskDetails } from './pages/desk/DeskDetails'
-import { DeskOverview } from './pages/desk/deskDetails/DeskOverview'
-import { DeskBoard } from './pages/desk/deskDetails/DeskBoard'
-import { AllTasks } from './pages/tasks/AllTasks'
-import { MyTasks } from './pages/tasks/MyTasks'
-import { Team } from './pages/welcome/team/Team'
-import { Welcome } from './pages/welcome/Welcome'
-import { AuthService } from './services/auth/Auth'
+import {BrowserRouter, Navigate, Route, Routes} from 'react-router-dom'
+import {NotFound} from './components/NotFound'
+import {DeskProvider} from './contexts/DeskContext'
+import {DeskLayout} from './layouts/DeskLayout'
+import {LoginPage} from './pages/Auth/LoginPage'
+import {RegisterPage} from './pages/Auth/RegisterPage'
+import {Desk} from './pages/desk/Desk'
+import {DeskDetails} from './pages/desk/deskDetails/DeskDetails.tsx'
+import {DeskBoard} from './pages/desk/deskDetails/DeskBoard'
+import {DeskOverview} from './pages/desk/deskDetails/DeskOverview'
+import {AllTasks} from './pages/tasks/AllTasks'
+import {MyTasks} from './pages/tasks/MyTasks'
+import {Team} from './pages/welcome/team/Team'
+import {Welcome} from './pages/welcome/Welcome'
+import {AuthService} from './services/auth/Auth'
 
 // Простой компонент для защиты роутов
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -68,9 +68,9 @@ function App() {
 					element={
 						<ProtectedRoute>
 							<DeskProvider>
-								<DeskLayout>
-									<DeskDetails />
-								</DeskLayout>
+									<DeskLayout>
+										<DeskDetails />
+									</DeskLayout>
 							</DeskProvider>
 						</ProtectedRoute>
 					}
@@ -86,9 +86,9 @@ function App() {
 					element={
 						<ProtectedRoute>
 							<DeskProvider>
-								<DeskLayout>
-									<MyTasks />
-								</DeskLayout>
+									<DeskLayout>
+										<MyTasks />
+									</DeskLayout>
 							</DeskProvider>
 						</ProtectedRoute>
 					}
@@ -98,9 +98,9 @@ function App() {
 					element={
 						<ProtectedRoute>
 							<DeskProvider>
-								<DeskLayout>
-									<AllTasks />
-								</DeskLayout>
+									<DeskLayout>
+										<AllTasks />
+									</DeskLayout>
 							</DeskProvider>
 						</ProtectedRoute>
 					}

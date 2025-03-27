@@ -1,8 +1,8 @@
-import { AuthService } from '../../services/auth/Auth'
-import { HeaderButtons } from './components/HeaderButtons'
-import { HeaderIcons } from './components/HeaderIcons'
-import { HeaderLogo } from './components/HeaderLogo'
-import { UserAvatar } from './components/UserAvatar'
+import {AuthService} from '../../services/auth/Auth'
+import {HeaderButtons} from './components/HeaderButtons'
+import {HeaderIcons} from './components/HeaderIcons'
+import {HeaderLogo} from './components/HeaderLogo'
+import {UserAvatar} from './components/UserAvatar'
 
 export const Header = () => {
 	const username = AuthService.getUsername()
