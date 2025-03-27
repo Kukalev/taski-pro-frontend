@@ -11,7 +11,7 @@ export const DeskBoard = () => {
 
 
 	return (
-		<div className="h-full flex flex-col">
+		<div className="h-100% flex flex-col bg-gray-100">
 			{/* Заголовок доски */}
 
 

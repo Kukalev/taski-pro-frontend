@@ -1,6 +1,8 @@
 import React, {useEffect, useState} from 'react'
 import {createTask, getTasksByDeskId} from '../../../services/task/Task'
 import {Task} from '../../../services/task/types/task.types'
+import {PiUserCircleThin} from 'react-icons/pi'
+import {FaRegCircle, FaCheck} from 'react-icons/fa'
 
 // Типы статусов
 enum StatusType {
@@ -13,11 +15,11 @@ enum StatusType {
 
 // Статусы для колонок
 const STATUSES = [
-	{ id: 1, title: 'К выполнению', color: 'bg-gray-400', type: StatusType.BACKLOG },
-	{ id: 2, title: 'В работе', color: 'bg-blue-400', type: StatusType.INWORK },
-	{ id: 3, title: 'На рассмотрении', color: 'bg-yellow-400', type: StatusType.REVIEW },
-	{ id: 4, title: 'Тестирование', color: 'bg-purple-400', type: StatusType.TESTING },
-	{ id: 5, title: 'Завершено', color: 'bg-green-400', type: StatusType.COMPLETED },
+	{ id: 1, title: 'К выполнению',  type: StatusType.BACKLOG },
+	{ id: 2, title: 'В работе',  type: StatusType.INWORK },
+	{ id: 3, title: 'На рассмотрении',  type: StatusType.REVIEW },
+	{ id: 4, title: 'Тестирование',  type: StatusType.TESTING },
+	{ id: 5, title: 'Завершено',  type: StatusType.COMPLETED },
 ];
 
 interface TaskBoardProps {
@@ -26,9 +28,10 @@ interface TaskBoardProps {
 
 export const TaskBoard: React.FC<TaskBoardProps> = ({ deskId }) => {
 	const [addingInColumn, setAddingInColumn] = useState<number | null>(null);
-	const [newTaskText, setNewTaskText] = useState('');
+	const [newTaskTexts, setNewTaskTexts] = useState<Record<number, string>>({});
 	const [tasks, setTasks] = useState<Task[]>([]);
 	const [loading, setLoading] = useState(true);
+	const [hoveredCheckCircle, setHoveredCheckCircle] = useState<number | null>(null);
 
 	// Загрузка задач только при первом рендере и изменении deskId
 	useEffect(() => {
@@ -49,12 +52,22 @@ export const TaskBoard: React.FC<TaskBoardProps> = ({ deskId }) => {
 		loadTasks();
 	}, [deskId]);
 
-	// Создание новой задачи - добавляем сразу в локальный массив
+	// Обновленная функция для обработки ввода в конкретной колонке
+	const handleInputChange = (columnId: number, text: string) => {
+		setNewTaskTexts(prev => ({
+			...prev,
+			[columnId]: text
+		}));
+	};
+
+	// Обновленная функция для обработки нажатия клавиш
 	const handleKeyDown = async (e: React.KeyboardEvent<HTMLInputElement>, status: typeof STATUSES[0]) => {
-		if (e.key === 'Enter' && newTaskText.trim()) {
+		const taskText = newTaskTexts[status.id] || '';
+		
+		if (e.key === 'Enter' && taskText.trim()) {
 			try {
 				// 1. Отправляем запрос на создание задачи на сервер
-				const newTask = await createTask(deskId, newTaskText.trim(), status.type);
+				const newTask = await createTask(deskId, taskText.trim(), status.type);
 
 				// 2. Добавляем полученный объект задачи в локальный массив
 				setTasks(prev => {
@@ -64,13 +77,19 @@ export const TaskBoard: React.FC<TaskBoardProps> = ({ deskId }) => {
 				});
 
 				// 3. Очищаем форму и закрываем поле ввода
-				setNewTaskText('');
+				setNewTaskTexts(prev => ({
+					...prev,
+					[status.id]: ''
+				}));
 				setAddingInColumn(null);
 			} catch (error) {
 				console.error('Ошибка при создании задачи:', error);
 			}
 		} else if (e.key === 'Escape') {
-			setNewTaskText('');
+			setNewTaskTexts(prev => ({
+				...prev,
+				[status.id]: ''
+			}));
 			setAddingInColumn(null);
 		}
 	};
@@ -90,58 +109,82 @@ export const TaskBoard: React.FC<TaskBoardProps> = ({ deskId }) => {
 				<div className="flex space-x-4">
 					{STATUSES.map(status => {
 						const statusTasks = getTasksByStatus(status.type);
+						const currentText = newTaskTexts[status.id] || '';
 
 						return (
-							<div key={status.id} className="w-72 bg-gray-50 rounded-lg shadow-sm">
-								<div className={`px-3 py-2 border-b border-gray-200 ${status.color} bg-opacity-30`}>
-									<div className="flex items-center">
-										<span className={`w-2 h-2 rounded-full ${status.color} mr-2`}></span>
-										<h3 className="font-medium text-sm">{status.title}</h3>
-										<span className="text-xs text-gray-500 ml-1">({statusTasks.length})</span>
-									</div>
+							<div key={status.id} className="w-[15%] min-w-[250px] flex flex-col h-full">
+								<div className="mb-2 rounded-lg bg-white py-2">
+									<h3 className="text-sm font-medium text-gray-700 ml-3">{status.title}</h3>
 								</div>
 
-								<div className="p-2 min-h-[200px]">
-									{statusTasks.length === 0 ? (
-										<div className="text-sm text-gray-400 text-center py-4">Нет задач</div>
-									) : (
-										<div className="space-y-2">
-											{statusTasks.map(task => (
-												<div 
-													key={task.taskId}
-													className="bg-white p-3 rounded shadow-sm hover:shadow transition-all"
-												>
-													<div className="text-sm font-medium">{task.taskName}</div>
-													{task.taskDescription && (
-														<div className="text-xs text-gray-500 mt-1">{task.taskDescription}</div>
-													)}
-													<div className="text-xs text-gray-400 mt-1">
-														{new Date(task.taskCreateDate).toLocaleDateString()}
-													</div>
-												</div>
-											))}
-										</div>
-									)}
-								</div>
-
-								{addingInColumn === status.id ? (
+								<div className="relative mb-2">
 									<input
 										type="text"
-										className="w-full p-2 border-t border-gray-200"
-										placeholder="Введите название задачи..."
-										value={newTaskText}
-										onChange={(e) => setNewTaskText(e.target.value)}
+										className="w-full p-3 rounded-lg bg-white text-[12px]
+										text-gray-150 transition-all duration-200 ease-in-out
+										hover:text-gray-300 focus:text-gray-700 focus:bg-gray-100
+										focus:outline-none border border-transparent focus:border-gray-100"
+										placeholder="Добавить задачу..."
+										value={currentText}
+										onChange={(e) => handleInputChange(status.id, e.target.value)}
 										onKeyDown={(e) => handleKeyDown(e, status)}
-										autoFocus
+										autoFocus={addingInColumn === status.id}
 									/>
-								) : (
-									<button 
-										className="w-full p-2 text-left text-gray-600 border-t border-gray-200 hover:bg-gray-100"
-										onClick={() => setAddingInColumn(status.id)}
-									>
-										+ Добавить задачу
-									</button>
-								)}
+								</div>
+
+								{/* Контейнер для задач с тонким скроллбаром */}
+								<div 
+									className="space-y-2 flex-1 overflow-y-auto max-h-[calc(100vh-200px)] pr-1
+									scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent hover:scrollbar-thumb-gray-300"
+								>
+									{statusTasks.map(task => (
+										<div
+											key={task.taskId}
+											className="bg-white pl-3 pb-3 min-h-[100px] cursor-pointer pt-2 rounded-lg border
+											border-gray-200 hover:shadow-sm transition-shadow relative group"
+										>
+											{task.taskId && (
+												<div className="text-[10px] text-gray-400 mt-0 inline-flex">
+													<span className="bg-gray-200 inline-flex justify-center items-center
+													min-w-[20px] h-5 px-1 rounded">
+														#{task.taskId}
+													</span>
+												</div>
+											)}
+											<div className="text-sm">{task.taskName}</div>
+
+											{/* Иконка пользователя, появляющаяся при наведении на задачу и меняющая цвет при наведении на иконку */}
+											<div className="absolute bottom-1 left-3 mb-2 opacity-0 group-hover:opacity-100 
+												transition-opacity duration-200">
+												<PiUserCircleThin
+													className="text-gray-400 transition-colors duration-300 hover:text-orange-500 cursor-pointer"
+													style={{ width: '20px', height: '20px' }}
+												/>
+											</div>
+											
+											{/* Круг с галочкой */}
+											<div 
+												className="absolute bottom-1 right-3 mb-2 cursor-pointer"
+												onMouseEnter={() => setHoveredCheckCircle(task.taskId)}
+												onMouseLeave={() => setHoveredCheckCircle(null)}
+											>
+												<div className="relative">
+													<FaRegCircle className="text-gray-300" size={16} />
+													
+													{/* Галочка с плавным появлением */}
+													<FaCheck 
+														className={`absolute top-0 left-0 text-gray-400 transition-opacity duration-300
+														${hoveredCheckCircle === task.taskId ? 'opacity-100' : 'opacity-0'}`}
+														size={10} 
+														style={{ 
+															transform: 'translate(3px, 3px)' // Центрируем галочку внутри круга
+														}}
+													/>
+												</div>
+											</div>
+										</div>
+									))}
+								</div>
 							</div>
 						);
 					})}

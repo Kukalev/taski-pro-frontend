@@ -4,7 +4,6 @@ import {MdOutlineInfo} from 'react-icons/md'
 import {PiSmiley} from 'react-icons/pi'
 import {SlLock} from 'react-icons/sl'
 import {WiStars} from 'react-icons/wi'
-import {LuUser} from 'react-icons/lu'
 import {Link, useNavigate} from 'react-router-dom'
 import {Button} from '../../components/ui/Button'
 import {Input} from '../../components/ui/Input'
@@ -21,7 +20,6 @@ export const RegisterPage = () => {
 	const [formData, setFormData] = useState<RegisterFormData>({
 		firstName: '',
 		lastName: '',
-		username: '',
 		email: '',
 		password: ''
 	})
@@ -30,7 +28,6 @@ export const RegisterPage = () => {
 	const [fieldErrors, setFieldErrors] = useState<Record<keyof RegisterFormData, boolean>>({
 		firstName: false,
 		lastName: false,
-		username: false,
 		email: false,
 		password: false
 	})
@@ -57,7 +54,6 @@ export const RegisterPage = () => {
 		const errors: Record<keyof RegisterFormData, boolean> = {
 			firstName: false,
 			lastName: false,
-			username: false,
 			email: false,
 			password: false
 		}
@@ -114,15 +110,6 @@ export const RegisterPage = () => {
 			return false
 		}
 
-		// Проверка имени пользователя
-		if (formData.username.length < 3) {
-			errors.username = true
-			setFieldErrors(errors)
-			setValidationError('Имя пользователя должно содержать не менее 3 символов')
-			setErrorType('format')
-			return false
-		}
-
 		// Если все в порядке
 		setFieldErrors(errors)
 		setValidationError(null)
@@ -149,26 +136,6 @@ export const RegisterPage = () => {
 		}
 
 		// Сбрасываем серверную ошибку при любом изменении
-		if (serverError) {
-			setServerError(null)
-		}
-	}
-
-	// Добавляем обработчик для имени пользователя
-	const handleUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-		const value = e.target.value
-		setFormData({ ...formData, username: value })
-
-		if (fieldErrors.username) {
-			if (value.length >= 3) {
-				setFieldErrors({ ...fieldErrors, username: false })
-
-				if (errorType === 'format' && validationError === 'Имя пользователя должно содержать не менее 3 символов') {
-					setValidationError(null)
-				}
-			}
-		}
-
 		if (serverError) {
 			setServerError(null)
 		}
@@ -254,7 +221,7 @@ export const RegisterPage = () => {
 		try {
 			// Формируем данные для отправки
 			const requestData: RegisterRequest = {
-				username: formData.username,
+				username: formData.name,
 				email: formData.email,
 				password: formData.password,
 				firstname: formData.firstName,
@@ -263,7 +230,6 @@ export const RegisterPage = () => {
 
 			// Используем функцию register
 			const response = await AuthService.register(requestData)
-			console.log(response)
 
 			// Перенаправляем после успешной регистрации
 			navigate('/welcome')
@@ -289,16 +255,6 @@ export const RegisterPage = () => {
 					<div className='grid grid-cols-2 gap-4 mb-4'>
 						<Input placeholder='Имя' value={formData.firstName} onChange={handleFirstNameChange} icon={<PiSmiley />} error={fieldErrors.firstName} />
 						<Input placeholder='Фамилия' value={formData.lastName} onChange={handleLastNameChange} error={fieldErrors.lastName} />
-					</div>
-
-					<div className='mb-4'>
-						<Input 
-							placeholder='Имя пользователя' 
-							value={formData.username} 
-							onChange={handleUsernameChange} 
-							icon={<LuUser />}
-							error={fieldErrors.username} 
-						/>
 					</div>
 
 					<div className='space-y-4'>
