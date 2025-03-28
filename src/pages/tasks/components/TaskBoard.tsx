@@ -1,8 +1,23 @@
-import React, {useEffect, useState} from 'react'
+import React, {useEffect, useState, useRef} from 'react'
 import {createTask, getTasksByDeskId, updateTask} from '../../../services/task/Task'
 import {Task} from '../../../services/task/types/task.types'
 import {PiUserCircleThin} from 'react-icons/pi'
 import {FaRegCircle, FaCheck} from 'react-icons/fa'
+import { IoCalendarNumberOutline } from "react-icons/io5"
+import dayjs from 'dayjs'
+import 'dayjs/locale/ru' // Подключаем русскую локаль для dayjs
+import format from 'date-fns/format'
+import ru from 'date-fns/locale/ru'
+import ReactDOM from 'react-dom'
+import DatePicker from 'react-datepicker'
+import 'react-datepicker/dist/react-datepicker.css'
+import { registerLocale } from 'react-datepicker'
+
+// Устанавливаем русскую локаль по умолчанию для dayjs
+dayjs.locale('ru')
+
+// Зарегистрируйте русскую локаль для календаря
+registerLocale('ru', ru)
 
 // Типы статусов
 enum StatusType {
@@ -32,8 +47,13 @@ export const TaskBoard: React.FC<TaskBoardProps> = ({ deskId }) => {
 	const [tasks, setTasks] = useState<Task[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [hoveredCheckCircle, setHoveredCheckCircle] = useState<number | null>(null);
+	const [hoveredCalendar, setHoveredCalendar] = useState<number | null>(null);
 	const [draggedTask, setDraggedTask] = useState<Task | null>(null);
 	const [dropTarget, setDropTarget] = useState<{statusType: string, index: number} | null>(null);
+	const [datePickerTaskId, setDatePickerTaskId] = useState<number | null>(null);
+	const [selectedDate, setSelectedDate] = useState<Record<number, Date | null>>({});
+	const calendarRef = useRef<HTMLDivElement>(null);
+	const [calendarPosition, setCalendarPosition] = useState({ top: 0, left: 0 });
 
 	// Загрузка задач
 	useEffect(() => {
@@ -44,6 +64,16 @@ export const TaskBoard: React.FC<TaskBoardProps> = ({ deskId }) => {
 			try {
 				const fetchedTasks = await getTasksByDeskId(deskId);
 				setTasks(fetchedTasks || []);
+				
+				// Инициализируем даты из полученных задач
+				const dateDictionary: Record<number, Date | null> = {};
+				fetchedTasks.forEach(task => {
+					if (task.taskId && task.taskFinishDate) {
+						dateDictionary[task.taskId] = new Date(task.taskFinishDate);
+					}
+				});
+				setSelectedDate(dateDictionary);
+				
 			} catch (error) {
 				console.error('Ошибка при загрузке задач:', error);
 			} finally {
@@ -53,6 +83,20 @@ export const TaskBoard: React.FC<TaskBoardProps> = ({ deskId }) => {
 
 		loadTasks();
 	}, [deskId]);
+
+	// Обработчик клика вне календаря
+	useEffect(() => {
+		const handleClickOutside = (event: MouseEvent) => {
+			if (calendarRef.current && !calendarRef.current.contains(event.target as Node)) {
+				setDatePickerTaskId(null);
+			}
+		};
+
+		document.addEventListener('mousedown', handleClickOutside);
+		return () => {
+			document.removeEventListener('mousedown', handleClickOutside);
+		};
+	}, []);
 
 	// Функции для работы с задачами
 	const handleInputChange = (columnId: number, text: string) => {
@@ -221,6 +265,53 @@ export const TaskBoard: React.FC<TaskBoardProps> = ({ deskId }) => {
 		setDropTarget({ statusType, index: tasks.length });
 	};
 
+	// Исправленный обработчик выбора даты с camelCase именами полей
+	const handleDateChange = async (taskId: number, date: Date | null) => {
+		try {
+			// Сохраняем дату в локальном состоянии
+			setSelectedDate(prev => ({
+				...prev,
+				[taskId]: date
+			}));
+			
+			// Отправляем запрос на обновление даты окончания в базе данных
+			if (date) {
+				// Java в Spring Boot обычно ожидает дату в формате ISO
+				const isoDate = date.toISOString();
+				
+				// Используем taskFinishDate вместо finish_date
+				await updateTask(deskId, taskId, {
+					taskFinishDate: isoDate
+				});
+				
+				// Обновляем задачу в локальном состоянии для отображения даты
+				setTasks(prev => prev.map(t => 
+					t.taskId === taskId ? {...t, taskFinishDate: isoDate} : t
+				));
+			} else {
+				// Если дата null, очищаем taskFinishDate
+				await updateTask(deskId, taskId, {
+					taskFinishDate: null
+				});
+				
+				// Обновляем задачу в локальном состоянии
+				setTasks(prev => prev.map(t => 
+					t.taskId === taskId ? {...t, taskFinishDate: null} : t
+				));
+			}
+			
+			// Закрываем календарь
+			setDatePickerTaskId(null);
+		} catch (error) {
+			console.error('Ошибка при обновлении даты окончания:', error);
+		}
+	};
+
+	// Форматирование даты для отображения в карточке (только день и месяц)
+	const formatShortDate = (date: Date) => {
+		return format(date, 'd MMM.', { locale: ru });
+	};
+
 	return (
 		<div className="flex-1 p-4 overflow-x-auto h-full">
 			{loading ? (
@@ -284,8 +375,9 @@ export const TaskBoard: React.FC<TaskBoardProps> = ({ deskId }) => {
 									{statusTasks.map((task, index) => (
 										<div key={task.taskId} className="relative">
 											<div
-												className="bg-white pl-3 pb-3 min-h-[100px] cursor-pointer pt-2 rounded-lg border
-												border-gray-200 hover:shadow-sm transition-shadow relative group task-card"
+												className={`bg-white pl-3 pb-3 min-h-[100px] cursor-pointer pt-2 rounded-lg border
+												border-gray-200 hover:shadow-sm transition-shadow relative group task-card
+												${datePickerTaskId === task.taskId ? 'active-calendar' : ''}`}
 												draggable
 												onDragStart={(e) => {
 													e.dataTransfer.setData('text/plain', JSON.stringify(task));
@@ -307,12 +399,86 @@ export const TaskBoard: React.FC<TaskBoardProps> = ({ deskId }) => {
 												<div className="text-sm">{task.taskName}</div>
 
 												{/* Иконка пользователя */}
-												<div className="absolute bottom-1 left-3 mb-2 opacity-0 group-hover:opacity-100 
-												transition-opacity duration-200">
+												<div className={`absolute bottom-1 left-3 mb-2 
+													${datePickerTaskId === task.taskId ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} 
+													transition-opacity duration-200`}>
 													<PiUserCircleThin 
 														className="text-gray-400 transition-colors duration-300 hover:text-orange-500 cursor-pointer" 
 														style={{ width: '20px', height: '20px' }}
 													/>
+												</div>
+												
+												{/* Показываем либо дату, либо иконку календаря */}
+												<div 
+													className={`absolute bottom-1 right-12 mb-2
+														${datePickerTaskId === task.taskId ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} 
+														transition-opacity duration-200 cursor-pointer`}
+													onMouseEnter={() => setHoveredCalendar(task.taskId)}
+													onMouseLeave={() => setHoveredCalendar(null)}
+													onClick={(e) => {
+														e.stopPropagation();
+														
+														// Получаем координаты клика и иконки
+														const iconRect = e.currentTarget.getBoundingClientRect();
+														
+														// Размеры календаря
+														const calendarWidth = 300;
+														const calendarHeight = 350;
+														const windowHeight = window.innerHeight;
+														
+														let position;
+														
+														// Проверяем, близко ли к низу экрана
+														if (iconRect.bottom + calendarHeight + 10 > windowHeight) {
+															// Размещаем СВЕРХУ и РЯДОМ с иконкой (под углом)
+															position = {
+																top: iconRect.top - calendarHeight - 5, // Сверху с минимальным отступом
+																left: iconRect.right - 40 // Сдвигаем календарь так, чтобы его правый нижний угол был близко к иконке
+															};
+														} else {
+															// Размещаем СНИЗУ и РЯДОМ с иконкой (под углом)
+															position = {
+																top: iconRect.bottom + 5, // Снизу с минимальным отступом
+																left: iconRect.right - 40 // Сдвигаем календарь так, чтобы его правый верхний угол был близко к иконке
+															};
+														}
+														
+														// Корректировка по границам экрана
+														if (position.left < 10) {
+															position.left = 10;
+														}
+														if (position.left + calendarWidth > window.innerWidth - 10) {
+															position.left = window.innerWidth - calendarWidth - 10;
+														}
+														if (position.top < 10) {
+															position.top = 10;
+														}
+														
+														// Переключаем состояние
+														if (datePickerTaskId === task.taskId) {
+															setDatePickerTaskId(null);
+														} else {
+															setDatePickerTaskId(task.taskId);
+															setCalendarPosition(position);
+														}
+													}}
+												>
+													{selectedDate[task.taskId!] ? (
+														// Если дата выбрана, показываем её вместо иконки
+														<div className="text-xs text-gray-500 hover:text-gray-700 transition-colors">
+															{formatShortDate(selectedDate[task.taskId!]!)}
+														</div>
+													) : (
+														// Если дата не выбрана, показываем иконку календаря
+														<IoCalendarNumberOutline 
+															className={`transition-colors duration-300 ${
+																datePickerTaskId === task.taskId || hoveredCalendar === task.taskId 
+																	? 'text-yellow-400' 
+																	: 'text-gray-400'
+															}`} 
+															size={16}
+														/>
+													)}
 												</div>
 												
 												{/* Круг с галочкой */}
@@ -352,6 +518,46 @@ export const TaskBoard: React.FC<TaskBoardProps> = ({ deskId }) => {
 						);
 					})}
 				</div>
+			)}
+
+			{/* Рендерим календарь через портал в body */}
+			{datePickerTaskId !== null && ReactDOM.createPortal(
+				<div 
+					className="fixed inset-0 z-50"
+					onClick={(e) => {
+						// Закрываем при клике вне календаря
+						if (calendarRef.current && !calendarRef.current.contains(e.target as Node)) {
+							setDatePickerTaskId(null);
+						}
+					}}
+				>
+					<div
+						ref={calendarRef}
+						style={{
+							position: 'fixed',
+							zIndex: 51,
+							top: `${calendarPosition.top}px`,
+							left: `${calendarPosition.left}px`,
+							background: 'white',
+							boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+							borderRadius: '8px'
+						}}
+						onClick={(e) => e.stopPropagation()}
+					>
+						<DatePicker
+							selected={selectedDate[datePickerTaskId] || null}
+							onChange={(date) => handleDateChange(datePickerTaskId, date)}
+							locale="ru"
+							inline
+							dateFormat="dd.MM.yyyy"
+							showMonthDropdown
+							showYearDropdown
+							dropdownMode="select"
+							onClickOutside={() => setDatePickerTaskId(null)}
+						/>
+					</div>
+				</div>,
+				document.body
 			)}
 		</div>
 	);
