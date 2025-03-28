@@ -16,9 +16,6 @@ import { registerLocale } from 'react-datepicker'
 // Устанавливаем русскую локаль по умолчанию для dayjs
 dayjs.locale('ru')
 
-// Зарегистрируйте русскую локаль для календаря
-registerLocale('ru', ru)
-
 // Типы статусов
 enum StatusType {
 	BACKLOG = 'BACKLOG',
@@ -53,7 +50,6 @@ export const TaskBoard: React.FC<TaskBoardProps> = ({ deskId }) => {
 	const [datePickerTaskId, setDatePickerTaskId] = useState<number | null>(null);
 	const [selectedDate, setSelectedDate] = useState<Record<number, Date | null>>({});
 	const calendarRef = useRef<HTMLDivElement>(null);
-	const [calendarPosition, setCalendarPosition] = useState({ top: 0, left: 0 });
 
 	// Загрузка задач
 	useEffect(() => {
@@ -64,16 +60,6 @@ export const TaskBoard: React.FC<TaskBoardProps> = ({ deskId }) => {
 			try {
 				const fetchedTasks = await getTasksByDeskId(deskId);
 				setTasks(fetchedTasks || []);
-				
-				// Инициализируем даты из полученных задач
-				const dateDictionary: Record<number, Date | null> = {};
-				fetchedTasks.forEach(task => {
-					if (task.taskId && task.taskFinishDate) {
-						dateDictionary[task.taskId] = new Date(task.taskFinishDate);
-					}
-				});
-				setSelectedDate(dateDictionary);
-				
 			} catch (error) {
 				console.error('Ошибка при загрузке задач:', error);
 			} finally {
@@ -97,6 +83,17 @@ export const TaskBoard: React.FC<TaskBoardProps> = ({ deskId }) => {
 			document.removeEventListener('mousedown', handleClickOutside);
 		};
 	}, []);
+
+	// Создаем портал для календаря, чтобы он рендерился вне родительских контейнеров
+	useEffect(() => {
+		if (datePickerTaskId !== null) {
+			// Предотвращаем прокрутку при открытом календаре
+			document.body.style.overflow = 'hidden';
+			return () => {
+				document.body.style.overflow = '';
+			};
+		}
+	}, [datePickerTaskId]);
 
 	// Функции для работы с задачами
 	const handleInputChange = (columnId: number, text: string) => {
@@ -265,39 +262,27 @@ export const TaskBoard: React.FC<TaskBoardProps> = ({ deskId }) => {
 		setDropTarget({ statusType, index: tasks.length });
 	};
 
-	// Исправленный обработчик выбора даты с camelCase именами полей
-	const handleDateChange = async (taskId: number, date: Date | null) => {
+	// Обработчик выбора даты через Ant Design DatePicker
+	const handleDateChange = async (taskId: number, date: dayjs.Dayjs | null) => {
 		try {
-			// Сохраняем дату в локальном состоянии
+			const jsDate = date ? date.toDate() : null;
+			
+			// Сохраняем дату в состоянии
 			setSelectedDate(prev => ({
 				...prev,
-				[taskId]: date
+				[taskId]: jsDate
 			}));
 			
-			// Отправляем запрос на обновление даты окончания в базе данных
-			if (date) {
-				// Java в Spring Boot обычно ожидает дату в формате ISO
-				const isoDate = date.toISOString();
-				
-				// Используем taskFinishDate вместо finish_date
+			// Отправляем запрос на обновление даты окончания
+			if (jsDate) {
 				await updateTask(deskId, taskId, {
-					taskFinishDate: isoDate
+					finish_date: jsDate.toISOString()
 				});
-				
-				// Обновляем задачу в локальном состоянии для отображения даты
-				setTasks(prev => prev.map(t => 
-					t.taskId === taskId ? {...t, taskFinishDate: isoDate} : t
-				));
 			} else {
-				// Если дата null, очищаем taskFinishDate
+				// Если дата null, устанавливаем пустую дату
 				await updateTask(deskId, taskId, {
-					taskFinishDate: null
+					finish_date: null
 				});
-				
-				// Обновляем задачу в локальном состоянии
-				setTasks(prev => prev.map(t => 
-					t.taskId === taskId ? {...t, taskFinishDate: null} : t
-				));
 			}
 			
 			// Закрываем календарь
@@ -310,6 +295,160 @@ export const TaskBoard: React.FC<TaskBoardProps> = ({ deskId }) => {
 	// Форматирование даты для отображения в карточке (только день и месяц)
 	const formatShortDate = (date: Date) => {
 		return format(date, 'd MMM.', { locale: ru });
+	};
+
+	const renderCalendar = (taskId: number) => {
+		const currentDate = selectedDate[taskId] || new Date();
+		const month = currentDate.getMonth();
+		const year = currentDate.getFullYear();
+		
+		// Определяем первый день месяца и количество дней
+		const firstDayOfMonth = new Date(year, month, 1);
+		const lastDayOfMonth = new Date(year, month + 1, 0);
+		const daysInMonth = lastDayOfMonth.getDate();
+		
+		// Определяем день недели первого дня месяца (0-воскресенье, 1-понедельник и т.д.)
+		let firstDayWeekday = firstDayOfMonth.getDay(); // 0 - воскресенье
+		if (firstDayWeekday === 0) firstDayWeekday = 7; // Переводим в формат 1-7 (пн-вс)
+		
+		// Дни для предыдущего месяца
+		const daysFromPrevMonth = firstDayWeekday - 1;
+		const prevMonth = month === 0 ? 11 : month - 1;
+		const prevMonthYear = month === 0 ? year - 1 : year;
+		const daysInPrevMonth = new Date(prevMonthYear, prevMonth + 1, 0).getDate();
+		
+		// Создаем массив для календарной сетки
+		const calendarDays = [];
+		
+		// Добавляем дни из предыдущего месяца
+		for (let i = daysInPrevMonth - daysFromPrevMonth + 1; i <= daysInPrevMonth; i++) {
+			calendarDays.push({
+				day: i,
+				month: prevMonth,
+				year: prevMonthYear,
+				isCurrentMonth: false
+			});
+		}
+		
+		// Добавляем дни текущего месяца
+		for (let i = 1; i <= daysInMonth; i++) {
+			calendarDays.push({
+				day: i,
+				month: month,
+				year: year,
+				isCurrentMonth: true
+			});
+		}
+		
+		// Добавляем дни следующего месяца до заполнения сетки (максимум 6 строк по 7 дней)
+		const nextMonth = month === 11 ? 0 : month + 1;
+		const nextMonthYear = month === 11 ? year + 1 : year;
+		const totalCells = 42; // 6 строк по 7 дней
+		
+		for (let i = 1; calendarDays.length < totalCells; i++) {
+			calendarDays.push({
+				day: i,
+				month: nextMonth,
+				year: nextMonthYear,
+				isCurrentMonth: false
+			});
+		}
+		
+		const today = new Date();
+		
+		return (
+			<div 
+				ref={calendarRef}
+				className="absolute bottom-10 right-0 bg-white rounded-lg shadow-lg p-4 z-20 w-64"
+			>
+				<div className="flex justify-between items-center mb-4">
+					<span className="text-sm font-medium">
+						{format(new Date(year, month), 'LLLL yyyy', { locale: ru })}
+					</span>
+					<div className="flex space-x-2">
+						<button 
+							className="text-gray-500 hover:text-gray-700 px-2"
+							onClick={() => {
+								const newDate = new Date(year, month - 1, 1);
+								setSelectedDate(prev => ({
+									...prev,
+									[taskId]: newDate
+								}));
+							}}
+						>
+							&lt;
+						</button>
+						<button 
+							className="text-gray-500 hover:text-gray-700 px-2"
+							onClick={() => {
+								const newDate = new Date(year, month + 1, 1);
+								setSelectedDate(prev => ({
+									...prev,
+									[taskId]: newDate
+								}));
+							}}
+						>
+							&gt;
+						</button>
+					</div>
+				</div>
+				
+				<div className="grid grid-cols-7 gap-1 mb-2">
+					{['ПН', 'ВТ', 'СР', 'ЧТ', 'ПТ', 'СБ', 'ВС'].map(day => (
+						<div key={day} className="text-center text-xs text-gray-500">
+							{day}
+						</div>
+					))}
+				</div>
+				
+				<div className="grid grid-cols-7 gap-1">
+					{calendarDays.map((dateInfo, index) => {
+						const date = new Date(dateInfo.year, dateInfo.month, dateInfo.day);
+						
+						const isSelected = selectedDate[taskId] && 
+							selectedDate[taskId]!.getDate() === dateInfo.day &&
+							selectedDate[taskId]!.getMonth() === dateInfo.month &&
+							selectedDate[taskId]!.getFullYear() === dateInfo.year;
+						
+						const isToday = 
+							today.getDate() === dateInfo.day &&
+							today.getMonth() === dateInfo.month &&
+							today.getFullYear() === dateInfo.year;
+						
+						return (
+							<button
+								key={index}
+								className={`
+									text-center py-1 text-sm rounded 
+									${dateInfo.isCurrentMonth ? 'text-gray-700' : 'text-gray-400'} 
+									${isSelected ? 'bg-orange-400 text-white' : ''} 
+									${isToday && !isSelected ? 'bg-gray-200' : ''}
+									hover:bg-gray-200 ${isSelected ? 'hover:bg-orange-500' : ''}
+								`}
+								onClick={() => handleDateChange(taskId, dateInfo.day)}
+							>
+								{dateInfo.day}
+							</button>
+						);
+					})}
+				</div>
+				
+				<div className="mt-4 flex justify-between items-center">
+					<button 
+						className="text-xs text-gray-500 hover:text-gray-700"
+						onClick={() => {
+							setSelectedDate(prev => ({
+								...prev,
+								[taskId]: null
+							}));
+							handleDateChange(taskId, null); // Отправляем null
+						}}
+					>
+						Очистить всё
+					</button>
+				</div>
+			</div>
+		);
 	};
 
 	return (
@@ -375,9 +514,8 @@ export const TaskBoard: React.FC<TaskBoardProps> = ({ deskId }) => {
 									{statusTasks.map((task, index) => (
 										<div key={task.taskId} className="relative">
 											<div
-												className={`bg-white pl-3 pb-3 min-h-[100px] cursor-pointer pt-2 rounded-lg border
-												border-gray-200 hover:shadow-sm transition-shadow relative group task-card
-												${datePickerTaskId === task.taskId ? 'active-calendar' : ''}`}
+												className="bg-white pl-3 pb-3 min-h-[100px] cursor-pointer pt-2 rounded-lg border
+												border-gray-200 hover:shadow-sm transition-shadow relative group task-card"
 												draggable
 												onDragStart={(e) => {
 													e.dataTransfer.setData('text/plain', JSON.stringify(task));
@@ -396,88 +534,62 @@ export const TaskBoard: React.FC<TaskBoardProps> = ({ deskId }) => {
 														</span>
 													</div>
 												)}
-												<div className="text-sm">{task.taskName}</div>
+												<div className={`text-sm ${task.statusType === StatusType.COMPLETED ? 'line-through text-gray-400' : ''}`}>
+													{task.taskName}
+												</div>
+
+												{/* Блок с датой окончания - виден всегда, если дата выбрана */}
+												<div className="flex justify-end mt-2">
+													{selectedDate[task.taskId!] && (
+														<div className="text-xs text-gray-500">
+															{formatShortDate(selectedDate[task.taskId!]!)}
+														</div>
+													)}
+												</div>
 
 												{/* Иконка пользователя */}
-												<div className={`absolute bottom-1 left-3 mb-2 
-													${datePickerTaskId === task.taskId ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} 
-													transition-opacity duration-200`}>
+												<div className="absolute bottom-1 left-3 mb-2 opacity-0 group-hover:opacity-100 
+												transition-opacity duration-200">
 													<PiUserCircleThin 
 														className="text-gray-400 transition-colors duration-300 hover:text-orange-500 cursor-pointer" 
 														style={{ width: '20px', height: '20px' }}
 													/>
 												</div>
 												
-												{/* Показываем либо дату, либо иконку календаря */}
+												{/* Иконка календаря */}
 												<div 
-													className={`absolute bottom-1 right-12 mb-2
-														${datePickerTaskId === task.taskId ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} 
-														transition-opacity duration-200 cursor-pointer`}
+													className="absolute bottom-1 right-8 mb-2 opacity-0 group-hover:opacity-100 
+													transition-opacity duration-200 cursor-pointer"
 													onMouseEnter={() => setHoveredCalendar(task.taskId)}
 													onMouseLeave={() => setHoveredCalendar(null)}
-													onClick={(e) => {
-														e.stopPropagation();
-														
-														// Получаем координаты клика и иконки
-														const iconRect = e.currentTarget.getBoundingClientRect();
-														
-														// Размеры календаря
-														const calendarWidth = 300;
-														const calendarHeight = 350;
-														const windowHeight = window.innerHeight;
-														
-														let position;
-														
-														// Проверяем, близко ли к низу экрана
-														if (iconRect.bottom + calendarHeight + 10 > windowHeight) {
-															// Размещаем СВЕРХУ и РЯДОМ с иконкой (под углом)
-															position = {
-																top: iconRect.top - calendarHeight - 5, // Сверху с минимальным отступом
-																left: iconRect.right - 40 // Сдвигаем календарь так, чтобы его правый нижний угол был близко к иконке
-															};
-														} else {
-															// Размещаем СНИЗУ и РЯДОМ с иконкой (под углом)
-															position = {
-																top: iconRect.bottom + 5, // Снизу с минимальным отступом
-																left: iconRect.right - 40 // Сдвигаем календарь так, чтобы его правый верхний угол был близко к иконке
-															};
-														}
-														
-														// Корректировка по границам экрана
-														if (position.left < 10) {
-															position.left = 10;
-														}
-														if (position.left + calendarWidth > window.innerWidth - 10) {
-															position.left = window.innerWidth - calendarWidth - 10;
-														}
-														if (position.top < 10) {
-															position.top = 10;
-														}
-														
-														// Переключаем состояние
-														if (datePickerTaskId === task.taskId) {
-															setDatePickerTaskId(null);
-														} else {
-															setDatePickerTaskId(task.taskId);
-															setCalendarPosition(position);
-														}
-													}}
+													onClick={() => setDatePickerTaskId(datePickerTaskId === task.taskId ? null : task.taskId)}
 												>
-													{selectedDate[task.taskId!] ? (
-														// Если дата выбрана, показываем её вместо иконки
-														<div className="text-xs text-gray-500 hover:text-gray-700 transition-colors">
-															{formatShortDate(selectedDate[task.taskId!]!)}
+													<IoCalendarNumberOutline 
+														className={`transition-colors duration-300 ${
+															hoveredCalendar === task.taskId 
+																? 'text-yellow-400' 
+																: 'text-gray-400'
+														}`} 
+														size={16}
+													/>
+													
+													{/* Ant Design DatePicker */}
+													{datePickerTaskId === task.taskId && (
+														<div 
+															style={{ position: 'absolute', right: 0, bottom: '25px', zIndex: 1000 }}
+															onClick={(e) => e.stopPropagation()}
+														>
+															<DatePicker
+																open={true}
+																className="ant-picker-dropdown"
+																style={{ boxShadow: '0 3px 6px rgba(0,0,0,0.16)' }}
+																defaultValue={selectedDate[task.taskId!] ? dayjs(selectedDate[task.taskId!]) : null}
+																onChange={(date) => handleDateChange(task.taskId!, date)}
+																onOpenChange={(open) => {
+																	if (!open) setDatePickerTaskId(null);
+																}}
+															/>
 														</div>
-													) : (
-														// Если дата не выбрана, показываем иконку календаря
-														<IoCalendarNumberOutline 
-															className={`transition-colors duration-300 ${
-																datePickerTaskId === task.taskId || hoveredCalendar === task.taskId 
-																	? 'text-yellow-400' 
-																	: 'text-gray-400'
-															}`} 
-															size={16}
-														/>
 													)}
 												</div>
 												
@@ -489,11 +601,19 @@ export const TaskBoard: React.FC<TaskBoardProps> = ({ deskId }) => {
 													onClick={() => handleCompleteTask(task.taskId!)}
 												>
 													<div className="relative">
-														<FaRegCircle className="text-gray-300" size={16} />
+														<FaRegCircle 
+															className={task.statusType === StatusType.COMPLETED ? "text-green-200" : "text-gray-300"} 
+															size={16} 
+														/>
 														
 														<FaCheck 
-															className={`absolute top-0 left-0 text-gray-400 transition-opacity duration-300
-															${hoveredCheckCircle === task.taskId ? 'opacity-100' : 'opacity-0'}`}
+															className={`absolute top-0 left-0 transition-all duration-300
+																${task.statusType === StatusType.COMPLETED 
+																	? 'text-green-500 opacity-100' // Всегда видно для завершенных задач
+																	: hoveredCheckCircle === task.taskId 
+																		? 'text-gray-400 opacity-100' // Видно при наведении для незавершенных
+																		: 'text-gray-400 opacity-0'   // Скрыто для незавершенных
+																}`}
 															size={10} 
 															style={{ transform: 'translate(3px, 3px)' }}
 														/>
@@ -523,7 +643,7 @@ export const TaskBoard: React.FC<TaskBoardProps> = ({ deskId }) => {
 			{/* Рендерим календарь через портал в body */}
 			{datePickerTaskId !== null && ReactDOM.createPortal(
 				<div 
-					className="fixed inset-0 z-50"
+					className="fixed inset-0 z-50 bg-transparent"
 					onClick={(e) => {
 						// Закрываем при клике вне календаря
 						if (calendarRef.current && !calendarRef.current.contains(e.target as Node)) {
@@ -533,28 +653,18 @@ export const TaskBoard: React.FC<TaskBoardProps> = ({ deskId }) => {
 				>
 					<div
 						ref={calendarRef}
+						className="absolute bg-white rounded-lg shadow-lg p-4"
 						style={{
+							width: '300px',
 							position: 'fixed',
 							zIndex: 51,
-							top: `${calendarPosition.top}px`,
-							left: `${calendarPosition.left}px`,
-							background: 'white',
-							boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-							borderRadius: '8px'
+							// Позиционируем относительно кнопки календаря
+							// Эти координаты нужно будет рассчитать динамически
+							bottom: '150px',
+							right: '100px',
 						}}
-						onClick={(e) => e.stopPropagation()}
 					>
-						<DatePicker
-							selected={selectedDate[datePickerTaskId] || null}
-							onChange={(date) => handleDateChange(datePickerTaskId, date)}
-							locale="ru"
-							inline
-							dateFormat="dd.MM.yyyy"
-							showMonthDropdown
-							showYearDropdown
-							dropdownMode="select"
-							onClickOutside={() => setDatePickerTaskId(null)}
-						/>
+						{/* ... содержимое календаря ... */}
 					</div>
 				</div>,
 				document.body
