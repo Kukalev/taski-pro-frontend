@@ -41,3 +41,13 @@ export const updateTask = async (deskId: number, taskId: number, updateData: Par
 	}
 };
 
+// Добавьте новую функцию для удаления задачи в Task.ts
+export const deleteTask = async (deskId: number, taskId: number): Promise<void> => {
+	try {
+		await api.delete(`${BASE_URL}/${deskId}/tasks/${taskId}`);
+	} catch (error) {
+		console.error('Ошибка при удалении задачи:', error);
+		throw error;
+	}
+};
+

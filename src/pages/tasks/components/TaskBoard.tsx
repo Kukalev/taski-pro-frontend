@@ -1,9 +1,14 @@
-import React, {useEffect, useState, useRef} from 'react'
-import {createTask, getTasksByDeskId, updateTask} from '../../../services/task/Task'
+import React, {useEffect, useRef, useState} from 'react'
+import {
+	createTask,
+	deleteTask,
+	getTasksByDeskId,
+	updateTask
+} from '../../../services/task/Task'
 import {Task} from '../../../services/task/types/task.types'
 import {PiUserCircleThin} from 'react-icons/pi'
-import {FaRegCircle, FaCheck} from 'react-icons/fa'
-import { IoCalendarNumberOutline } from "react-icons/io5"
+import {FaCheck, FaRegCircle} from 'react-icons/fa'
+import {IoCalendarNumberOutline} from 'react-icons/io5'
 import dayjs from 'dayjs'
 import 'dayjs/locale/ru' // Подключаем русскую локаль для dayjs
 import format from 'date-fns/format'
@@ -11,7 +16,6 @@ import ru from 'date-fns/locale/ru'
 import ReactDOM from 'react-dom'
 import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
-import { registerLocale } from 'react-datepicker'
 
 // Устанавливаем русскую локаль по умолчанию для dayjs
 dayjs.locale('ru')
@@ -38,6 +42,18 @@ interface TaskBoardProps {
 	deskId: number;
 }
 
+// Добавляем стили для анимации
+const fadeInAnimation = `
+@keyframes fadeIn {
+	from { opacity: 0; transform: scale(0.95); }
+	to { opacity: 1; transform: scale(1); }
+}
+@keyframes fadeOut {
+	from { opacity: 1; transform: scale(1); }
+	to { opacity: 0; transform: scale(0.95); }
+}
+`;
+
 export const TaskBoard: React.FC<TaskBoardProps> = ({ deskId }) => {
 	const [addingInColumn, setAddingInColumn] = useState<number | null>(null);
 	const [newTaskTexts, setNewTaskTexts] = useState<Record<number, string>>({});
@@ -50,6 +66,10 @@ export const TaskBoard: React.FC<TaskBoardProps> = ({ deskId }) => {
 	const [datePickerTaskId, setDatePickerTaskId] = useState<number | null>(null);
 	const [selectedDate, setSelectedDate] = useState<Record<number, Date | null>>({});
 	const calendarRef = useRef<HTMLDivElement>(null);
+	const [showDropZone, setShowDropZone] = useState(false);
+	const [dropZoneHovered, setDropZoneHovered] = useState(false);
+	const [showDeleteModal, setShowDeleteModal] = useState(false);
+	const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
 
 	// Загрузка задач
 	useEffect(() => {
@@ -95,6 +115,41 @@ export const TaskBoard: React.FC<TaskBoardProps> = ({ deskId }) => {
 		}
 	}, [datePickerTaskId]);
 
+	// В начале функции TaskBoard добавьте:
+	useEffect(() => {
+		// Устанавливаем обработчики на уровне документа для гарантированного срабатывания
+		const handleDocumentDragStart = () => {
+			setShowDropZone(true);
+			console.log('Документ: начало перетаскивания');
+		};
+		
+		const handleDocumentDragEnd = () => {
+			setShowDropZone(false);
+			setDropZoneHovered(false);
+			console.log('Документ: конец перетаскивания');
+		};
+		
+		document.addEventListener('dragstart', handleDocumentDragStart);
+		document.addEventListener('dragend', handleDocumentDragEnd);
+		
+		// Удаляем обработчики при размонтировании компонента
+		return () => {
+			document.removeEventListener('dragstart', handleDocumentDragStart);
+			document.removeEventListener('dragend', handleDocumentDragEnd);
+		};
+	}, []);
+
+	// И добавьте этот стиль в DOM
+	useEffect(() => {
+		const style = document.createElement('style');
+		style.innerHTML = fadeInAnimation;
+		document.head.appendChild(style);
+		
+		return () => {
+			document.head.removeChild(style);
+		};
+	}, []);
+
 	// Функции для работы с задачами
 	const handleInputChange = (columnId: number, text: string) => {
 		setNewTaskTexts(prev => ({
@@ -127,22 +182,30 @@ export const TaskBoard: React.FC<TaskBoardProps> = ({ deskId }) => {
 		}
 	};
 
-	// Функции для drag and drop
+	// Модификация в handleDragStart, чтобы явно установить флаг showDropZone в true
 	const handleDragStart = (e: React.DragEvent, task: Task) => {
 		e.dataTransfer.setData('text/plain', JSON.stringify(task));
 		setDraggedTask(task);
 		
-		// Для визуального эффекта при перетаскивании
+		// Принудительно устанавливаем showDropZone в true
+		setTimeout(() => {
+			setShowDropZone(true);
+			console.log('handleDragStart: showDropZone установлен в true');
+		}, 10);
+		
+		// Визуальный эффект для перетаскивания
 		if (e.currentTarget instanceof HTMLElement) {
-			setTimeout(() => {
-				e.currentTarget.style.opacity = '0.4';
-			}, 0);
+			e.currentTarget.style.opacity = '0.4';
 		}
 	};
 
 	const handleDragEnd = (e: React.DragEvent) => {
 		setDraggedTask(null);
 		setDropTarget(null);
+		
+		// Скрываем зону удаления
+		setShowDropZone(false);
+		setDropZoneHovered(false);
 		
 		// Возвращаем нормальный вид элементу
 		if (e.currentTarget instanceof HTMLElement) {
@@ -451,6 +514,22 @@ export const TaskBoard: React.FC<TaskBoardProps> = ({ deskId }) => {
 		);
 	};
 
+	// Добавьте функцию для удаления задачи
+	const handleDeleteTask = async () => {
+		if (!taskToDelete || !taskToDelete.taskId) return;
+		
+		try {
+			await deleteTask(deskId, taskToDelete.taskId);
+			
+			// Удаляем задачу из локального состояния
+			setTasks(prev => prev.filter(t => t.taskId !== taskToDelete.taskId));
+			setShowDeleteModal(false);
+			setTaskToDelete(null);
+		} catch (error) {
+			console.error('Ошибка при удалении задачи:', error);
+		}
+	};
+
 	return (
 		<div className="flex-1 p-4 overflow-x-auto h-full">
 			{loading ? (
@@ -637,6 +716,113 @@ export const TaskBoard: React.FC<TaskBoardProps> = ({ deskId }) => {
 							</div>
 						);
 					})}
+				</div>
+			)}
+
+			{/* Зона удаления - делаем её маленькой, только в центре внизу */}
+			{draggedTask && (
+				<div 
+					className="fixed bottom-8 left-1/2 transform -translate-x-1/2 h-12 bg-white border-2 border-dashed border-gray-300 
+								flex items-center justify-center z-[9999] rounded-lg px-6"
+					style={{
+						maxWidth: '300px', // Ограничиваем ширину
+						width: '80%',
+						transition: 'border-color 0.2s',
+						borderColor: dropZoneHovered ? '#FB923C' : '#D1D5DB'
+					}}
+					onDragOver={(e) => {
+						e.preventDefault();
+						setDropZoneHovered(true);
+					}}
+					onDragLeave={() => {
+						setDropZoneHovered(false);
+					}}
+					onDrop={(e) => {
+						e.preventDefault();
+						if (!draggedTask) return;
+						
+						setTaskToDelete(draggedTask);
+						setShowDeleteModal(true);
+						setDropZoneHovered(false);
+					}}
+				>
+					<div className="flex items-center text-sm">
+						<svg 
+							className={`w-5 h-5 mr-2 transition-colors duration-200 ${
+								dropZoneHovered ? 'text-orange-500' : 'text-gray-400'
+							}`}
+							fill="none" 
+							stroke="currentColor" 
+							viewBox="0 0 24 24" 
+							xmlns="http://www.w3.org/2000/svg"
+						>
+							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+						</svg>
+						<span className="text-gray-500">Переместите сюда для удаления</span>
+					</div>
+				</div>
+			)}
+			
+			{/* Модальное окно с анимациями и возможностью закрытия кликом вне */}
+			{showDeleteModal && (
+				<div 
+					className="fixed inset-0 z-50 flex items-center justify-center transition-all duration-500"
+					style={{ 
+						backgroundColor: 'rgba(0, 0, 0, 0.4)' // Легкое затемнение
+					}}
+					onClick={() => {
+						// Закрываем модалку при клике на затемненный фон
+						setShowDeleteModal(false);
+						setTaskToDelete(null);
+					}}
+				>
+					<div 
+						className="bg-white rounded-xl p-6 shadow-xl transition-all duration-300 transform animate-fadeIn"
+						style={{ 
+							width: '400px',
+							animation: 'fadeIn 0.3s ease-out' 
+						}}
+						onClick={(e) => {
+							// Предотвращаем закрытие при клике на само модальное окно
+							e.stopPropagation();
+						}}
+					>
+						<div className="flex justify-between items-center mb-4">
+							<h3 className="text-base">Удаление задачи</h3>
+							<button 
+								onClick={() => {
+									setShowDeleteModal(false);
+									setTaskToDelete(null);
+								}}
+								className="text-gray-400 hover:text-gray-500 hover:cursor-pointer transition-all duration-300"
+							>
+								<svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+									<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+								</svg>
+							</button>
+						</div>
+						<p className="mb-4 text-sm">
+							Вы уверены, что хотите удалить задачу 
+							{taskToDelete?.taskName ? ` "${taskToDelete.taskName}"` : " \"Без названия\""}?
+						</p>
+						<div className="flex justify-end space-x-3">
+							<button
+								onClick={() => {
+									setShowDeleteModal(false);
+									setTaskToDelete(null);
+								}}
+								className="px-8 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 w-1/2 transition-all duration-200 cursor-pointer "
+							>
+								Нет
+							</button>
+							<button
+								onClick={handleDeleteTask}
+								className="px-8 py-2 bg-orange-400 text-white rounded-lg hover:bg-orange-500 w-1/2 transition-all duration-200 cursor-pointer"
+							>
+								Да
+							</button>
+						</div>
+					</div>
 				</div>
 			)}
 
