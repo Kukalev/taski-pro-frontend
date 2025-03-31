@@ -1,14 +1,15 @@
-import { useEffect, useState } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
-import { useDesks } from '../../contexts/DeskContext'
-import { DeskService } from '../../services/desk/Desk'
-import { CreateDeskModal } from '../modals/createDeskModal/CreateDeskModal'
-import { DeleteDeskModal } from '../modals/deleteDeskModal/DeleteDeskModal'
-import { RenameDeskModal } from '../modals/renameDeskModal/RenameDeskModal'
-import { SidebarDesks } from './components/SidebarDesks'
-import { SidebarFooter } from './components/SidebarFooter'
-import { SidebarMenu } from './components/SidebarMenu'
-import { SidebarSearch } from './components/SidebarSearch'
+import {useEffect, useState} from 'react'
+import {useLocation, useNavigate} from 'react-router-dom'
+import {useDesks} from '../../contexts/DeskContext'
+import {DeskService} from '../../services/desk/Desk'
+import {CreateDeskModal} from '../modals/createDeskModal/CreateDeskModal'
+import {DeleteDeskModal} from '../modals/deleteDeskModal/DeleteDeskModal'
+import {RenameDeskModal} from '../modals/renameDeskModal/RenameDeskModal'
+import {SidebarDesks} from './components/SidebarDesks'
+import {SidebarFooter} from './components/SidebarFooter'
+import {SidebarMenu} from './components/SidebarMenu'
+import {SidebarSearch} from './components/SidebarSearch'
+import { DESK_UPDATE_EVENT } from '../../pages/DeskOverview/hooks/useDeskActions'
 
 export const Sidebar = () => {
 	const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
@@ -22,7 +23,7 @@ export const Sidebar = () => {
 	const location = useLocation()
 
 	// Получаем данные и функции из контекста
-	const { desks, loading, addDesk, loadDesks, removeDesk } = useDesks()
+	const { desks, loading, addDesk, loadDesks, removeDesk, updateDesk } = useDesks()
 
 	// Найти имя доски по ID
 	useEffect(() => {
@@ -92,9 +93,30 @@ export const Sidebar = () => {
 		loadDesks()
 	}
 
+	useEffect(() => {
+		// Слушатель для обновления данных в sidebar
+		const handleDeskUpdated = (event: CustomEvent) => {
+			const { deskId, updates } = event.detail;
+			console.log('Получено событие обновления доски:', deskId, updates);
+			
+			// Обновляем название доски в контексте
+			if (updates && deskId) {
+				updateDesk(deskId, updates);
+			}
+		};
+
+		// Добавляем слушатель с типизацией для CustomEvent
+		window.addEventListener(DESK_UPDATE_EVENT, handleDeskUpdated as EventListener);
+		
+		return () => {
+			// Удаляем слушатель при размонтировании
+			window.removeEventListener(DESK_UPDATE_EVENT, handleDeskUpdated as EventListener);
+		};
+	}, [updateDesk]); // Зависит от функции updateDesk
+
 	return (
 		<>
-			<div className='w-70 min-w-[300px] bg-gray-50 h-[calc(100vh-3.5rem)] p-4 flex flex-col'>
+			<div className='w-70 min-w-[300px] bg-gray-50 h-[calc(100vh-3.5rem)] p-4 flex flex-col border-r border-gray-200'>
 				{/* Поиск */}
 				<SidebarSearch />
 

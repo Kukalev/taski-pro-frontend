@@ -28,3 +28,26 @@ export const createTask = async (deskId: number, taskName: string, statusType: s
 	}
 };
 
+// Обновить задачу - одна общая функция для любых обновлений
+export const updateTask = async (deskId: number, taskId: number, updateData: Partial<Task>): Promise<Task> => {
+	try {
+		console.log(`Обновляем задачу ${taskId} в доске ${deskId}:`, updateData);
+		const response = await api.put(`${BASE_URL}/${deskId}/tasks/${taskId}`, updateData);
+		console.log('Ответ сервера:', response.data);
+		return response.data;
+	} catch (error) {
+		console.error('Ошибка при обновлении задачи:', error);
+		throw error;
+	}
+};
+
+// Добавьте новую функцию для удаления задачи в Task.ts
+export const deleteTask = async (deskId: number, taskId: number): Promise<void> => {
+	try {
+		await api.delete(`${BASE_URL}/${deskId}/tasks/${taskId}`);
+	} catch (error) {
+		console.error('Ошибка при удалении задачи:', error);
+		throw error;
+	}
+};
+

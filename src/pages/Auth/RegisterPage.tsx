@@ -1,15 +1,19 @@
-import { FormEvent, useEffect, useState } from 'react'
-import { IoMailOutline } from 'react-icons/io5'
-import { MdOutlineInfo } from 'react-icons/md'
-import { PiSmiley } from 'react-icons/pi'
-import { SlLock } from 'react-icons/sl'
-import { WiStars } from 'react-icons/wi'
-import { Link, useNavigate } from 'react-router-dom'
-import { Button } from '../../components/ui/Button'
-import { Input } from '../../components/ui/Input'
-import { AuthService } from '../../services/auth/Auth'
-import { RegisterFormData, RegisterRequest } from '../../types/auth.types'
-import { isEmailValid, isNameValid, isPasswordValid } from '../../utils/validation'
+import {FormEvent, useEffect, useState} from 'react'
+import {IoMailOutline} from 'react-icons/io5'
+import {MdOutlineInfo} from 'react-icons/md'
+import {PiSmiley} from 'react-icons/pi'
+import {SlLock} from 'react-icons/sl'
+import {WiStars} from 'react-icons/wi'
+import {Link, useNavigate} from 'react-router-dom'
+import {Button} from '../../components/ui/Button'
+import {Input} from '../../components/ui/Input'
+import {AuthService} from '../../services/auth/Auth'
+import {RegisterFormData, RegisterRequest} from '../../types/auth.types'
+import {
+	isEmailValid,
+	isNameValid,
+	isPasswordValid
+} from '../../utils/validation'
 
 export const RegisterPage = () => {
 	const navigate = useNavigate()
@@ -31,7 +35,6 @@ export const RegisterPage = () => {
 	const [isLoading, setIsLoading] = useState<boolean>(false)
 	const [serverError, setServerError] = useState<string | null>(null)
 	const [validationError, setValidationError] = useState<string | null>(null)
-	const [success, setSuccess] = useState<string | null>(null)
 	const [isErrorVisible, setIsErrorVisible] = useState<boolean>(false)
 
 	// Для конкретных сообщений об ошибках валидации
@@ -212,14 +215,13 @@ export const RegisterPage = () => {
 		// Если форма валидна
 		setValidationError(null)
 		setServerError(null)
-		setSuccess(null)
 		setIsErrorVisible(false)
 		setIsLoading(true)
 
 		try {
 			// Формируем данные для отправки
 			const requestData: RegisterRequest = {
-				username: formData.email,
+				username: formData.name,
 				email: formData.email,
 				password: formData.password,
 				firstname: formData.firstName,

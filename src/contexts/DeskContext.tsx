@@ -12,7 +12,7 @@ interface DeskData {
 	userLimit?: number
 }
 
-// Интерфейс контекста
+// Интерфейс контекста - добавляем setDesks
 interface DeskContextType {
 	desks: DeskData[]
 	loading: boolean
@@ -20,6 +20,8 @@ interface DeskContextType {
 	loadDesks: () => Promise<void>
 	addDesk: (desk: DeskData) => void
 	removeDesk: (id: number) => void
+	setDesks: React.Dispatch<React.SetStateAction<DeskData[]>>
+	updateDesk: (id: number, updatedData: Partial<DeskData>) => void
 }
 
 const DeskContext = createContext<DeskContextType | undefined>(undefined)
@@ -56,13 +58,37 @@ export function DeskProvider({ children }: { children: ReactNode }) {
 	const removeDesk = (id: number) => {
 		setDesks(prev => prev.filter(desk => desk.id !== id))
 	}
+	
+	// Добавляем функцию для обновления доски
+	const updateDesk = (id: number, updatedData: Partial<DeskData>) => {
+		setDesks(prev => 
+			prev.map(desk => 
+				desk.id === id ? { ...desk, ...updatedData } : desk
+			)
+		)
+	}
 
 	// Загружаем доски при первом рендере, но только если пользователь авторизован
 	useEffect(() => {
 		loadDesks()
 	}, [])
 
-	return <DeskContext.Provider value={{ desks, loading, error, loadDesks, addDesk, removeDesk }}>{children}</DeskContext.Provider>
+	return (
+		<DeskContext.Provider 
+			value={{ 
+				desks, 
+				loading, 
+				error, 
+				loadDesks, 
+				addDesk, 
+				removeDesk, 
+				setDesks, 
+				updateDesk 
+			}}
+		>
+			{children}
+		</DeskContext.Provider>
+	)
 }
 
 // Хук для использования контекста

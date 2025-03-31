@@ -1,9 +1,10 @@
 import {AllDesks} from '../tasks/allDesks/AllDesks'
+import {DeskCreateDto} from '../../services/desk/types/desk.types.ts'
 
 
 export const Desk = () => {
 	// Обработчик создания новой доски
-	const handleDeskCreated = (newDesk: any) => {
+	const handleDeskCreated = (newDesk: DeskCreateDto) => {
 		console.log('Desk: Получена новая доска:', newDesk)
 		// Можно добавить toast уведомление здесь, если нужно
 	}
