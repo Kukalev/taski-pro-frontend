@@ -9,6 +9,7 @@ import {SidebarDesks} from './components/SidebarDesks'
 import {SidebarFooter} from './components/SidebarFooter'
 import {SidebarMenu} from './components/SidebarMenu'
 import {SidebarSearch} from './components/SidebarSearch'
+import { DESK_UPDATE_EVENT } from '../../pages/DeskOverview/hooks/useDeskActions'
 
 export const Sidebar = () => {
 	const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
@@ -22,7 +23,7 @@ export const Sidebar = () => {
 	const location = useLocation()
 
 	// Получаем данные и функции из контекста
-	const { desks, loading, addDesk, loadDesks, removeDesk } = useDesks()
+	const { desks, loading, addDesk, loadDesks, removeDesk, updateDesk } = useDesks()
 
 	// Найти имя доски по ID
 	useEffect(() => {
@@ -91,6 +92,27 @@ export const Sidebar = () => {
 		// После успешного переименования обновляем список досок
 		loadDesks()
 	}
+
+	useEffect(() => {
+		// Слушатель для обновления данных в sidebar
+		const handleDeskUpdated = (event: CustomEvent) => {
+			const { deskId, updates } = event.detail;
+			console.log('Получено событие обновления доски:', deskId, updates);
+			
+			// Обновляем название доски в контексте
+			if (updates && deskId) {
+				updateDesk(deskId, updates);
+			}
+		};
+
+		// Добавляем слушатель с типизацией для CustomEvent
+		window.addEventListener(DESK_UPDATE_EVENT, handleDeskUpdated as EventListener);
+		
+		return () => {
+			// Удаляем слушатель при размонтировании
+			window.removeEventListener(DESK_UPDATE_EVENT, handleDeskUpdated as EventListener);
+		};
+	}, [updateDesk]); // Зависит от функции updateDesk
 
 	return (
 		<>

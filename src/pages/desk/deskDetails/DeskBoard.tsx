@@ -1,6 +1,6 @@
 import {useOutletContext} from 'react-router-dom'
 import {DeskData} from '../../../components/sidebar/types/sidebar.types'
-import {TaskBoard} from '../../tasks/components/TaskBoard'
+import TaskBoardPage from '../../TaskBoard/TaskBoardPage.tsx'
 
 type ContextType = {
 	desk: DeskData;
@@ -16,7 +16,7 @@ export const DeskBoard = () => {
 
 
 			{/* Передаем ID доски как число, с проверкой на undefined */}
-			<TaskBoard deskId={desk.id} />
+			<TaskBoardPage deskId={desk.id} />
 		</div>
 	);
 };
