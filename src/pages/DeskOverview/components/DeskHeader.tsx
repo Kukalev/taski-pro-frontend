@@ -146,43 +146,52 @@ const DeskHeader: React.FC<DeskHeaderProps> = ({
             {getFirstLetter()}
           </div>
 
-          {/* Название доски (под логотипом, выровнено по левому краю) */}
-          {isEditing ? (
-            <div className="flex items-center ">
-              <input
-                ref={inputRef}
-                type="text"
-                value={editedName}
-                onChange={(e) => setEditedName(e.target.value)}
-                onKeyDown={handleKeyDown}
-                onBlur={handleBlur}
-                className="text-2xl font-bold w-full outline-none pb-1"
-                placeholder="Введите название доски"
-                disabled={isLoading}
-              />
-              {isLoading && (
-                <div className="ml-2 animate-spin h-5 w-5 border-2 border-blue-500 rounded-full border-t-transparent"></div>
-              )}
-            </div>
-          ) : (
-            <h1 
-              className="text-2xl font-bold"
-              onClick={handleEdit}
-            >
-              {desk.deskName || 'Без названия'}
-            </h1>
-          )}
+          {/* Название доски (под логотипом) с фиксированной шириной */}
+          <div className="w-[550px]">
+            {isEditing ? (
+              <div className="w-full">
+                <input
+                  ref={inputRef}
+                  type="text"
+                  value={editedName}
+                  onChange={(e) => setEditedName(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  onBlur={handleBlur}
+                  className="text-2xl font-bold w-full outline-none whitespace-nowrap overflow-hidden text-ellipsis"
+                  placeholder="Введите название доски"
+                  disabled={isLoading}
+                  style={{ 
+                    background: 'transparent', 
+                    padding: '0',
+                    margin: '0',
+                    border: 'none',
+                    boxSizing: 'border-box'
+                  }}
+                />
+                {isLoading && (
+                  <div className="ml-2 animate-spin h-5 w-5 border-2 border-blue-500 rounded-full border-t-transparent"></div>
+                )}
+              </div>
+            ) : (
+              <h1 
+                className="text-2xl font-bold whitespace-nowrap overflow-hidden text-ellipsis cursor-text w-full"
+                onClick={handleEdit}
+              >
+                {desk.deskName || 'Без названия'}
+              </h1>
+            )}
+          </div>
         </div>
 
-        {/* Дата и статус в горизонтальном положении, с меньшим отступом */}
-        <div className='flex items-center space-x-5 -mx-30'>
-          {/* Кнопка даты - значительно увеличенная */}
+        {/* Дата и статус в горизонтальном положении */}
+        <div className='flex items-center space-x-5 -ml-66'>
+          {/* Кнопка даты */}
           <button 
             className='flex items-center min-w-[150px] px-6 py-2 bg-gray-50 hover:bg-gray-100 rounded-lg text-base cursor-pointer transition-colors'
             data-date-button="true"
             onClick={onDateClick}
           >
-            <svg className="w-6 h-6 mr-3" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <svg className="w-6 h-6 mr-3 flex-shrink-0" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
               <path d="M8 2V5" stroke="currentColor" strokeWidth="1.5" strokeMiterlimit="10" strokeLinecap="round" strokeLinejoin="round"/>
               <path d="M16 2V5" stroke="currentColor" strokeWidth="1.5" strokeMiterlimit="10" strokeLinecap="round" strokeLinejoin="round"/>
               <path d="M3.5 9.09H20.5" stroke="currentColor" strokeWidth="1.5" strokeMiterlimit="10" strokeLinecap="round" strokeLinejoin="round"/>
@@ -194,7 +203,9 @@ const DeskHeader: React.FC<DeskHeaderProps> = ({
               <path d="M8.29431 13.7H8.30329" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
               <path d="M8.29431 16.7H8.30329" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
-            {formatDate(selectedDate || desk.deskFinishDate)}
+            <span className="whitespace-nowrap overflow-hidden text-ellipsis">
+              {formatDate(selectedDate || desk.deskFinishDate)}
+            </span>
           </button>
           
           {/* Статус "В работе" с выпадающим меню */}
@@ -204,11 +215,11 @@ const DeskHeader: React.FC<DeskHeaderProps> = ({
               onClick={toggleStatusMenu}
             >
               <div className="flex items-center">
-                <span className={`w-3 h-3 ${getStatusColor(currentStatus)} rounded-full mr-3`}></span>
-                <span className='mr-2'>{currentStatus}</span>
+                <span className={`w-3 h-3 ${getStatusColor(currentStatus)} rounded-full mr-3 flex-shrink-0`}></span>
+                <span className='mr-2 whitespace-nowrap'>{currentStatus}</span>
               </div>
               <svg 
-                className={`w-5 h-5 transition-colors ${statusMenuOpen ? 'text-orange-500' : 'text-gray-400'}`} 
+                className={`w-5 h-5 transition-colors ${statusMenuOpen ? 'text-orange-500' : 'text-gray-400'} flex-shrink-0`} 
                 fill="none" 
                 viewBox="0 0 24 24" 
                 stroke="currentColor"
@@ -232,28 +243,28 @@ const DeskHeader: React.FC<DeskHeaderProps> = ({
                     className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
                     onClick={() => handleStatusChange(DeskStatus.INACTIVE)}
                   >
-                    <span className="w-2 h-2 bg-gray-400 rounded-full mr-3"></span>
+                    <span className="w-2 h-2 bg-gray-400 rounded-full mr-3 flex-shrink-0"></span>
                     <span className="text-sm">Не активный</span>
                   </button>
                   <button
                     className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
                     onClick={() => handleStatusChange(DeskStatus.IN_PROGRESS)}
                   >
-                    <span className="w-2 h-2 bg-green-500 rounded-full mr-3"></span>
+                    <span className="w-2 h-2 bg-green-500 rounded-full mr-3 flex-shrink-0"></span>
                     <span className="text-sm">В работе</span>
                   </button>
                   <button
                     className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
                     onClick={() => handleStatusChange(DeskStatus.AT_RISK)}
                   >
-                    <span className="w-2 h-2 bg-yellow-400 rounded-full mr-3"></span>
+                    <span className="w-2 h-2 bg-yellow-400 rounded-full mr-3 flex-shrink-0"></span>
                     <span className="text-sm">Под угрозой</span>
                   </button>
                   <button
                     className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center"
                     onClick={() => handleStatusChange(DeskStatus.PAUSED)}
                   >
-                    <span className="w-2 h-2 bg-red-500 rounded-full mr-3"></span>
+                    <span className="w-2 h-2 bg-red-500 rounded-full mr-3 flex-shrink-0"></span>
                     <span className="text-sm">Приостановлен</span>
                   </button>
                 </div>
