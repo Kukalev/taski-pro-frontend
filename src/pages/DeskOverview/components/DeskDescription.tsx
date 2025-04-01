@@ -23,6 +23,7 @@ const DeskDescription: React.FC<DeskDescriptionProps> = ({
   
   const [isEditing, setIsEditing] = useState(false);
   const [editedDescription, setEditedDescription] = useState(currentDescription);
+  const [displayDescription, setDisplayDescription] = useState(currentDescription);
   const [isSaving, setIsSaving] = useState(false);
   const [containerHeight, setContainerHeight] = useState<number | null>(null);
   
@@ -38,8 +39,11 @@ const DeskDescription: React.FC<DeskDescriptionProps> = ({
 
   // Обновляем состояние при изменении пропсов
   useEffect(() => {
-    setEditedDescription(currentDescription);
-  }, [currentDescription]);
+    const newDescription = desk.deskDescription || desk.description || '';
+    setEditedDescription(newDescription);
+    setDisplayDescription(newDescription);
+    console.log('Обновление описания из пропсов:', newDescription);
+  }, [desk.deskDescription, desk.description]);
 
   // Фокус на текстовом поле при входе в режим редактирования
   useEffect(() => {
@@ -69,6 +73,9 @@ const DeskDescription: React.FC<DeskDescriptionProps> = ({
     
     setIsSaving(true);
     try {
+      // Сохраняем новое описание сразу для отображения
+      setDisplayDescription(editedDescription);
+      
       console.log('Сохраняем описание:', editedDescription);
       
       // Обновляем только описание, сохраняя остальные поля
@@ -90,6 +97,7 @@ const DeskDescription: React.FC<DeskDescriptionProps> = ({
       console.error('Ошибка при обновлении описания:', error);
       // Возвращаем предыдущее описание в случае ошибки
       setEditedDescription(currentDescription);
+      setDisplayDescription(currentDescription);
     } finally {
       setIsSaving(false);
       setIsEditing(false);
@@ -97,6 +105,7 @@ const DeskDescription: React.FC<DeskDescriptionProps> = ({
   };
 
   const handleBlur = () => {
+    console.log('Текст при потере фокуса:', editedDescription);
     handleSave();
   };
 
@@ -153,8 +162,8 @@ const DeskDescription: React.FC<DeskDescriptionProps> = ({
             onClick={handleEdit}
             className="h-full cursor-text"
           >
-            {currentDescription ? (
-              <p className="whitespace-pre-wrap">{currentDescription}</p>
+            {displayDescription ? (
+              <p className="whitespace-pre-wrap">{displayDescription}</p>
             ) : (
               <p className="text-gray-400">Добавьте описание доски...</p>
             )}
