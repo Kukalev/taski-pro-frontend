@@ -1,18 +1,18 @@
-import { useEffect, useState } from 'react'
-import { IoMailOutline } from 'react-icons/io5'
-import { MdOutlineInfo } from 'react-icons/md'
-import { SlLock } from 'react-icons/sl'
-import { Link, useNavigate } from 'react-router-dom'
-import { Button } from '../../components/ui/Button'
-import { Input } from '../../components/ui/Input'
-import { AuthService } from '../../services/auth/Auth'
-import { ApiError, LoginFormData } from '../../types/auth.types'
+import {useEffect, useState} from 'react'
+import {IoPersonOutline} from 'react-icons/io5'
+import {MdOutlineInfo} from 'react-icons/md'
+import {SlLock} from 'react-icons/sl'
+import {Link, useNavigate} from 'react-router-dom'
+import {Button} from '../../components/ui/Button'
+import {Input} from '../../components/ui/Input'
+import {AuthService} from '../../services/auth/Auth'
+import {ApiError, LoginFormData} from '../../types/auth.types'
 
 export const LoginPage = () => {
 	const navigate = useNavigate()
 
 	const [formData, setFormData] = useState<LoginFormData>({
-		email: '',
+		username: '',
 		password: ''
 	})
 
@@ -21,7 +21,7 @@ export const LoginPage = () => {
 	const [authError, setAuthError] = useState<string | null>(null)
 	const [isErrorVisible, setIsErrorVisible] = useState<boolean>(false)
 	const [fieldErrors, setFieldErrors] = useState({
-		email: false,
+		username: false,
 		password: false
 	})
 
@@ -37,13 +37,13 @@ export const LoginPage = () => {
 	// Валидация формы
 	const validateForm = (): boolean => {
 		const errors = {
-			email: !formData.email.trim(),
+			username: !formData.username.trim(),
 			password: !formData.password.trim()
 		}
 
 		setFieldErrors(errors)
 
-		if (errors.email || errors.password) {
+		if (errors.username || errors.password) {
 			setValidationError('Необходимо заполнить все подсвеченные поля')
 			return false
 		}
@@ -52,17 +52,17 @@ export const LoginPage = () => {
 	}
 
 	// Обработчики изменения полей
-	const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+	const handleUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const value = e.target.value
-		setFormData({ ...formData, email: value })
+		setFormData({ ...formData, username: value })
 
 		// Сбрасываем ошибку поля
 		if (value.trim()) {
-			setFieldErrors({ ...fieldErrors, email: false })
+			setFieldErrors({ ...fieldErrors, username: false })
 		}
 
 		// Если исправляется ошибка, сбрасываем сообщения об ошибке
-		if (validationError && fieldErrors.email) {
+		if (validationError && fieldErrors.username) {
 			// Проверяем, осталось ли другое поле с ошибкой
 			if (!fieldErrors.password || formData.password.trim()) {
 				setValidationError(null)
@@ -87,7 +87,7 @@ export const LoginPage = () => {
 		// Если исправляется ошибка, сбрасываем сообщения об ошибке
 		if (validationError && fieldErrors.password) {
 			// Проверяем, осталось ли другое поле с ошибкой
-			if (!fieldErrors.email || formData.email.trim()) {
+			if (!fieldErrors.username || formData.username.trim()) {
 				setValidationError(null)
 			}
 		}
@@ -121,16 +121,20 @@ export const LoginPage = () => {
 		try {
 			// Формируем данные для отправки согласно API бэкенда
 			const requestData = {
-				username: formData.email,
+				username: formData.username,
 				password: formData.password
 			}
 
+			console.log('Отправляем данные:', requestData)
+			
 			// Используем функцию login напрямую
 			const response = await AuthService.login(requestData)
-
+			if (!response){
+				console.log('Не логин')
+			}
 			// После успешного входа перенаправляем на главную страницу
 			navigate('/welcome')
-		} catch (err: any) {
+		} catch (err: unknown) {
 			const apiError = err as ApiError
 			setAuthError(apiError.message || 'Неверное имя пользователя или пароль')
 			// Активируем анимацию
@@ -142,8 +146,6 @@ export const LoginPage = () => {
 
 	return (
 		<div className='min-h-screen flex items-center justify-center px-4'>
-			shaly1@mail.ru
-			GHYU546QW
 			<div className='w-full max-w-[350px] -mt-64'>
 				<div className='text-left mb-2.5 flex justify-between px-2'>
 					<h1 className='text-[19px] font-semibold text-[#4d505e]'>Вход</h1>
@@ -154,8 +156,22 @@ export const LoginPage = () => {
 
 				<form onSubmit={handleSubmit} className='bg-gray-100 rounded-xl p-5 shadow-sm'>
 					<div className='space-y-4'>
-						<Input type='email' placeholder='Электронная почта' value={formData.email} onChange={handleEmailChange} icon={<IoMailOutline />} error={fieldErrors.email} />
-						<Input type='password' placeholder='Пароль' value={formData.password} onChange={handlePasswordChange} icon={<SlLock />} error={fieldErrors.password} />
+						<Input 
+							type='text' 
+							placeholder='Имя пользователя' 
+							value={formData.username} 
+							onChange={handleUsernameChange} 
+							icon={<IoPersonOutline />} 
+							error={fieldErrors.username} 
+						/>
+						<Input 
+							type='password' 
+							placeholder='Пароль' 
+							value={formData.password} 
+							onChange={handlePasswordChange} 
+							icon={<SlLock />} 
+							error={fieldErrors.password} 
+						/>
 					</div>
 
 					{validationError && (

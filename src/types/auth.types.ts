@@ -1,6 +1,6 @@
 // Типы для форм
 export interface LoginFormData {
-  email: string;
+  username: string;
   password: string;
 }
 

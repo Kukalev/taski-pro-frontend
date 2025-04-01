@@ -17,6 +17,7 @@ const DeskDescription: React.FC<DeskDescriptionProps> = ({
   const [isEditing, setIsEditing] = useState(false);
   const [editedDescription, setEditedDescription] = useState(desk.deskDescription || '');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     if (isEditing && textareaRef.current) {
@@ -32,8 +33,12 @@ const DeskDescription: React.FC<DeskDescriptionProps> = ({
     setIsEditing(true);
   };
 
-  const handleSave = async () => {
-    await updateDeskDescription(editedDescription);
+  const handleBlur = async () => {
+    if (editedDescription !== desk.deskDescription) {
+      setIsSaving(true);
+      await updateDeskDescription(editedDescription);
+      setIsSaving(false);
+    }
     setIsEditing(false);
   };
 
@@ -41,6 +46,8 @@ const DeskDescription: React.FC<DeskDescriptionProps> = ({
     if (e.key === 'Escape') {
       setIsEditing(false);
       setEditedDescription(desk.deskDescription || '');
+    } else if (e.key === 'Enter' && e.ctrlKey) {
+      handleBlur();
     }
   };
 
@@ -55,31 +62,17 @@ const DeskDescription: React.FC<DeskDescriptionProps> = ({
             value={editedDescription}
             onChange={(e) => setEditedDescription(e.target.value)}
             onKeyDown={handleKeyDown}
+            onBlur={handleBlur}
             className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[100px]"
             placeholder="Добавьте описание доски..."
-            disabled={isLoading}
+            disabled={isLoading || isSaving}
           />
-          
-          <div className="flex justify-end mt-2 space-x-2">
-            <button
-              onClick={() => {
-                setIsEditing(false);
-                setEditedDescription(desk.deskDescription || '');
-              }}
-              className="px-3 py-1 text-gray-600 hover:bg-gray-100 rounded"
-              disabled={isLoading}
-            >
-              Отмена
-            </button>
-            
-            <button
-              onClick={handleSave}
-              className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
-              disabled={isLoading}
-            >
-              {isLoading ? 'Сохранение...' : 'Сохранить'}
-            </button>
-          </div>
+          {isSaving && (
+            <div className="flex items-center mt-2 text-sm text-gray-500">
+              <div className="mr-2 animate-spin h-4 w-4 border-2 border-blue-500 rounded-full border-t-transparent"></div>
+              Сохранение...
+            </div>
+          )}
         </div>
       ) : (
         <div 

@@ -4,22 +4,19 @@ import {MdOutlineInfo} from 'react-icons/md'
 import {PiSmiley} from 'react-icons/pi'
 import {SlLock} from 'react-icons/sl'
 import {WiStars} from 'react-icons/wi'
+import {CgProfile} from 'react-icons/cg'
 import {Link, useNavigate} from 'react-router-dom'
 import {Button} from '../../components/ui/Button'
 import {Input} from '../../components/ui/Input'
 import {AuthService} from '../../services/auth/Auth'
 import {RegisterFormData, RegisterRequest} from '../../types/auth.types'
-import {
-	isEmailValid,
-	isNameValid,
-	isPasswordValid
-} from '../../utils/validation'
 
 export const RegisterPage = () => {
 	const navigate = useNavigate()
 	const [formData, setFormData] = useState<RegisterFormData>({
 		firstName: '',
 		lastName: '',
+		username: '',
 		email: '',
 		password: ''
 	})
@@ -28,6 +25,7 @@ export const RegisterPage = () => {
 	const [fieldErrors, setFieldErrors] = useState<Record<keyof RegisterFormData, boolean>>({
 		firstName: false,
 		lastName: false,
+		username: false,
 		email: false,
 		password: false
 	})
@@ -49,11 +47,26 @@ export const RegisterPage = () => {
 		}
 	}, [validationError, serverError])
 
+	// Простые функции валидации
+	const checkEmail = (email: string) => {
+		const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+		return re.test(email);
+	}
+	
+	const checkPassword = (password: string) => {
+		return password.length >= 6;
+	}
+	
+	const checkName = (name: string) => {
+		return /^[a-zA-Zа-яА-ЯёЁ\s-]+$/.test(name);
+	}
+
 	// Валидация формы с детальными ошибками
 	const validateForm = (): boolean => {
 		const errors: Record<keyof RegisterFormData, boolean> = {
 			firstName: false,
 			lastName: false,
+			username: false,
 			email: false,
 			password: false
 		}
@@ -78,7 +91,7 @@ export const RegisterPage = () => {
 		}
 
 		// Проверка формата полей, если все заполнены
-		if (!isEmailValid(formData.email)) {
+		if (!checkEmail(formData.email)) {
 			errors.email = true
 			setFieldErrors(errors)
 			setValidationError('Неверный формат электронной почты')
@@ -86,7 +99,7 @@ export const RegisterPage = () => {
 			return false
 		}
 
-		if (!isPasswordValid(formData.password)) {
+		if (!checkPassword(formData.password)) {
 			errors.password = true
 			setFieldErrors(errors)
 			setValidationError('Пароль должен быть не менее 6 символов')
@@ -94,7 +107,7 @@ export const RegisterPage = () => {
 			return false
 		}
 
-		if (!isNameValid(formData.firstName)) {
+		if (!checkName(formData.firstName)) {
 			errors.firstName = true
 			setFieldErrors(errors)
 			setValidationError('Имя содержит недопустимые символы')
@@ -102,7 +115,7 @@ export const RegisterPage = () => {
 			return false
 		}
 
-		if (!isNameValid(formData.lastName)) {
+		if (!checkName(formData.lastName)) {
 			errors.lastName = true
 			setFieldErrors(errors)
 			setValidationError('Фамилия содержит недопустимые символы')
@@ -125,7 +138,7 @@ export const RegisterPage = () => {
 		// Проверка и сброс ошибок
 		if (fieldErrors.email) {
 			// При вводе правильного email сбрасываем ошибку
-			if (isEmailValid(value)) {
+			if (checkEmail(value)) {
 				setFieldErrors({ ...fieldErrors, email: false })
 
 				// Если это была единственная ошибка формата, сбрасываем сообщение
@@ -141,13 +154,29 @@ export const RegisterPage = () => {
 		}
 	}
 
+	// Обработчик для нового поля username
+	const handleUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const value = e.target.value
+		setFormData({ ...formData, username: value })
+		
+		// Сбрасываем серверную ошибку при любом изменении
+		if (serverError) {
+			setServerError(null)
+		}
+		
+		// Сбрасываем ошибку поля
+		if (fieldErrors.username && value.trim()) {
+			setFieldErrors({ ...fieldErrors, username: false })
+		}
+	}
+
 	// Аналогичные обработчики для других полей
 	const handleFirstNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const value = e.target.value
 		setFormData({ ...formData, firstName: value })
 
 		if (fieldErrors.firstName) {
-			if (isNameValid(value)) {
+			if (checkName(value)) {
 				setFieldErrors({ ...fieldErrors, firstName: false })
 
 				if (errorType === 'format' && validationError === 'Имя содержит недопустимые символы') {
@@ -166,7 +195,7 @@ export const RegisterPage = () => {
 		setFormData({ ...formData, lastName: value })
 
 		if (fieldErrors.lastName) {
-			if (isNameValid(value)) {
+			if (checkName(value)) {
 				setFieldErrors({ ...fieldErrors, lastName: false })
 
 				if (errorType === 'format' && validationError === 'Фамилия содержит недопустимые символы') {
@@ -185,7 +214,7 @@ export const RegisterPage = () => {
 		setFormData({ ...formData, password: value })
 
 		if (fieldErrors.password) {
-			if (isPasswordValid(value)) {
+			if (checkPassword(value)) {
 				setFieldErrors({ ...fieldErrors, password: false })
 
 				if (errorType === 'format' && validationError === 'Пароль должен быть не менее 6 символов') {
@@ -221,7 +250,7 @@ export const RegisterPage = () => {
 		try {
 			// Формируем данные для отправки
 			const requestData: RegisterRequest = {
-				username: formData.name,
+				username: formData.username,
 				email: formData.email,
 				password: formData.password,
 				firstname: formData.firstName,
@@ -258,6 +287,7 @@ export const RegisterPage = () => {
 					</div>
 
 					<div className='space-y-4'>
+						<Input placeholder='Имя пользователя' value={formData.username} onChange={handleUsernameChange} icon={<CgProfile />} error={fieldErrors.username} />
 						<Input type='email' placeholder='Электронная почта' value={formData.email} onChange={handleEmailChange} icon={<IoMailOutline />} error={fieldErrors.email} />
 						<Input type='password' placeholder='Пароль' value={formData.password} onChange={handlePasswordChange} icon={<SlLock />} error={fieldErrors.password} />
 					</div>

@@ -1,13 +1,12 @@
-import React from 'react';
-import { TaskColumnProps } from '../types';
-import TaskCard from './TaskCard';
-import TaskInput from './TaskInput';
-import TaskDatePicker from './TaskDatePicker';
+import React from 'react'
+import {TaskColumnProps} from '../types'
+import TaskCard from './TaskCard'
+import TaskInput from './TaskInput'
+import TaskDatePicker from './TaskDatePicker'
 
 const TaskColumn: React.FC<TaskColumnProps> = ({
   status,
   tasks,
-  onAddTask,
   onDragOver,
   onDrop,
   draggedTask,

@@ -1,19 +1,14 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { TaskBoardProps, STATUSES, StatusType } from './types';
-import { useTaskActions } from './hooks/useTaskActions';
-import { useTaskDragAndDrop } from './hooks/useTaskDragAndDrop';
-import TaskColumn from './components/TaskColumn';
-import DeleteZone from './components/DeleteZone';
-import DeleteModal from './components/DeleteModal';
-import { fadeInAnimation } from './styles/animations';
-import DatePicker from 'react-datepicker';
-import 'react-datepicker/dist/react-datepicker.css';
-import { registerLocale } from 'react-datepicker';
-import ru from 'date-fns/locale/ru';
-import ReactDOM from 'react-dom';
+import React, {useEffect, useRef, useState} from 'react'
+import {STATUSES, TaskBoardProps} from './types'
+import {useTaskActions} from './hooks/useTaskActions'
+import {useTaskDragAndDrop} from './hooks/useTaskDragAndDrop'
+import TaskColumn from './components/TaskColumn'
+import DeleteZone from './components/DeleteZone'
+import DeleteModal from './components/DeleteModal'
+import {fadeInAnimation} from './styles/animations'
+
 
 // Регистрируем русскую локаль для DatePicker
-registerLocale('ru', ru);
 
 const TaskBoardPage: React.FC<TaskBoardProps> = ({ deskId }) => {
   // Состояния
@@ -42,7 +37,6 @@ const TaskBoardPage: React.FC<TaskBoardProps> = ({ deskId }) => {
   const {
     draggedTask,
     dropTarget,
-    showDropZone,
     dropZoneHovered,
     handleDragStart,
     handleDragEnd,
@@ -145,8 +139,8 @@ const TaskBoardPage: React.FC<TaskBoardProps> = ({ deskId }) => {
   return (
     <div className="flex-1 p-4 overflow-x-auto h-full">
       {loading ? (
-        <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+        <div className="flex justify-center items-center h-[100vh] ">
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 -mt-150 "></div>
         </div>
       ) : (
         <div className="flex space-x-4 h-full">
