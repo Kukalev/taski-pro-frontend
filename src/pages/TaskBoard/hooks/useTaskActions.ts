@@ -58,9 +58,17 @@ export const useTaskActions = (deskId: number) => {
   // Обновление статуса задачи
   const handleUpdateTaskStatus = async (taskId: number, statusType: string) => {
     try {
+      // Находим задачу в списке
+      const currentTask = tasks.find(t => t.taskId === taskId);
+      
+      if (!currentTask) {
+        return false;
+      }
+      
       // Если перемещаем в статус COMPLETED
       if (statusType === StatusType.COMPLETED) {
-        // Устанавливаем текущую дату завершения
+        // Устанавливаем текущую дату завершения без коррекции времени
+        // Используем полную дату без изменений, чтобы исключить смещение
         const today = new Date();
         
         const updatedTask = await updateTask(deskId, taskId, { 
@@ -77,10 +85,28 @@ export const useTaskActions = (deskId: number) => {
           ...prev,
           [taskId]: today
         }));
+      } 
+      // Если перемещаем ИЗ статуса COMPLETED в любой другой
+      else if (currentTask.statusType === StatusType.COMPLETED) {
+        // Очищаем дату завершения
+        const updatedTask = await updateTask(deskId, taskId, { 
+          statusType,
+          taskFinishDate: null
+        });
         
-        console.log(`Задача ${taskId} перемещена в статус ${statusType} с датой: ${today.toISOString()}`);
-      } else {
-        // Для других статусов - стандартная логика без изменения даты
+        setTasks(prev => prev.map(t => 
+          t.taskId === taskId ? updatedTask : t
+        ));
+        
+        // Удаляем дату из локального состояния
+        setSelectedDate(prev => {
+          const newState = { ...prev };
+          delete newState[taskId]; // Удаляем дату для этой задачи
+          return newState;
+        });
+      } 
+      // Для других случаев - стандартная логика без изменения даты
+      else {
         const updatedTask = await updateTask(deskId, taskId, { statusType });
         
         setTasks(prev => prev.map(t => 
@@ -106,15 +132,20 @@ export const useTaskActions = (deskId: number) => {
       
       // Отправляем запрос на обновление даты окончания
       if (date) {
+        // Нормализуем дату, чтобы избежать проблем с часовым поясом
+        // Устанавливаем время на полдень для предотвращения сдвига из-за UTC
+        const normalizedDate = new Date(date);
+        normalizedDate.setHours(12, 0, 0, 0);
+        
+        console.log(`Устанавливаем дату для задачи ${taskId}:`, normalizedDate);
+        
         await updateTask(deskId, taskId, {
-          taskFinishDate: date.toISOString() // Убедитесь, что имя поля совпадает с API
+          taskFinishDate: normalizedDate.toISOString()
         });
-        console.log(`Дата ${date.toISOString()} сохранена для задачи ${taskId}`);
       } else {
         await updateTask(deskId, taskId, {
           taskFinishDate: null // Очищаем дату
         });
-        console.log(`Дата очищена для задачи ${taskId}`);
       }
       
       return true;
@@ -124,15 +155,17 @@ export const useTaskActions = (deskId: number) => {
     }
   };
 
-  // Завершение задачи
+  // Завершение/отмена завершения задачи
   const handleCompleteTask = async (taskId: number) => {
     try {
       const taskToUpdate = tasks.find(t => t.taskId === taskId);
       if (!taskToUpdate) return false;
       
-      // Если задача не в статусе COMPLETED, меняем на COMPLETED
+      // Если задача НЕ в статусе COMPLETED, меняем на COMPLETED
       if (taskToUpdate.statusType !== StatusType.COMPLETED) {
-        // Сначала устанавливаем текущую дату завершения, если её нет
+        console.log(`Завершаем задачу ${taskId}`);
+        
+        // Устанавливаем текущую дату завершения
         const today = new Date();
         
         // Обновляем задачу с новым статусом и датой завершения
@@ -151,12 +184,33 @@ export const useTaskActions = (deskId: number) => {
           ...prev,
           [taskId]: today
         }));
+      } 
+      // Если задача уже в статусе COMPLETED, возвращаем в предыдущий статус (или BACKLOG по умолчанию)
+      else {
+        console.log(`Отменяем завершение задачи ${taskId}`);
         
-        console.log(`Задача ${taskId} завершена с датой: ${today.toISOString()}`);
+        // Возвращаем в статус BACKLOG и очищаем дату
+        const updatedTask = await updateTask(deskId, taskId, {
+          statusType: StatusType.BACKLOG, // Возвращаем в "К выполнению"
+          taskFinishDate: null // Очищаем дату завершения
+        });
+        
+        // Обновляем локальное состояние
+        setTasks(prev => prev.map(t => 
+          t.taskId === taskId ? updatedTask : t
+        ));
+        
+        // Удаляем дату из локального состояния
+        setSelectedDate(prev => {
+          const newState = { ...prev };
+          delete newState[taskId]; // Удаляем дату для этой задачи
+          return newState;
+        });
       }
+      
       return true;
     } catch (error) {
-      console.error('Ошибка при завершении задачи:', error);
+      console.error('Ошибка при изменении статуса завершения задачи:', error);
       return false;
     }
   };
