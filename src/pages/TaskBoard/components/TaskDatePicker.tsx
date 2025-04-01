@@ -1,8 +1,17 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { TaskDatePickerProps } from '../types';
-import { format, addMonths, subMonths, startOfMonth, endOfMonth, isSameMonth, isSameDay, isAfter, isBefore, isToday } from 'date-fns';
-import { ru } from 'date-fns/locale';
-import ReactDOM from 'react-dom';
+import React, {useEffect, useRef, useState} from 'react'
+import {TaskDatePickerProps} from '../types'
+import {
+  addMonths,
+  format,
+  isBefore,
+  isSameDay,
+  isSameMonth,
+  isToday,
+  startOfMonth,
+  subMonths
+} from 'date-fns'
+import {ru} from 'date-fns/locale'
+import ReactDOM from 'react-dom'
 
 const TaskDatePicker: React.FC<TaskDatePickerProps> = ({
   taskId,

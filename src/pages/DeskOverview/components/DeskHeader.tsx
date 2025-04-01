@@ -2,9 +2,18 @@ import React, {useEffect, useRef, useState} from 'react'
 import {format} from 'date-fns'
 import {ru} from 'date-fns/locale'
 import {DeskData} from '../../../components/sidebar/types/sidebar.types'
+import TaskDatePicker from '../../TaskBoard/components/TaskDatePicker'
+import { DeskService } from '../../../services/desk/Desk'
 
 interface DeskHeaderProps {
-  desk: DeskData;
+  desk: {
+    id: number;
+    deskName: string;
+    description?: string;
+    deskDescription?: string;
+    deskCreateDate?: string | Date;
+    deskFinishDate?: string | Date | null;
+  };
   onDeskUpdate: (updatedDesk: Partial<DeskData>) => void;
   isLoading?: boolean;
   error?: string | null;
@@ -33,10 +42,15 @@ const DeskHeader: React.FC<DeskHeaderProps> = ({
   const [isEditing, setIsEditing] = useState(false);
   const [editedName, setEditedName] = useState(desk.deskName || '');
   const [statusMenuOpen, setStatusMenuOpen] = useState(false);
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [currentStatus, setCurrentStatus] = useState<DeskStatus>(DeskStatus.IN_PROGRESS);
   const inputRef = useRef<HTMLInputElement>(null);
   const statusButtonRef = useRef<HTMLDivElement>(null);
   const statusMenuRef = useRef<HTMLDivElement>(null);
+  const calendarButtonRef = useRef<HTMLButtonElement>(null);
+
+  // Уникальный ID для календаря
+  const calendarId = `desk-date-${desk.id || 'main'}`;
 
   useEffect(() => {
     if (isEditing && inputRef.current) {
@@ -97,28 +111,112 @@ const DeskHeader: React.FC<DeskHeaderProps> = ({
     return desk.deskName.charAt(0).toUpperCase();
   };
 
-  const formatDate = (date: Date | null | undefined) => {
-    if (!date) return 'Дата не выбрана';
+  const formatShortDate = (date: string | Date | null | undefined) => {
+    if (!date) return '';
     
     try {
       // Если date - строка, преобразуем в объект Date
       const dateObj = typeof date === 'string' ? new Date(date) : date;
-      return format(dateObj, 'd MMMM yyyy', { locale: ru });
+      return format(dateObj, 'd MMM.', { locale: ru });
     } catch (error) {
       console.error('Ошибка форматирования даты:', error);
-      return 'Дата не выбрана';
+      return '';
+    }
+  };
+  
+  const getFormattedDateRange = () => {
+    console.log('Данные дат:', {
+      startDate: desk.deskCreateDate,
+      finishDate: selectedDate || desk.deskFinishDate
+    });
+    
+    // Используем deskCreateDate как начальную дату
+    const startDateStr = desk.deskCreateDate ? formatShortDate(desk.deskCreateDate) : '';
+    
+    // Используем deskFinishDate или selectedDate как конечную дату
+    const finishDateStr = (selectedDate || desk.deskFinishDate) ? 
+      formatShortDate(selectedDate || desk.deskFinishDate) : '';
+    
+    if (startDateStr && finishDateStr) {
+      return `${startDateStr} - ${finishDateStr}`;
+    } else if (startDateStr) {
+      return `${startDateStr} - не указано`;
+    } else if (finishDateStr) {
+      return `не указано - ${finishDateStr}`;
+    } else {
+      return 'Даты не выбраны';
     }
   };
   
   const toggleStatusMenu = () => {
     setStatusMenuOpen(!statusMenuOpen);
+    if (!statusMenuOpen) {
+      setIsCalendarOpen(false); // Закрываем календарь при открытии меню статусов
+    }
+  };
+  
+  const toggleCalendar = () => {
+    setIsCalendarOpen(!isCalendarOpen);
+    if (isCalendarOpen) {
+      setStatusMenuOpen(false); // Закрываем меню статусов при открытии календаря
+    }
   };
   
   const handleStatusChange = (status: DeskStatus) => {
     setCurrentStatus(status);
     setStatusMenuOpen(false);
-    // Здесь можно добавить обновление статуса на сервере
-    // например: onDeskUpdate({ status: status });
+    // Проверяем, что onDeskUpdate это функция
+    if (typeof onDeskUpdate === 'function') {
+      console.log('Обновляем статус доски:', status);
+      onDeskUpdate({ status: status });
+    } else {
+      console.error('onDeskUpdate не является функцией');
+    }
+  };
+  
+  // ИСПРАВЛЕННАЯ ФУНКЦИЯ ОБНОВЛЕНИЯ ДАТЫ
+  const handleDateChange = async (taskId: string, date: Date | null) => {
+    if (!desk?.id) {
+      console.error('ID доски не определен:', desk);
+      setIsCalendarOpen(false);
+      return;
+    }
+
+    // Нормализуем дату, чтобы избежать проблем с часовыми поясами
+    let normalizedDate = null;
+    if (date) {
+      normalizedDate = new Date(date);
+      normalizedDate.setHours(12, 0, 0, 0);
+      console.log('ВЫБРАНА ДАТА:', date);
+      console.log('НОРМАЛИЗОВАННАЯ ДАТА:', normalizedDate);
+    }
+    
+    try {
+      // Создаем объект для обновления, сохраняя исходное описание
+      const updateData = {
+        deskName: desk.deskName || '',
+        deskDescription: desk.deskDescription || '',
+        deskFinishDate: normalizedDate
+      };
+      
+      console.log('Отправляем данные для обновления:', updateData);
+      
+      // Обновляем доску через сервис
+      await DeskService.updateDesk(Number(desk.id), updateData);
+      
+      console.log('ДАТА УСПЕШНО ОБНОВЛЕНА');
+      
+      // Локально обновляем состояние, если функция предоставлена
+      if (typeof onDeskUpdate === 'function') {
+        onDeskUpdate({ deskFinishDate: normalizedDate });
+      }
+      
+    } catch (error) {
+      console.error('ОШИБКА ПРИ ОБНОВЛЕНИИ ДАТЫ:', error);
+    }
+    
+    // Закрываем календарь после попытки обновления
+    setIsCalendarOpen(false);
   };
   
   // Получение цвета маркера в зависимости от статуса
@@ -147,7 +245,7 @@ const DeskHeader: React.FC<DeskHeaderProps> = ({
           </div>
 
           {/* Название доски (под логотипом) с фиксированной шириной */}
-          <div className="w-[550px]">
+          <div className="w-[350px]">
             {isEditing ? (
               <div className="w-full">
                 <input
@@ -184,14 +282,20 @@ const DeskHeader: React.FC<DeskHeaderProps> = ({
         </div>
 
         {/* Дата и статус в горизонтальном положении */}
-        <div className='flex items-center space-x-5 -ml-66'>
-          {/* Кнопка даты */}
+        <div className='flex items-center space-x-5 ml-auto'>
+          {/* Кнопка даты с компактным отображением диапазона */}
           <button 
-            className='flex items-center min-w-[150px] px-6 py-2 bg-gray-50 hover:bg-gray-100 rounded-lg text-base cursor-pointer transition-colors'
-            data-date-button="true"
-            onClick={onDateClick}
+            ref={calendarButtonRef}
+            className='flex items-center min-w-[180px] px-4 py-2 bg-gray-50 hover:bg-gray-100 rounded-lg text-base cursor-pointer transition-colors'
+            data-task-id={calendarId}
+            onClick={() => setIsCalendarOpen(!isCalendarOpen)}
           >
-            <svg className="w-6 h-6 mr-3 flex-shrink-0" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <svg 
+              className={`w-6 h-6 mr-3 flex-shrink-0 transition-colors ${isCalendarOpen ? 'text-orange-500' : ''}`} 
+              viewBox="0 0 24 24" 
+              fill="none" 
+              xmlns="http://www.w3.org/2000/svg"
+            >
               <path d="M8 2V5" stroke="currentColor" strokeWidth="1.5" strokeMiterlimit="10" strokeLinecap="round" strokeLinejoin="round"/>
               <path d="M16 2V5" stroke="currentColor" strokeWidth="1.5" strokeMiterlimit="10" strokeLinecap="round" strokeLinejoin="round"/>
               <path d="M3.5 9.09H20.5" stroke="currentColor" strokeWidth="1.5" strokeMiterlimit="10" strokeLinecap="round" strokeLinejoin="round"/>
@@ -203,10 +307,18 @@ const DeskHeader: React.FC<DeskHeaderProps> = ({
               <path d="M8.29431 13.7H8.30329" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
               <path d="M8.29431 16.7H8.30329" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
-            <span className="whitespace-nowrap overflow-hidden text-ellipsis">
-              {formatDate(selectedDate || desk.deskFinishDate)}
-            </span>
+            <span className="text-sm font-medium">{getFormattedDateRange()}</span>
           </button>
+          
+          {/* Рендерим TaskDatePicker, если календарь открыт */}
+          {isCalendarOpen && (
+            <TaskDatePicker
+              taskId={calendarId}
+              selectedDate={selectedDate || desk.deskFinishDate || null}
+              onDateChange={handleDateChange}
+              onClose={() => setIsCalendarOpen(false)}
+            />
+          )}
           
           {/* Статус "В работе" с выпадающим меню */}
           <div className="relative" ref={statusButtonRef}>
