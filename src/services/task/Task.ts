@@ -1,5 +1,5 @@
 import api from '../api'
-import {Task} from './types/task.types'
+import {Task, TaskUpdate} from './types/task.types'
 
 // Базовый URL для API задач
 const BASE_URL = 'api/v1/desk';
@@ -29,7 +29,7 @@ export const createTask = async (deskId: number, taskName: string, statusType: s
 };
 
 // Обновить задачу - одна общая функция для любых обновлений
-export const updateTask = async (deskId: number, taskId: number, updateData: Partial<Task>): Promise<Task> => {
+export const updateTask = async (deskId: number, taskId: number, updateData: Partial<TaskUpdate>): Promise<Task> => {
 	try {
 		console.log(`Обновляем задачу ${taskId} в доске ${deskId}:`, updateData);
 		const response = await api.put(`${BASE_URL}/${deskId}/tasks/${taskId}`, updateData);

@@ -1,6 +1,6 @@
 import React, {useEffect, useRef, useState} from 'react'
 import {UserService} from '../../../services/users/Users'
-import {UserResponseDto, UsersOnDeskResponseDto} from '../../../services/users/types/types'
+import {UserResponseDto} from '../../../services/users/types/types'
 import ReactDOM from 'react-dom'
 
 interface AddUserModalProps {
@@ -22,7 +22,7 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
 	const [availableUsers, setAvailableUsers] = useState<UserResponseDto[]>([]);
 	const [filteredUsers, setFilteredUsers] = useState<UserResponseDto[]>([]);
 	const [selectedUser, setSelectedUser] = useState<UserResponseDto | null>(null);
-	const [accessType, setAccessType] = useState<string>('CONTRIBUTOR');
+	const [accessType, setAccessType] = useState<string>('MEMBER');
 	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState('');
 	const modalRef = useRef<HTMLDivElement>(null);
@@ -41,17 +41,19 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
 		try {
 			// 1. Получаем ВСЕХ пользователей системы
 			const allUsersData = await UserService.getAllUsers();
+			console.log('Все пользователи системы:', allUsersData);
 			setAllUsers(allUsersData);
 			
 			// 2. Получаем пользователей доски
 			const deskUsersData = await UserService.getUsersOnDesk(deskId);
+			console.log('Пользователи доски:', deskUsersData);
 			
-			// 3. Извлекаем имена пользователей (userName вместо username)
+			// 3. Извлекаем имена пользователей (username или userName)
 			const usernames = deskUsersData.map(user => 
-                // Проверяем поле userName (используем именно это поле согласно вашему API)
-                (user.userName || '').toLowerCase()
-            ).filter(Boolean);
+                user.username || user.userName
+            ).filter(Boolean).map(name => name.toLowerCase());
 			
+			console.log('Имена пользователей на доске:', usernames);
 			setDeskUsers(usernames);
 			
 			// 4. Фильтруем - убираем пользователей доски из общего списка
@@ -59,9 +61,11 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
 				!usernames.includes(user.username.toLowerCase())
 			);
 			
+			console.log('Доступные пользователи:', filteredAvailable);
 			setAvailableUsers(filteredAvailable);
 			
-		} catch (error) {
+		} catch (error: unknown) {
+			console.error('Ошибка при загрузке данных:', error);
 			setDeskUsers([]);
 			setAvailableUsers(allUsersData);
 		} finally {
@@ -139,11 +143,15 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
 		setIsLoading(true);
 		setError('');
 		try {
+			console.log('Добавляем пользователя:', selectedUser.username, 'с правами:', accessType);
+			
 			// Добавляем пользователя через API
 			await UserService.addUserForDesk(deskId, {
 				username: selectedUser.username,
 				rightType: accessType
 			});
+			
+			console.log('Пользователь успешно добавлен');
 			
 			// После успешного добавления обновляем списки
 			const userLower = selectedUser.username.toLowerCase();
@@ -159,12 +167,13 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
 			// Сбрасываем выбор
 			setSelectedUser(null);
 			
-			// Уведомляем родителя
+			// Уведомляем родителя для обновления списка участников
 			if (onUserAdded) {
 				onUserAdded();
 			}
 			
-		} catch (err) {
+		} catch (err: unknown) {
+			console.error('Ошибка при добавлении пользователя:', err);
 			setError('Не удалось добавить пользователя');
 		} finally {
 			setIsLoading(false);
@@ -281,9 +290,8 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
 								value={accessType}
 								onChange={(e) => setAccessType(e.target.value)}
 							>
-								<option value="CONTRIBUTOR">Участник</option>
-								<option value="EDITOR">Редактор</option>
-								<option value="VIEWER">Наблюдатель</option>
+								<option value="MEMBER">Участник</option>
+								<option value="CONTRIBUTOR">Редактор</option>
 							</select>
 						</div>
 					)}

@@ -16,6 +16,42 @@ export const DeskRow = ({ desk, username, onRename, onDelete }: DeskRowProps) =>
 	const menuRef = useRef<HTMLDivElement>(null)
 	const buttonRef = useRef<HTMLButtonElement>(null)
 	
+	// Форматирование даты
+	const formatDate = (date: Date | null) => {
+		if (!date) return "-";
+		return new Date(date).toLocaleDateString('ru-RU', {
+			day: 'numeric',
+			month: 'short',
+			year: 'numeric'
+		});
+	}
+	
+	// Форматируем диапазон дат
+	const formatDateRange = () => {
+		if (!desk.deskCreateDate) return "-";
+		
+		const startDate = formatDate(desk.deskCreateDate);
+		const endDate = desk.deskFinishDate ? formatDate(desk.deskFinishDate) : null;
+		
+		if (endDate) {
+			return `${startDate} - ${endDate}`;
+		}
+		return startDate;
+	}
+	
+	// Определяем владельца и его инициалы
+	const owner = desk.deskOwner || username;
+	const getInitials = (name: string) => {
+		if (!name) return 'UN';
+		return name.substring(0, 2).toUpperCase();
+	};
+	
+	// Логирование для отладки
+	useEffect(() => {
+		console.log(`Данные доски ${desk.id}:`, desk);
+		console.log(`Владелец доски ${desk.id}:`, owner);
+	}, [desk, owner]);
+	
 	const handleDeskClick = () => {
 		navigate(`/desk/${desk.id}/board`)
 	}
@@ -114,11 +150,13 @@ export const DeskRow = ({ desk, username, onRename, onDelete }: DeskRowProps) =>
 					<span className='text-gray-700'>В работе</span>
 				</div>
 			</td>
-			<td className='py-3 px-4 text-gray-700'>-</td>
+			<td className='py-3 px-4 text-gray-700'>{formatDateRange()}</td>
 			<td className='py-3 px-4'>
 				<div className='flex items-center'>
-					<span className='text-xs mr-1 bg-gray-200 text-gray-600 rounded px-1'>AA</span>
-					<span className='text-gray-700'>{username}</span>
+					<span className='text-xs mr-1 bg-gray-200 text-gray-600 rounded px-1'>
+						{getInitials(owner)}
+					</span>
+					<span className='text-gray-700'>{owner}</span>
 				</div>
 			</td>
 		</tr>

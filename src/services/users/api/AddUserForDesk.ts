@@ -1,14 +1,18 @@
 import api from '../../api'
 import {AddUserOnDeskDto} from '../types/types'
+import {invalidateDeskUsersCache} from './GetUsersOnDesk'
 
 const BASE_URL = '/api/v1/desk';
 
-
 export const addUserForDesk = async (deskId: number, addUserDto: AddUserOnDeskDto): Promise<void> => {
   try {
-
+    console.log(`Добавление пользователя ${addUserDto.username} на доску ${deskId} с правами ${addUserDto.rightType}`);
     const response = await api.post(`${BASE_URL}/${deskId}/user`, addUserDto);
     console.log('Ответ от сервера:', response.status);
+    
+    // Инвалидируем кэш для этой доски, чтобы следующий запрос получил свежие данные
+    invalidateDeskUsersCache(deskId);
+    
     // Возвращаем void, так как API возвращает 200 OK без тела
     return;
   } catch (error: any) {

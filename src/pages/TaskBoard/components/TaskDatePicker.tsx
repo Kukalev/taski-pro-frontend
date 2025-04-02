@@ -78,7 +78,8 @@ const TaskDatePicker: React.FC<TaskDatePickerProps> = ({
   
   const daysOfWeek = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
   
-  const prevMonth = () => {
+  const prevMonth = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Останавливаем всплытие
     // Проверяем, не пытаемся ли мы перейти к месяцу раньше текущего
     const prevMonthDate = subMonths(currentMonth, 1);
     if (isBefore(prevMonthDate, startOfMonth(today)) && !isSameMonth(prevMonthDate, today)) {
@@ -87,11 +88,13 @@ const TaskDatePicker: React.FC<TaskDatePickerProps> = ({
     setCurrentMonth(prevMonthDate);
   };
   
-  const nextMonth = () => {
+  const nextMonth = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Останавливаем всплытие
     setCurrentMonth(addMonths(currentMonth, 1));
   };
   
-  const handleSelectDate = (date: Date) => {
+  const handleSelectDate = (date: Date, e: React.MouseEvent) => {
+    e.stopPropagation(); // Останавливаем всплытие
     // Проверяем, что выбранная дата не раньше сегодняшней
     if (isBefore(date, today) && !isToday(date)) {
       return; // Не позволяем выбирать даты ранее сегодняшней
@@ -203,7 +206,7 @@ const TaskDatePicker: React.FC<TaskDatePickerProps> = ({
                   ${isSelectedDay ? 'bg-orange-400 text-white' : ''}
                   ${isPastDay ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-gray-100'}
                 `}
-                onClick={() => !isPastDay && handleSelectDate(day)}
+                onClick={(e) => !isPastDay && handleSelectDate(day, e)}
                 disabled={isPastDay}
               >
                 {day.getDate()}
@@ -216,13 +219,19 @@ const TaskDatePicker: React.FC<TaskDatePickerProps> = ({
       <div className="mt-4 border-t pt-3 flex justify-between">
         <button 
           className="text-xs text-gray-500 hover:text-gray-700"
-          onClick={() => onDateChange(taskId, null)}
+          onClick={(e) => {
+            e.stopPropagation();
+            onDateChange(taskId, null);
+          }}
         >
           Очистить
         </button>
         <button 
           className="text-xs text-orange-400 font-medium hover:text-orange-500"
-          onClick={() => handleSelectDate(today)}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleSelectDate(today, e);
+          }}
         >
           Сегодня
         </button>

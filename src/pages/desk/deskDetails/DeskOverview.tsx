@@ -1,7 +1,6 @@
-import React from 'react';
-import { useOutletContext } from 'react-router-dom';
-import DeskOverviewPage from '../../DeskOverview/DeskOverviewPage';
-import { DeskData } from '../../../components/sidebar/types/sidebar.types';
+import {useOutletContext} from 'react-router-dom'
+import DeskOverviewPage from '../../DeskOverview/DeskOverviewPage'
+import {DeskData} from '../../../components/sidebar/types/sidebar.types'
 
 type ContextType = {
   desk: DeskData;
@@ -26,4 +25,3 @@ export const DeskOverview = () => {
   );
 };
 
-export default DeskOverview;

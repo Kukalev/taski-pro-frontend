@@ -18,4 +18,5 @@ export interface DeskResponseDto {
 	deskCreateDate: Date
 	deskFinishDate: Date
 	userLimit: number
+	username:string
 }

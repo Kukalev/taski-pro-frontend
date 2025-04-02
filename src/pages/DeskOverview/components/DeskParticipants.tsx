@@ -5,7 +5,8 @@ import AddUserModal from './AddUserModal'
 // Простой интерфейс для пользователя на доске
 interface UserOnDesk {
   id: number;
-  userName: string; 
+  userName?: string; 
+  username?: string;
   rightType: string;
 }
 
@@ -47,6 +48,17 @@ const DeskParticipants = ({ desk }) => {
       loadParticipants();
     }
   }, [desk?.id]);
+  
+  // Функция для получения имени пользователя (username или userName)
+  const getUserName = (user: UserOnDesk): string => {
+    return user.username || user.userName || 'Неизвестный пользователь';
+  };
+  
+  // Функция для получения инициалов пользователя
+  const getUserInitials = (user: UserOnDesk): string => {
+    const name = getUserName(user);
+    return name !== 'Неизвестный пользователь' ? name.charAt(0).toUpperCase() : '?';
+  };
   
   // Функция для получения отображаемого имени роли
   const getRoleDisplayName = (rightType: string) => {
@@ -94,9 +106,9 @@ const DeskParticipants = ({ desk }) => {
               <div key={user.id} className='flex items-center justify-between p-2 hover:bg-gray-50 rounded'>
                 <div className='flex items-center'>
                   <div className='w-10 h-10 bg-purple-200 rounded-full flex items-center justify-center text-purple-600 mr-3'>
-                    {user.userName ? user.userName.charAt(0).toUpperCase() : '?'}
+                    {getUserInitials(user)}
                   </div>
-                  <div className='font-medium'>{user.userName || 'Неизвестный пользователь'}</div>
+                  <div className='font-medium'>{getUserName(user)}</div>
                 </div>
                 
                 <div className={`px-3 py-1 rounded-full text-xs ${getRoleBadgeClass(user.rightType || '')}`}>

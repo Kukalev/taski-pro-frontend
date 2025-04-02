@@ -26,7 +26,7 @@ export interface TaskBoardProps {
 export interface TaskColumnProps {
   status: typeof STATUSES[0];
   tasks: Task[];
-  onAddTask: (statusId: number, text: string, statusType: string) => void;
+  onAddTask?: (statusId: number, text: string, statusType: string) => void;
   onDragOver: (e: React.DragEvent, statusType: string, tasks: Task[]) => void;
   onDrop: (e: React.DragEvent, statusType: string) => void;
   draggedTask: Task | null;
@@ -46,10 +46,13 @@ export interface TaskColumnProps {
   onDragStart: (e: React.DragEvent, task: Task) => void;
   onDragEnd: (e: React.DragEvent) => void;
   onDateChange: (taskId: number, date: Date | null) => void;
+  onTaskClick?: (task: Task) => void;
 }
 
 export interface TaskCardProps {
   task: Task;
+  deskUsers: any[];
+  deskId?: number;
   onDragStart: (e: React.DragEvent, task: Task) => void;
   onDragEnd: (e: React.DragEvent) => void;
   onComplete: (taskId: number) => void;
@@ -60,6 +63,15 @@ export interface TaskCardProps {
   hoveredCalendar: number | null;
   setHoveredCheckCircle: (taskId: number | null) => void;
   setHoveredCalendar: (taskId: number | null) => void;
+  onTaskClick?: (task: Task) => void;
+  onTaskUpdate?: (updatedTask: Task) => void;
+}
+
+export interface TaskExecutorProps {
+  task: Task;
+  deskUsers: any[];
+  deskId: number;
+  onTaskUpdate: (updatedTask: Task) => void;
 }
 
 export interface TaskInputProps {

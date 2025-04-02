@@ -18,6 +18,7 @@
     "axios": "^1.8.4",
     "date-fns": "^4.1.0",
     "dayjs": "^1.11.13",
+    "framer-motion": "^12.6.3",
     "jwt-decode": "^4.0.0",
     "react": "^19.0.0",
     "react-datepicker": "^8.2.1",

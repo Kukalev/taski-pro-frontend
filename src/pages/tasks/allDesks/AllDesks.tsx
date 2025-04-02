@@ -1,4 +1,4 @@
-import {useState} from 'react'
+import {useState, useEffect} from 'react'
 import {
 	CreateDeskModal
 } from '../../../components/modals/createDeskModal/CreateDeskModal'
@@ -11,6 +11,7 @@ import {
 import {useDesks} from '../../../contexts/DeskContext'
 import {AuthService} from '../../../services/auth/Auth'
 import {DeskService} from '../../../services/desk/Desk'
+import {UserService} from '../../../services/users/Users'
 import {DeskTable} from './components/DeskTable'
 import {SearchPanel} from './components/SearchPanel'
 
@@ -23,9 +24,73 @@ export const AllDesks = () => {
 	const [isDeleting, setIsDeleting] = useState(false)
 	const [searchQuery, setSearchQuery] = useState('')
 	const username = AuthService.getUsername() || ''
+	const [fullDesksData, setFullDesksData] = useState<any[]>([])
 
 	// Получаем данные и функции из контекста
 	const { desks, loading, addDesk, loadDesks, removeDesk } = useDesks()
+
+	// Загружаем полные данные о досках
+	useEffect(() => {
+		const fetchDesksWithUsers = async () => {
+			if (desks.length === 0 || loading) return;
+			
+			try {
+				// Сначала загружаем детали досок
+				const desksWithDetails = await Promise.all(
+					desks.map(async (desk) => {
+						try {
+							const deskDetails = await DeskService.getDeskById(desk.id);
+							return deskDetails;
+						} catch (error) {
+							console.error(`Ошибка при загрузке деталей доски ${desk.id}:`, error);
+							return desk;
+						}
+					})
+				);
+				
+				// Затем загружаем пользователей для каждой доски
+				const desksWithUsers = await Promise.all(
+					desksWithDetails.map(async (desk) => {
+						try {
+							// Используем UserService.getUsersOnDesk для получения пользователей доски
+							const deskUsers = await UserService.getUsersOnDesk(desk.id);
+							console.log(`Пользователи доски ${desk.id}:`, deskUsers);
+							
+							// Ищем пользователя с правом CREATOR
+							const creator = deskUsers.find(user => user.rightType === 'CREATOR');
+							console.log(`Создатель доски ${desk.id}:`, creator);
+							
+							// Определяем владельца доски
+							let ownerUsername = username;
+							if (creator && creator.username) {
+								ownerUsername = creator.username;
+							}
+							
+							// Возвращаем обогащенные данные доски
+							return {
+								...desk,
+								deskOwner: ownerUsername
+							};
+						} catch (error) {
+							console.error(`Ошибка при загрузке пользователей доски ${desk.id}:`, error);
+							return {
+								...desk,
+								deskOwner: username // В случае ошибки используем текущего пользователя
+							};
+						}
+					})
+				);
+				
+				console.log('Доски с информацией о пользователях:', desksWithUsers);
+				setFullDesksData(desksWithUsers);
+				
+			} catch (error) {
+				console.error('Ошибка при загрузке данных о досках и пользователях:', error);
+			}
+		};
+		
+		fetchDesksWithUsers();
+	}, [desks, loading, username]);
 
 	// Используем функцию из контекста для добавления доски
 	const handleDeskCreated = (newDesk: any) => {
@@ -73,7 +138,9 @@ export const AllDesks = () => {
 		}
 	}
 
-	const filteredDesks = desks.filter(desk => desk.deskName.toLowerCase().includes(searchQuery.toLowerCase()))
+	const filteredDesks = fullDesksData.length > 0 
+		? fullDesksData.filter(desk => desk.deskName.toLowerCase().includes(searchQuery.toLowerCase())) 
+		: desks.filter(desk => desk.deskName.toLowerCase().includes(searchQuery.toLowerCase()))
 
 	return (
 		<div className='w-full h-screen flex flex-col overflow-hidden '>

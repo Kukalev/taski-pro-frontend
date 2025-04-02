@@ -5,4 +5,5 @@ export interface DeskData {
 	deskCreateDate: Date
 	deskFinishDate: Date | null
 	userLimit?: number
+	deskOwner?: string
 }

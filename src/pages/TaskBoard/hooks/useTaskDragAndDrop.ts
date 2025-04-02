@@ -33,8 +33,11 @@ export const useTaskDragAndDrop = () => {
     setShowDropZone(true);
     
     if (e.currentTarget instanceof HTMLElement) {
+      const element = e.currentTarget;
       setTimeout(() => {
-        e.currentTarget.style.opacity = '0.4';
+        if (element && document.body.contains(element)) {
+          element.style.opacity = '0.4';
+        }
       }, 0);
     }
   };
@@ -46,7 +49,10 @@ export const useTaskDragAndDrop = () => {
     setDropZoneHovered(false);
     
     if (e.currentTarget instanceof HTMLElement) {
-      e.currentTarget.style.opacity = '1';
+      const element = e.currentTarget;
+      if (element && document.body.contains(element)) {
+        element.style.opacity = '1';
+      }
     }
   };
 

@@ -14,6 +14,7 @@ export interface AddUserOnDeskDto{
 
 export interface UsersOnDeskResponseDto {
   id: number;
-  username: string;
+  userName: string;
+  username?: string;
   rightType: string;
 }

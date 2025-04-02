@@ -7,5 +7,16 @@ export interface Task {
 	taskFinishDate: string | null;
 	priorityType: string;
 	statusType: string;
+	executors: string[];
+}
+
+export interface TaskUpdate {
+	taskName?: string;
+	taskDescription?: string | null;
+	taskFinishDate?: string | null;
+	priorityType?: string;
+	statusType?: string;
+	executorUsernames?: string[];
+	removeExecutorUsernames?: string[];
 }
 

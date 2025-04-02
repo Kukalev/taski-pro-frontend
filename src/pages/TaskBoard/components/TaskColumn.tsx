@@ -1,12 +1,51 @@
-import React from 'react'
-import {TaskColumnProps} from '../types'
+import React, {useEffect, useState, useRef} from 'react'
+import {TaskColumnProps, StatusType} from '../types'
 import TaskCard from './TaskCard'
 import TaskInput from './TaskInput'
 import TaskDatePicker from './TaskDatePicker'
+import {UserService} from '../../../services/users/Users'
+import { useParams } from 'react-router-dom'
 
-const TaskColumn: React.FC<TaskColumnProps> = ({
+// Улучшенный синглтон для хранения пользователей доски
+const DeskUsersState = {
+  usersMap: new Map<number, any[]>(),
+  loadingMap: new Map<number, boolean>(),
+  
+  getUsers(deskId: number) {
+    return this.usersMap.get(deskId) || [];
+  },
+  
+  setUsers(deskId: number, users: any[]) {
+    this.usersMap.set(deskId, users);
+    this.loadingMap.set(deskId, false);
+    // Упрощаем логирование
+    console.log(`[КЭШИРОВАНИЕ] Сохранены пользователи для доски ${deskId}: ${users.length}`);
+  },
+  
+  hasUsers(deskId: number) {
+    return this.usersMap.has(deskId);
+  },
+  
+  isLoading(deskId: number) {
+    return this.loadingMap.get(deskId) || false;
+  },
+  
+  setLoading(deskId: number, loading: boolean) {
+    this.loadingMap.set(deskId, loading);
+  }
+};
+
+// Обновить интерфейс TaskColumnProps, добавив deskId и onTaskUpdate
+interface ExtendedTaskColumnProps extends TaskColumnProps {
+  deskId?: number;
+  onTaskUpdate?: (updatedTask: any) => void;
+}
+
+const TaskColumn: React.FC<ExtendedTaskColumnProps> = ({
   status,
   tasks,
+  deskId,
+  onAddTask,
   onDragOver,
   onDrop,
   draggedTask,
@@ -25,11 +64,66 @@ const TaskColumn: React.FC<TaskColumnProps> = ({
   setHoveredCalendar,
   onDragStart,
   onDragEnd,
-  onDateChange
+  onDateChange,
+  onTaskClick,
+  onTaskUpdate
 }) => {
+  const [deskUsers, setDeskUsers] = useState<any[]>([]);
+  const { deskId: urlDeskId } = useParams<{ deskId: string }>();
+  const loadingRef = useRef(false);
+  
+  // Проверяем наличие deskId только один раз, убираем лишнее логирование
+  useEffect(() => {
+    if (!deskId) {
+      console.error('TaskColumn: deskId не определен');
+    }
+  }, [deskId]);
+  
+  // Используем переданный deskId или ID из URL, или хардкодим для тестирования
+  const actualDeskId = deskId || (urlDeskId ? parseInt(urlDeskId, 10) : 72);
+  
+  // Фильтруем задачи по статусу
+  const columnTasks = tasks.filter(task => task.statusType === status.type);
+  
+  // Загрузка пользователей доски - оптимизирована
+  useEffect(() => {
+    // Проверяем, есть ли уже пользователи в кэше
+    if (DeskUsersState.hasUsers(actualDeskId)) {
+      setDeskUsers(DeskUsersState.getUsers(actualDeskId));
+      return;
+    }
+    
+    // Проверяем, загружаются ли уже пользователи
+    if (DeskUsersState.isLoading(actualDeskId) || loadingRef.current) {
+      return;
+    }
+    
+    // Устанавливаем флаги загрузки
+    DeskUsersState.setLoading(actualDeskId, true);
+    loadingRef.current = true;
+    
+    const loadUsers = async () => {
+      try {
+        const users = await UserService.getUsersOnDesk(actualDeskId);
+        
+        // Сохраняем пользователей в кэш
+        DeskUsersState.setUsers(actualDeskId, users);
+        
+        // Обновляем локальное состояние
+        setDeskUsers(users);
+      } catch (error) {
+        console.error('Ошибка при загрузке пользователей:', error);
+      } finally {
+        loadingRef.current = false;
+        DeskUsersState.setLoading(actualDeskId, false);
+      }
+    };
+
+    loadUsers();
+  }, [actualDeskId]);
+  
   return (
     <div 
-      key={status.id} 
       className="w-[15%] min-w-[250px] flex flex-col h-[calc(100vh-80px)]"
     >
       <div className="mb-2 rounded-lg bg-white py-2">
@@ -61,10 +155,12 @@ const TaskColumn: React.FC<TaskColumnProps> = ({
           />
         )}
         
-        {tasks.map((task, index) => (
+        {columnTasks.map((task, index) => (
           <div key={task.taskId} className="relative">
             <TaskCard 
               task={task}
+              deskUsers={deskUsers}
+              deskId={deskId}
               onDragStart={(e) => onDragStart(e, task)}
               onDragEnd={onDragEnd}
               onComplete={onTaskComplete}
@@ -75,6 +171,8 @@ const TaskColumn: React.FC<TaskColumnProps> = ({
               hoveredCalendar={hoveredCalendar}
               setHoveredCheckCircle={setHoveredCheckCircle}
               setHoveredCalendar={setHoveredCalendar}
+              onTaskClick={onTaskClick}
+              onTaskUpdate={onTaskUpdate}
             />
             
             {/* Календарь */}
