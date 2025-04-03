@@ -5,6 +5,8 @@ import {
 } from '../../../components/modals/renameDeskModal/RenameDeskModal.tsx'
 import {DeskData} from '../../../components/sidebar/types/sidebar.types.ts'
 import {DeskService} from '../../../services/desk/Desk.ts'
+import {UserService} from '../../../services/users/Users'
+import {canEditDesk} from '../../../utils/permissionUtils'
 
 export const DeskDetails = () => {
 	const { id } = useParams<{ id: string }>()
@@ -14,6 +16,8 @@ export const DeskDetails = () => {
 	const [error, setError] = useState<string | null>(null)
 	const [updateCounter, setUpdateCounter] = useState(0)
 	const loadingRef = useRef(false) // Для предотвращения двойных вызовов
+	const [deskUsers, setDeskUsers] = useState<any[]>([])
+	const [hasEditPermission, setHasEditPermission] = useState(false)
 
 	const loadDesk = useCallback(async () => {
 		if (!id) return
@@ -34,6 +38,20 @@ export const DeskDetails = () => {
 
 			setDesk(deskData)
 			setError(null)
+			
+			// Загружаем пользователей для проверки прав
+			try {
+				const users = await UserService.getUsersOnDesk(Number(id))
+				setDeskUsers(users)
+				
+				// Проверяем права пользователя
+				const canEdit = canEditDesk(users)
+				setHasEditPermission(canEdit)
+				console.log(`Права на редактирование доски: ${canEdit ? 'Есть' : 'Нет'}`)
+			} catch (userError) {
+				console.error('Ошибка при загрузке пользователей:', userError)
+				setHasEditPermission(false)
+			}
 		} catch (err: unknown) {
 			console.error('Ошибка при загрузке доски:', err)
 			setError(err.message || 'Не удалось загрузить информацию о доске')
@@ -141,7 +159,7 @@ export const DeskDetails = () => {
 
 			{/* Основной контент */}
 			<div className='flex-1 overflow-auto'>
-				<Outlet context={{ desk, refreshDesk }} />
+				<Outlet context={{ desk, refreshDesk, hasEditPermission, deskUsers }} />
 			</div>
 		</div>
 	)

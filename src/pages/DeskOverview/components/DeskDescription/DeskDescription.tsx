@@ -4,11 +4,14 @@ import {DeskService} from '../../../../services/desk/Desk'
 import {DeskUpdateDto} from '../../../../services/desk/types/desk.types'
 import ViewMode from './components/ViewMode'
 import EditMode from './components/EditMode'
+import {UserService} from '../../../../services/users/Users'
+import {canEditDesk} from '../../../../utils/permissionUtils'
 
 const DeskDescription: React.FC<DeskDescriptionProps> = ({
 	desk,
-	onDescriptionUpdate,
+	onDeskUpdate,
 	isLoading = false,
+	updateDeskDescription
 }) => {
 	// Используем либо deskDescription, либо description, что найдется
 	const currentDescription = desk.deskDescription || desk.description || '';
@@ -19,6 +22,7 @@ const DeskDescription: React.FC<DeskDescriptionProps> = ({
 	const [editedDescription, setEditedDescription] = useState(currentDescription);
 	const [isSaving, setIsSaving] = useState(false);
 	const [containerHeight, setContainerHeight] = useState<number | null>(null);
+	const [deskUsers, setDeskUsers] = useState<any[]>([]);
 
 	const textareaRef = useRef<HTMLTextAreaElement>(null);
 	const containerRef = useRef<HTMLDivElement>(null);
@@ -46,6 +50,22 @@ const DeskDescription: React.FC<DeskDescriptionProps> = ({
 		}
 	}, [isEditing]);
 
+	// Загрузка пользователей доски для проверки прав
+	useEffect(() => {
+		const loadUsers = async () => {
+			try {
+				if (desk.id) {
+					const users = await UserService.getUsersOnDesk(desk.id);
+					setDeskUsers(users);
+				}
+			} catch (error) {
+				console.error('Ошибка при загрузке пользователей доски:', error);
+			}
+		};
+		
+		loadUsers();
+	}, [desk.id]);
+
 	// Debounced сохранение при вводе
 	const debouncedSave = useCallback((text: string) => {
 		if (saveTimeoutRef.current) {
@@ -57,8 +77,11 @@ const DeskDescription: React.FC<DeskDescriptionProps> = ({
 		}, 1000);
 	}, [desk.id]);
 
+	// Проверка прав на редактирование доски
+	const hasEditPermission = canEditDesk(deskUsers);
+
 	const handleEdit = () => {
-		if (isLoading || isSaving) return;
+		if (isLoading || isSaving || !hasEditPermission) return;
 		setIsEditing(true);
 	};
 
@@ -94,8 +117,8 @@ const DeskDescription: React.FC<DeskDescriptionProps> = ({
 			await DeskService.updateDesk(Number(desk.id), updateData);
 			
 			// Уведомляем родительский компонент об обновлении
-			if (onDescriptionUpdate) {
-				onDescriptionUpdate(text);
+			if (onDeskUpdate) {
+				onDeskUpdate(text);
 			}
 			
 			console.log('Описание успешно обновлено на сервере');

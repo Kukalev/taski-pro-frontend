@@ -13,8 +13,8 @@ const DeskHeader: React.FC<DeskHeaderProps> = ({
 	desk,
 	onDeskUpdate,
 	isLoading = false,
-
-	selectedDate
+	selectedDate,
+	hasEditPermission = true // По умолчанию права есть
 }) => {
 	// Локальное состояние
 	const [isEditing, setIsEditing] = useState(false);
@@ -70,6 +70,9 @@ const DeskHeader: React.FC<DeskHeaderProps> = ({
 	}, []);
 
 	const handleEdit = () => {
+		// Проверяем права доступа
+		if (!hasEditPermission) return;
+		
 		setIsEditing(true);
 	};
 
@@ -79,7 +82,8 @@ const DeskHeader: React.FC<DeskHeaderProps> = ({
 
 	// Функция для сохранения имени на сервере и обновления UI компонентов
 	const saveNameToServer = async (name: string) => {
-		if (!desk.id) return;
+		// Проверяем права доступа
+		if (!hasEditPermission || !desk.id) return;
 		
 		try {
 			// Сохраняем на сервер
@@ -141,6 +145,9 @@ const DeskHeader: React.FC<DeskHeaderProps> = ({
 	};
 
 	const toggleStatusMenu = () => {
+		// Проверяем права доступа
+		if (!hasEditPermission) return;
+		
 		setStatusMenuOpen(!statusMenuOpen);
 		if (!statusMenuOpen) {
 			setIsCalendarOpen(false);
@@ -148,6 +155,9 @@ const DeskHeader: React.FC<DeskHeaderProps> = ({
 	};
 
 	const handleStatusChange = (status: DeskStatus) => {
+		// Проверяем права доступа
+		if (!hasEditPermission) return;
+		
 		setCurrentStatus(status);
 		setStatusMenuOpen(false);
 		
@@ -177,6 +187,7 @@ const DeskHeader: React.FC<DeskHeaderProps> = ({
 						handleBlur={handleBlur}
 						handleKeyDown={handleKeyDown}
 						inputRef={inputRef}
+						hasEditPermission={hasEditPermission}
 					/>
 				</div>
 
@@ -193,6 +204,7 @@ const DeskHeader: React.FC<DeskHeaderProps> = ({
 						setIsCalendarOpen={setIsCalendarOpen}
 						onDeskUpdate={onDeskUpdate}
 						calendarButtonRef={calendarButtonRef}
+						hasEditPermission={hasEditPermission}
 					/>
 					
 					<StatusSelector
@@ -200,9 +212,10 @@ const DeskHeader: React.FC<DeskHeaderProps> = ({
 						statusMenuOpen={statusMenuOpen}
 						toggleStatusMenu={toggleStatusMenu}
 						statusButtonRef={statusButtonRef}
+						hasEditPermission={hasEditPermission}
 					/>
 					
-					{statusMenuOpen && (
+					{statusMenuOpen && hasEditPermission && (
 						<StatusMenu
 							isOpen={statusMenuOpen}
 							handleStatusChange={handleStatusChange}

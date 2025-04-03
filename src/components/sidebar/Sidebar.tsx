@@ -10,6 +10,8 @@ import {SidebarFooter} from './components/SidebarFooter'
 import {SidebarMenu} from './components/SidebarMenu'
 import {SidebarSearch} from './components/SidebarSearch'
 import { DESK_UPDATE_EVENT } from '../../pages/DeskOverview/hooks/useDeskActions'
+import { UserService } from '../../services/users/Users'
+import { canEditDesk } from '../../utils/permissionUtils'
 
 export const Sidebar = () => {
 	const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
@@ -18,6 +20,7 @@ export const Sidebar = () => {
 	const [selectedDeskId, setSelectedDeskId] = useState<number | null>(null)
 	const [selectedDeskName, setSelectedDeskName] = useState<string>('')
 	const [isDeleting, setIsDeleting] = useState(false)
+	const [hasEditPermission, setHasEditPermission] = useState(false)
 
 	const navigate = useNavigate()
 	const location = useLocation()
@@ -25,12 +28,25 @@ export const Sidebar = () => {
 	// Получаем данные и функции из контекста
 	const { desks, loading, addDesk, loadDesks, removeDesk, updateDesk } = useDesks()
 
-	// Найти имя доски по ID
+	// Найти имя доски по ID и проверить права пользователя
 	useEffect(() => {
 		if (selectedDeskId && desks.length > 0) {
 			const desk = desks.find(d => d.id === selectedDeskId)
 			if (desk) {
 				setSelectedDeskName(desk.deskName)
+				
+				// Проверяем права пользователя на редактирование
+				const checkPermissions = async () => {
+					try {
+						const users = await UserService.getUsersOnDesk(selectedDeskId)
+						setHasEditPermission(canEditDesk(users))
+					} catch (error) {
+						console.error('Ошибка при проверке прав пользователя:', error)
+						setHasEditPermission(false)
+					}
+				}
+				
+				checkPermissions()
 			}
 		}
 	}, [selectedDeskId, desks])
@@ -46,19 +62,54 @@ export const Sidebar = () => {
 	}
 
 	// Открытие модального окна для переименования
-	const handleRenameClick = (id: number) => {
+	const handleRenameClick = async (id: number) => {
 		setSelectedDeskId(id)
-		setIsRenameModalOpen(true)
+		
+		// Проверяем права пользователя перед открытием модального окна
+		try {
+			const users = await UserService.getUsersOnDesk(id)
+			const canEdit = canEditDesk(users)
+			
+			if (!canEdit) {
+				console.log('У вас нет прав для переименования этой доски')
+				return
+			}
+			
+			setIsRenameModalOpen(true)
+		} catch (error) {
+			console.error('Ошибка при проверке прав пользователя:', error)
+		}
 	}
 
 	// Открытие модального окна для удаления
-	const handleDeleteClick = (id: number) => {
+	const handleDeleteClick = async (id: number) => {
 		setSelectedDeskId(id)
-		setIsDeleteModalOpen(true)
+		
+		// Проверяем права пользователя перед открытием модального окна
+		try {
+			const users = await UserService.getUsersOnDesk(id)
+			const canEdit = canEditDesk(users)
+			
+			if (!canEdit) {
+				console.log('У вас нет прав для удаления этой доски')
+				return
+			}
+			
+			setIsDeleteModalOpen(true)
+		} catch (error) {
+			console.error('Ошибка при проверке прав пользователя:', error)
+		}
 	}
 
 	// Подтверждение удаления доски
 	const handleConfirmDelete = async (id: number) => {
+		// Проверяем права еще раз перед удалением
+		if (!hasEditPermission) {
+			console.log('У вас нет прав для удаления этой доски')
+			setIsDeleteModalOpen(false)
+			return
+		}
+		
 		setIsDeleting(true)
 		try {
 			// Оптимистичное удаление из UI

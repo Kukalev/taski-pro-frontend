@@ -9,13 +9,12 @@ const TaskInput: React.FC<TaskInputProps> = ({
   autoFocus
 }) => {
   return (
-    <div className="relative mb-2">
+    <div className="relative">
       <input
         type="text"
-        className="w-full p-3 rounded-lg bg-white text-[12px]
-        text-gray-150 transition-all duration-200 ease-in-out
-        hover:text-gray-300 focus:text-gray-700 focus:bg-gray-100
-        focus:outline-none border border-transparent focus:border-gray-100"
+        className="w-full h-10 px-3 rounded-lg bg-white text-[12px]
+        text-gray-700 border border-gray-200 focus:border-gray-300
+        hover:border-gray-300 focus:outline-none"
         placeholder="Добавить задачу..."
         value={value}
         onChange={(e) => onChange(statusId, e.target.value)}

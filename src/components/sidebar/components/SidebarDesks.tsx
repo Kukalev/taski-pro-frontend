@@ -2,12 +2,19 @@ import { useLocation } from 'react-router-dom'
 import { getDeskColor } from '../../../utils/deskColors'
 import { DeskData, SidebarDesksProps } from '../types/sidebar.types'
 import { useState, useRef, useEffect } from 'react'
+import { canEditDesk } from '../../../utils/permissionUtils'
+import { UserService } from '../../../services/users/Users'
+
+// Кэш для хранения ролей пользователей по доскам
+const userRolesCache = new Map<number, boolean>();
 
 export const SidebarDesks = ({ desks, loading, onDeskClick, onAddClick, onRename, onDelete }: SidebarDesksProps) => {
 	const location = useLocation()
 	const [activeMenu, setActiveMenu] = useState<number | null>(null)
 	const menuRef = useRef<HTMLDivElement>(null)
 	const buttonsRef = useRef<{[key: number]: HTMLDivElement | null}>({})
+	const [deskPermissions, setDeskPermissions] = useState<{[key: number]: boolean}>({})
+	const checkingPermissionsRef = useRef<{[key: number]: boolean}>({})
 
 	// Создаем ссылку для кнопки
 	const setButtonRef = (id: number, el: HTMLDivElement | null) => {
@@ -18,8 +25,63 @@ export const SidebarDesks = ({ desks, loading, onDeskClick, onAddClick, onRename
 	const handleMenuToggle = (e: React.MouseEvent, deskId: number) => {
 		e.stopPropagation() // Предотвращаем срабатывание клика по элементу списка
 		e.preventDefault()
+		
+		// Проверяем, есть ли у пользователя права редактировать доску
+		if (!deskPermissions[deskId]) {
+			console.log('У вас нет прав для управления этой доской')
+			return
+		}
+		
 		setActiveMenu(activeMenu === deskId ? null : deskId)
 	}
+
+	// Функция для проверки прав пользователя на доске
+	useEffect(() => {
+		desks.forEach(desk => {
+			// Если права уже проверяются или уже известны, пропускаем
+			if (checkingPermissionsRef.current[desk.id] || deskPermissions[desk.id] !== undefined) {
+				return
+			}
+			
+			// Если права уже в кэше, используем их
+			if (userRolesCache.has(desk.id)) {
+				setDeskPermissions(prev => ({
+					...prev,
+					[desk.id]: userRolesCache.get(desk.id) || false
+				}))
+				return
+			}
+			
+			// Отмечаем, что начали проверку прав
+			checkingPermissionsRef.current[desk.id] = true
+			
+			// Асинхронно проверяем права пользователя
+			const checkPermissions = async () => {
+				try {
+					const users = await UserService.getUsersOnDesk(desk.id)
+					const hasPermission = canEditDesk(users)
+					
+					// Сохраняем результат в кэш и состояние
+					userRolesCache.set(desk.id, hasPermission)
+					setDeskPermissions(prev => ({
+						...prev,
+						[desk.id]: hasPermission
+					}))
+				} catch (error) {
+					console.error('Ошибка при проверке прав пользователя:', error)
+					// В случае ошибки считаем, что прав нет
+					setDeskPermissions(prev => ({
+						...prev,
+						[desk.id]: false
+					}))
+				} finally {
+					checkingPermissionsRef.current[desk.id] = false
+				}
+			}
+			
+			checkPermissions()
+		})
+	}, [desks])
 
 	// Закрытие меню при клике вне него
 	useEffect(() => {
@@ -70,20 +132,23 @@ export const SidebarDesks = ({ desks, loading, onDeskClick, onAddClick, onRename
 										${location.pathname.includes(`/desk/${desk.id}`) ? 'bg-gray-200 text-gray-900' : 'text-gray-700'}`}>
 									<div className={`w-5 h-5 rounded flex items-center justify-center ${getDeskColor(desk.id)}`}>{desk.deskName.charAt(0).toUpperCase()}</div>
 									<span className='truncate flex-grow'>{desk.deskName}</span>
-									<div
-										ref={(el) => setButtonRef(desk.id, el)}
-										onClick={(e) => handleMenuToggle(e, desk.id)}
-										className="h-[20px] w-[20px] opacity-0 group-hover:opacity-100 flex items-center justify-center text-gray-500 hover:text-gray-700">
-										<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-											<circle cx="12" cy="6" r="1" />
-											<circle cx="12" cy="12" r="1" />
-											<circle cx="12" cy="18" r="1" />
-										</svg>
-									</div>
+									{/* Показываем кнопку троеточия только если у пользователя есть права */}
+									{deskPermissions[desk.id] && (
+										<div
+											ref={(el) => setButtonRef(desk.id, el)}
+											onClick={(e) => handleMenuToggle(e, desk.id)}
+											className="h-[20px] w-[20px] opacity-0 group-hover:opacity-100 flex items-center justify-center text-gray-500 hover:text-gray-700">
+											<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+												<circle cx="12" cy="6" r="1" />
+												<circle cx="12" cy="12" r="1" />
+												<circle cx="12" cy="18" r="1" />
+											</svg>
+										</div>
+									)}
 								</button>
 								
 								{/* Выпадающее меню */}
-								{activeMenu === desk.id && (
+								{activeMenu === desk.id && deskPermissions[desk.id] && (
 									<div ref={menuRef} className="absolute right-0 mt-1 z-10 bg-white rounded-md shadow-lg border border-gray-100 w-44">
 										<div className="py-1">
 											<button 

@@ -2,6 +2,8 @@ import { useNavigate } from 'react-router-dom'
 import { DeskData } from '../types/desk.types'
 import { getDeskColor } from '../../../../utils/deskColors'
 import { useState, useRef, useEffect } from 'react'
+import { UserService } from '../../../../services/users/Users'
+import { canEditDesk } from '../../../../utils/permissionUtils'
 
 interface DeskRowProps {
 	desk: DeskData
@@ -15,6 +17,30 @@ export const DeskRow = ({ desk, username, onRename, onDelete }: DeskRowProps) =>
 	const [showMenu, setShowMenu] = useState(false)
 	const menuRef = useRef<HTMLDivElement>(null)
 	const buttonRef = useRef<HTMLButtonElement>(null)
+	const [hasEditPermission, setHasEditPermission] = useState(false)
+	const [isCheckingPermission, setIsCheckingPermission] = useState(false)
+	
+	// Проверка прав на редактирование доски
+	useEffect(() => {
+		if (isCheckingPermission) return;
+		
+		const checkPermission = async () => {
+			setIsCheckingPermission(true);
+			try {
+				const users = await UserService.getUsersOnDesk(desk.id);
+				const canEdit = canEditDesk(users);
+				setHasEditPermission(canEdit);
+				console.log(`Права на редактирование доски ${desk.id}: ${canEdit ? 'Есть' : 'Нет'}`);
+			} catch (error) {
+				console.error('Ошибка при проверке прав пользователя:', error);
+				setHasEditPermission(false);
+			} finally {
+				setIsCheckingPermission(false);
+			}
+		};
+		
+		checkPermission();
+	}, [desk.id]);
 	
 	// Форматирование даты
 	const formatDate = (date: Date | null) => {
@@ -59,6 +85,13 @@ export const DeskRow = ({ desk, username, onRename, onDelete }: DeskRowProps) =>
 	const handleMenuClick = (e: React.MouseEvent) => {
 		e.stopPropagation()
 		e.preventDefault()
+		
+		// Проверяем права перед открытием меню
+		if (!hasEditPermission) {
+			console.log('У вас нет прав для управления этой доской');
+			return;
+		}
+		
 		setShowMenu(!showMenu)
 	}
 	
@@ -95,18 +128,21 @@ export const DeskRow = ({ desk, username, onRename, onDelete }: DeskRowProps) =>
 						<span className='font-medium text-gray-800'>{desk.deskName}</span>
 					</div>
 					
-					<button 
-						ref={buttonRef}
-						onClick={handleMenuClick}
-						className="h-8 w-8 flex items-center justify-center text-gray-500 hover:bg-gray-100 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
-						<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-							<circle cx="12" cy="6" r="1" />
-							<circle cx="12" cy="12" r="1" />
-							<circle cx="12" cy="18" r="1" />
-						</svg>
-					</button>
+					{/* Кнопка меню - показываем только если есть права */}
+					{hasEditPermission && (
+						<button 
+							ref={buttonRef}
+							onClick={handleMenuClick}
+							className="h-8 w-8 flex items-center justify-center text-gray-500 hover:bg-gray-100 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+								<circle cx="12" cy="6" r="1" />
+								<circle cx="12" cy="12" r="1" />
+								<circle cx="12" cy="18" r="1" />
+							</svg>
+						</button>
+					)}
 					
-					{showMenu && (
+					{showMenu && hasEditPermission && (
 						<div ref={menuRef} className="absolute right-4 top-full mt-1 z-50 bg-white rounded-md shadow-lg border border-gray-100 w-44">
 							<div className="py-1">
 								{onRename && (

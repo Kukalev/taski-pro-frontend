@@ -13,4 +13,17 @@ const TaskBoardPage = () => {
   // <TaskColumn ... deskId={deskIdNumber} />
   
   // ... остальной код
+
+  // Клик по иконке даты
+  const handleDateClick = (taskId: number) => {
+    // Закрываем календарь в TaskDetails если он открыт
+    if (selectedTask && selectedTask.taskId === taskId) {
+      // Закрываем календарь в TaskDetails через соответствующий интерфейс,
+      // если он будет разработан. Сейчас это не требуется - компонент управляет сам
+      // своим календарем
+    }
+    
+    // Открываем/закрываем календарь рядом с карточкой задачи
+    setDatePickerTaskId(datePickerTaskId === taskId ? null : taskId);
+  };
 }; 

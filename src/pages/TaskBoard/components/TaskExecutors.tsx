@@ -2,7 +2,8 @@ import React, {useEffect, useRef, useState} from 'react'
 import {updateTask} from '../../../services/task/Task'
 import {PiUserCircleThin} from 'react-icons/pi'
 import {UserService} from '../../../services/users/Users'
-
+import {AuthService} from '../../../services/auth/Auth'
+import {canEditTask, getUserRoleOnDesk, UserRightType} from '../../../utils/permissionUtils'
 
 // Кэш для пользователей, чтобы не загружать их много раз
 const usersCache = new Map<number, any[]>();
@@ -12,9 +13,16 @@ interface TaskExecutorProps {
   deskUsers: any[];
   deskId: number;
   onTaskUpdate?: (updatedTask: any) => void;
+  canEdit?: boolean; // Проп для проверки прав редактирования
 }
 
-const TaskExecutors: React.FC<TaskExecutorProps> = ({ task, deskUsers, deskId, onTaskUpdate }) => {
+const TaskExecutors: React.FC<TaskExecutorProps> = ({ 
+  task, 
+  deskUsers, 
+  deskId, 
+  onTaskUpdate,
+  canEdit = true // По умолчанию разрешено редактирование
+}) => {
   const [isOpen, setIsOpen] = useState(false);
   const [localDeskUsers, setLocalDeskUsers] = useState<any[]>(deskUsers || []);
   const loadingRef = useRef(false);
@@ -23,6 +31,9 @@ const TaskExecutors: React.FC<TaskExecutorProps> = ({ task, deskUsers, deskId, o
   
   // Получаем текущих исполнителей задачи с защитой от null
   const executors = task?.executors || [];
+  
+  // Проверка, может ли пользователь редактировать задачу
+  const actualCanEdit = canEdit && canEditTask(deskUsers, task);
   
   // Загружаем пользователей только один раз при маунте компонента или изменении deskId
   useEffect(() => {
@@ -80,6 +91,8 @@ const TaskExecutors: React.FC<TaskExecutorProps> = ({ task, deskUsers, deskId, o
 
   // Добавляем исполнителя
   const handleAddExecutor = async (username: string) => {
+    if (!actualCanEdit) return; // Проверка прав доступа
+    
     try {
       if (!task?.taskId || !deskId) {
         console.error('taskId или deskId не определены', { task, deskId });
@@ -101,6 +114,9 @@ const TaskExecutors: React.FC<TaskExecutorProps> = ({ task, deskUsers, deskId, o
   // Удаляем исполнителя
   const handleRemoveExecutor = async (username: string, e: React.MouseEvent) => {
     e.stopPropagation();
+    
+    if (!actualCanEdit) return; // Проверка прав доступа
+    
     try {
       if (!task?.taskId || !deskId) {
         console.error('taskId или deskId не определены', { task, deskId });
@@ -149,6 +165,10 @@ const TaskExecutors: React.FC<TaskExecutorProps> = ({ task, deskUsers, deskId, o
   // Функция для открытия/закрытия выпадающего списка
   const toggleDropdown = (e: React.MouseEvent) => {
     e.stopPropagation();
+    
+    // MEMBER не может открывать выпадающий список, если он не исполнитель задачи
+    if (!actualCanEdit) return;
+    
     setIsOpen(!isOpen);
   };
   
@@ -163,7 +183,11 @@ const TaskExecutors: React.FC<TaskExecutorProps> = ({ task, deskUsers, deskId, o
 
   return (
     <div className="relative" ref={dropdownRef}>
-      <div className="flex items-center cursor-pointer" onClick={toggleDropdown}>
+      {/* Фиксированная ширина контейнера для исполнителей */}
+      <div 
+        className={`inline-flex items-center ${actualCanEdit ? 'cursor-pointer' : 'cursor-default'}`} 
+        onClick={toggleDropdown}
+      >
         {executors.length > 0 ? (
           // Отображаем только аватарки исполнителей без крестиков
           <div className="flex -space-x-1">
@@ -183,14 +207,14 @@ const TaskExecutors: React.FC<TaskExecutorProps> = ({ task, deskUsers, deskId, o
           </div>
         ) : (
           // Если исполнителей нет, показываем только иконку пользователя
-          <div className="flex items-center text-gray-400">
+          <div className={`flex items-center text-gray-400 ${!actualCanEdit && 'opacity-50'}`}>
             <PiUserCircleThin size={20} />
           </div>
         )}
       </div>
       
-      {/* Выпадающий список исполнителей */}
-      {isOpen && (
+      {/* Выпадающий список исполнителей - только если пользователь может редактировать */}
+      {isOpen && actualCanEdit && (
         <div className="absolute z-10 mt-1 w-44 bg-white rounded-md shadow-lg border border-gray-200">
           <div className="p-2 text-sm text-gray-700 border-b border-gray-200">
             Исполнители:
@@ -211,7 +235,7 @@ const TaskExecutors: React.FC<TaskExecutorProps> = ({ task, deskUsers, deskId, o
                     </div>
                     <span className="text-sm">{executor}</span>
                     <button 
-                      className="ml-1 text-gray-400 hover:text-red-500 cursor-pointer"
+                      className="ml-auto text-gray-400 hover:text-red-500 cursor-pointer"
                       onClick={(e) => handleRemoveExecutor(executor, e)}
                     >
                       <span className="text-sm font-medium">×</span>

@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { PiUserCircleThin } from 'react-icons/pi';
 import { updateTask } from '../../../../../services/task/Task';
+import { AuthService } from '../../../../../services/auth/Auth';
+import { isCurrentUser } from '../../../../../utils/permissionUtils';
 
 interface TaskExecutorsProps {
   executors: string[];
@@ -8,6 +10,7 @@ interface TaskExecutorsProps {
   taskId: number;
   deskId: number;
   onTaskUpdate: (task: any) => void;
+  canEdit?: boolean;
 }
 
 const TaskExecutors: React.FC<TaskExecutorsProps> = ({ 
@@ -15,7 +18,8 @@ const TaskExecutors: React.FC<TaskExecutorsProps> = ({
   deskUsers, 
   taskId, 
   deskId, 
-  onTaskUpdate 
+  onTaskUpdate,
+  canEdit = true
 }) => {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -36,6 +40,8 @@ const TaskExecutors: React.FC<TaskExecutorsProps> = ({
   
   // Добавление исполнителя
   const handleAddExecutor = async (username: string) => {
+    if (!canEdit) return;
+    
     try {
       const updatedTask = await updateTask(deskId, taskId, {
         executorUsernames: [username]
@@ -43,7 +49,6 @@ const TaskExecutors: React.FC<TaskExecutorsProps> = ({
       
       if (updatedTask) {
         onTaskUpdate(updatedTask);
-        // Не закрываем выпадающий список после добавления
       }
     } catch (error) {
       console.error('Ошибка при добавлении исполнителя:', error);
@@ -52,6 +57,8 @@ const TaskExecutors: React.FC<TaskExecutorsProps> = ({
   
   // Удаление исполнителя
   const handleRemoveExecutor = async (username: string) => {
+    if (!canEdit) return;
+    
     try {
       const updatedTask = await updateTask(deskId, taskId, {
         removeExecutorUsernames: [username]
@@ -99,8 +106,8 @@ const TaskExecutors: React.FC<TaskExecutorsProps> = ({
         <span className="text-gray-500 mr-2">Исполнители:</span>
         
         <div 
-          className="flex items-center cursor-pointer" 
-          onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+          className={`flex items-center ${canEdit ? 'cursor-pointer' : 'cursor-default'}`} 
+          onClick={() => canEdit && setIsDropdownOpen(!isDropdownOpen)}
         >
           {executors && executors.length > 0 ? (
             <div className="flex -space-x-2">
@@ -138,45 +145,49 @@ const TaskExecutors: React.FC<TaskExecutorsProps> = ({
                     <div className={`w-6 h-6 rounded-full border flex items-center justify-center font-medium mr-2 ${getAvatarColor(username)} bg-white text-gray-800`}>
                       {getUserInitial(username)}
                     </div>
-                    <span>{username}</span>
+                    <span>{username} {isCurrentUser(username) && <span className="text-gray-400 text-xs">(Вы)</span>}</span>
                   </div>
-                  <span 
-                    className="text-gray-400 hover:text-gray-600 cursor-pointer text-xl"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleRemoveExecutor(username);
-                    }}
-                  >
-                    ×
-                  </span>
+                  {canEdit && (
+                    <span 
+                      className="text-gray-400 hover:text-gray-600 cursor-pointer text-xl"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRemoveExecutor(username);
+                      }}
+                    >
+                      ×
+                    </span>
+                  )}
                 </div>
               ))
             )}
           </div>
           
           {/* Список доступных пользователей */}
-          <div className="border-t border-gray-100 p-2">
-            {deskUsers
-              .filter(user => {
-                const username = user.username || user.userName;
-                return !executors.includes(username);
-              })
-              .map(user => {
-                const username = user.username || user.userName;
-                return (
-                  <div 
-                    key={username}
-                    className="flex items-center py-2 px-2 hover:bg-gray-50 rounded cursor-pointer"
-                    onClick={() => handleAddExecutor(username)}
-                  >
-                    <div className={`w-6 h-6 rounded-full border flex items-center justify-center font-medium mr-2 ${getAvatarColor(username)} bg-white text-gray-800`}>
-                      {getUserInitial(username)}
+          {canEdit && (
+            <div className="border-t border-gray-100 p-2">
+              {deskUsers
+                .filter(user => {
+                  const username = user.username || user.userName;
+                  return !executors.includes(username);
+                })
+                .map(user => {
+                  const username = user.username || user.userName;
+                  return (
+                    <div 
+                      key={username}
+                      className="flex items-center py-2 px-2 hover:bg-gray-50 rounded cursor-pointer"
+                      onClick={() => handleAddExecutor(username)}
+                    >
+                      <div className={`w-6 h-6 rounded-full border flex items-center justify-center font-medium mr-2 ${getAvatarColor(username)} bg-white text-gray-800`}>
+                        {getUserInitial(username)}
+                      </div>
+                      <span>{username}</span>
                     </div>
-                    <span>{username}</span>
-                  </div>
-                );
-              })}
-          </div>
+                  );
+                })}
+            </div>
+          )}
         </div>
       )}
     </div>

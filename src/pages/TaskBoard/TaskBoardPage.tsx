@@ -16,6 +16,7 @@ import {Task} from '../../services/task/types/task.types'
 import {UserService} from '../../services/users/Users'
 import {DeskService} from '../../services/desk/Desk'
 import {createPortal} from 'react-dom'
+import { AuthService } from '../../services/auth/Auth'
 
 // Основной компонент
 const TaskBoardPage: React.FC<TaskBoardProps> = ({ deskId }) => {
@@ -33,6 +34,8 @@ const TaskBoardPage: React.FC<TaskBoardProps> = ({ deskId }) => {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [deskUsers, setDeskUsers] = useState<any[]>([]);
   const [deskName, setDeskName] = useState('');
+  const [userRole, setUserRole] = useState<string>('');
+  const [hasFullAccess, setHasFullAccess] = useState(true); // Установим true по умолчанию для CREATOR
   
   const calendarRef = useRef<HTMLDivElement>(null);
   const currentDeskIdRef = useRef<number | null>(null);
@@ -76,6 +79,19 @@ const TaskBoardPage: React.FC<TaskBoardProps> = ({ deskId }) => {
       try {
         const users = await UserService.getUsersOnDesk(deskId);
         setDeskUsers(users);
+        
+        // Определяем права пользователя
+        const username = AuthService.getUsername();
+        const currentUser = users.find(u => 
+          u.username === username || u.userName === username
+        );
+        
+        const role = currentUser?.rightType || currentUser?.role || 'CREATOR'; // По умолчанию CREATOR
+        setUserRole(role);
+        setHasFullAccess(true); // Всегда устанавливаем true для CREATOR
+        
+        console.log(`Пользователь: ${username}, роль: ${role}, полный доступ: ${true}`);
+        
       } catch (error) {
         console.error('Ошибка при загрузке пользователей:', error);
       } finally {
@@ -495,6 +511,7 @@ const TaskBoardPage: React.FC<TaskBoardProps> = ({ deskId }) => {
                 onDateChange={handleUpdateTaskDate}
                 onTaskClick={handleTaskClick}
                 onTaskUpdate={handleTaskUpdate}
+                setAddingInColumn={setAddingInColumn}
               />
             );
           })}

@@ -13,9 +13,16 @@ import DatePicker from '../../components/DatePicker/DatePicker.tsx'
 interface DeskOverviewPageProps {
   desk: DeskData;
   onDeskUpdate?: (updatedDesk: Partial<DeskData>) => void;
+  hasEditPermission?: boolean;
+  deskUsers?: any[];
 }
 
-const DeskOverviewPage: React.FC<DeskOverviewPageProps> = ({ desk, onDeskUpdate }) => {
+const DeskOverviewPage: React.FC<DeskOverviewPageProps> = ({ 
+  desk, 
+  onDeskUpdate, 
+  hasEditPermission = true,
+  deskUsers = []
+}) => {
   // Инициализируем состояние без ссылки на desk
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
@@ -41,11 +48,15 @@ const DeskOverviewPage: React.FC<DeskOverviewPageProps> = ({ desk, onDeskUpdate 
 
   // Обработчик нажатия на кнопку даты
   const handleDateButtonClick = () => {
+    if (!hasEditPermission) return;
+    
     setIsDatePickerVisible(!isDatePickerVisible);
   };
 
   // Обработчик изменения даты
   const handleDateChange = (date: Date | null) => {
+    if (!hasEditPermission) return;
+    
     setSelectedDate(date);
     setIsDatePickerVisible(false);
     
@@ -70,6 +81,7 @@ const DeskOverviewPage: React.FC<DeskOverviewPageProps> = ({ desk, onDeskUpdate 
         updateDeskName={updateDeskName}
         onDateClick={handleDateButtonClick}
         selectedDate={selectedDate}
+        hasEditPermission={hasEditPermission}
       />
       
       <div className="max-w-4xl mx-auto px-4 py-6">
@@ -78,12 +90,16 @@ const DeskOverviewPage: React.FC<DeskOverviewPageProps> = ({ desk, onDeskUpdate 
           onDeskUpdate={onDeskUpdate || (() => {})}
           isLoading={isLoading}
           updateDeskDescription={updateDeskDescription}
+          hasEditPermission={hasEditPermission}
         />
         
-        <DeskParticipants desk={desk} />
+        <DeskParticipants 
+          desk={desk} 
+          hasEditPermission={hasEditPermission}
+        />
       </div>
       
-      {isDatePickerVisible && (
+      {isDatePickerVisible && hasEditPermission && (
         <DatePicker
           taskId={calendarId}
           selectedDate={selectedDate}

@@ -6,13 +6,16 @@ import {
   isSameMonth,
   isToday,
   startOfMonth,
-  subMonths
+  subMonths,
+  format,
+  isSameDay
 } from 'date-fns'
 import ReactDOM from 'react-dom'
 import CalendarHeader from './components/CalendarHeader.tsx'
 import WeekdaysHeader from './components/WeekdaysHeader.tsx'
 import CalendarGrid from './components/CalendarGrid.tsx'
 import CalendarFooter from './components/CalendarFooter.tsx'
+import { ru } from 'date-fns/locale'
 
 const DatePicker: React.FC<TaskDatePickerProps> = ({
   taskId,
@@ -24,7 +27,7 @@ const DatePicker: React.FC<TaskDatePickerProps> = ({
   today.setHours(0, 0, 0, 0); // Устанавливаем время на начало дня для корректного сравнения
   
   // Всегда инициализируем на текущий месяц, независимо от выбранной даты
-  const [currentMonth, setCurrentMonth] = useState(startOfMonth(today));
+  const [currentMonth, setCurrentMonth] = useState(startOfMonth(selectedDate || today));
   // Начальное состояние - невидимый календарь
   const [isVisible, setIsVisible] = useState(false);
   const [calendarPosition, setCalendarPosition] = useState({ top: 0, left: 0 });
@@ -118,28 +121,118 @@ const DatePicker: React.FC<TaskDatePickerProps> = ({
       }}
       onClick={(e) => e.stopPropagation()}
     >
-      <CalendarHeader 
-        currentMonth={currentMonth}
-        today={today}
-        prevMonth={prevMonth}
-        nextMonth={nextMonth}
-      />
+      <div className="flex justify-between items-center mb-4">
+        <button 
+          className="p-1 hover:bg-gray-100 rounded text-gray-500"
+          onClick={prevMonth}
+        >
+          ←
+        </button>
+        <div className="font-semibold">
+          {format(currentMonth, 'LLLL yyyy', { locale: ru })}
+        </div>
+        <button 
+          className="p-1 hover:bg-gray-100 rounded text-gray-500"
+          onClick={nextMonth}
+        >
+          →
+        </button>
+      </div>
       
-      <WeekdaysHeader daysOfWeek={daysOfWeek} />
+      {/* Дни недели */}
+      <div className="grid grid-cols-7 gap-1 mb-2">
+        {daysOfWeek.map(day => (
+          <div key={day} className="text-center text-xs text-gray-500 font-medium py-1">
+            {day}
+          </div>
+        ))}
+      </div>
       
-      <CalendarGrid 
-        currentMonth={currentMonth}
-        selectedDate={selectedDate}
-        today={today}
-        handleSelectDate={handleSelectDate}
-      />
+      {/* Дни месяца */}
+      <div className="grid grid-cols-7 gap-1">
+        {(() => {
+          // Вычисляем первый день месяца
+          const firstDayOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
+          // День недели первого дня (0 - воскресенье, 1 - понедельник и т.д.)
+          let firstDayWeekday = firstDayOfMonth.getDay();
+          // Переводим в формат 0 - понедельник, 6 - воскресенье
+          firstDayWeekday = firstDayWeekday === 0 ? 6 : firstDayWeekday - 1;
+          
+          // Вычисляем последний день месяца
+          const lastDayOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
+          const daysInMonth = lastDayOfMonth.getDate();
+          
+          // Массив для всех дней, которые будем отображать
+          const calendarDays = [];
+          
+          // Дни предыдущего месяца
+          const prevMonthLastDay = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 0).getDate();
+          for (let i = 0; i < firstDayWeekday; i++) {
+            const day = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, prevMonthLastDay - firstDayWeekday + i + 1);
+            calendarDays.push(day);
+          }
+          
+          // Дни текущего месяца
+          for (let i = 1; i <= daysInMonth; i++) {
+            const day = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), i);
+            calendarDays.push(day);
+          }
+          
+          // Дни следующего месяца (добавляем столько, чтобы общее число было кратно 7)
+          const remainingDays = 7 - (calendarDays.length % 7);
+          if (remainingDays < 7) {
+            for (let i = 1; i <= remainingDays; i++) {
+              const day = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, i);
+              calendarDays.push(day);
+            }
+          }
+          
+          // Рендерим все дни
+          return calendarDays.map((day, index) => {
+            const isCurrentMonth = day.getMonth() === currentMonth.getMonth();
+            const isSelectedDay = selectedDate ? isSameDay(day, selectedDate) : false;
+            const isPastDay = isBefore(day, today) && !isToday(day);
+            
+            return (
+              <button
+                key={index}
+                className={`
+                  w-7 h-7 flex items-center justify-center text-xs rounded-full
+                  ${!isCurrentMonth ? 'text-gray-400' : 'text-gray-800'}
+                  ${isToday(day) ? 'font-bold border border-orange-400' : ''}
+                  ${isSelectedDay ? 'bg-orange-400 text-white' : ''}
+                  ${isPastDay ? 'text-gray-300' : 'hover:bg-gray-100'}
+                `}
+                onClick={(e) => !isPastDay && handleSelectDate(day, e)}
+                disabled={isPastDay}
+              >
+                {day.getDate()}
+              </button>
+            );
+          });
+        })()}
+      </div>
       
-      <CalendarFooter 
-        taskId={taskId}
-        today={today}
-        onDateChange={onDateChange}
-        handleSelectDate={handleSelectDate}
-      />
+      <div className="mt-4 border-t pt-3 flex justify-between">
+        <button 
+          className="text-xs text-gray-500 hover:text-gray-700"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDateChange(taskId, null);
+          }}
+        >
+          Очистить
+        </button>
+        <button 
+          className="text-xs text-orange-400 font-medium hover:text-orange-500"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleSelectDate(today, e);
+          }}
+        >
+          Сегодня
+        </button>
+      </div>
     </div>
   );
   

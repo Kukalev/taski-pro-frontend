@@ -1,4 +1,5 @@
 import React from 'react'
+import {AuthService} from '../../../../../services/auth/Auth';
 
 interface TaskNameProps {
   taskName: string;
@@ -8,6 +9,7 @@ interface TaskNameProps {
   setTaskName: (value: string) => void;
   onSave: () => void;
   inputRef: React.RefObject<HTMLInputElement>;
+  canEdit?: boolean;
 }
 
 const TaskName: React.FC<TaskNameProps> = ({
@@ -17,7 +19,8 @@ const TaskName: React.FC<TaskNameProps> = ({
   setIsEditingName,
   setTaskName,
   onSave,
-  inputRef
+  inputRef,
+  canEdit = true
 }) => {
   return (
     <div className="mb-4">
@@ -44,7 +47,8 @@ const TaskName: React.FC<TaskNameProps> = ({
           className={`text-2xl font-medium p-2 ${
             isCompleted ? 'text-gray-500' : 'text-gray-800'
           }`}
-          onClick={() => setIsEditingName(true)}
+          onClick={() => canEdit && setIsEditingName(true)}
+          style={{ cursor: canEdit ? 'pointer' : 'default' }}
         >
           {taskName}
         </h1>

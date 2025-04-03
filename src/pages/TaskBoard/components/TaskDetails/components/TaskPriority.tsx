@@ -7,6 +7,7 @@ interface TaskPriorityProps {
   taskId?: number;
   deskId?: number;
   onPriorityChange?: (priority: string) => void;
+  canEdit?: boolean;
 }
 
 const TaskPriority: React.FC<TaskPriorityProps> = (props) => {
@@ -14,7 +15,8 @@ const TaskPriority: React.FC<TaskPriorityProps> = (props) => {
     priorityType = '', 
     taskId, 
     deskId,
-    onPriorityChange 
+    onPriorityChange,
+    canEdit = true
   } = props;
   
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -66,6 +68,8 @@ const TaskPriority: React.FC<TaskPriorityProps> = (props) => {
   };
   
   const handlePriorityChange = (newPriority: string) => {
+    if (!canEdit) return;
+    
     // Сразу обновляем UI для лучшего UX
     setLocalPriority(newPriority);
     setIsDropdownOpen(false);
@@ -101,14 +105,14 @@ const TaskPriority: React.FC<TaskPriorityProps> = (props) => {
       <div className="flex items-center ml-4 w-full">
         <span className="text-gray-500 mr-2">Приоритет</span>
         <div 
-          className={`cursor-pointer px-2 py-1 rounded-md ${getPriorityColor()}`}
-          onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+          className={`${canEdit ? 'cursor-pointer' : 'cursor-default'} px-2 py-1 rounded-md ${getPriorityColor()}`}
+          onClick={() => canEdit && setIsDropdownOpen(!isDropdownOpen)}
         >
           {getPriorityDisplay()}
         </div>
       </div>
       
-      {isDropdownOpen && (
+      {isDropdownOpen && canEdit && (
         <div className="absolute top-full left-0 mt-1 bg-white rounded-md shadow-md z-10 w-56 border border-gray-200">
           <div className="p-2">
             <div 

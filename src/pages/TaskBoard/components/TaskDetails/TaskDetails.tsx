@@ -10,6 +10,8 @@ import TaskDate from './components/TaskDate'
 import TaskPriority from './components/TaskPriority'
 import TaskDescription from './components/TaskDescription'
 import '../../styles/animations.ts'
+import {AuthService} from '../../../../services/auth/Auth'
+import {canEditTask} from '../../../../utils/permissionUtils'
 
 interface TaskDetailsProps {
   task: {
@@ -51,6 +53,9 @@ const TaskDetails: React.FC<TaskDetailsProps> = ({
   const inputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  // Определяем, может ли пользователь редактировать задачу
+  const hasEditPermission = canEditTask(deskUsers, task);
+
   useEffect(() => {
     if (task) {
       setTaskName(task.taskName || '');
@@ -70,7 +75,7 @@ const TaskDetails: React.FC<TaskDetailsProps> = ({
   };
 
   const saveTaskChanges = async (changes: any) => {
-    if (!task?.taskId) return;
+    if (!task?.taskId || !hasEditPermission) return;
 
     try {
       console.log('Сохранение изменений:', changes);
@@ -94,17 +99,23 @@ const TaskDetails: React.FC<TaskDetailsProps> = ({
   };
 
   const handleCompleteTask = async () => {
+    if (!hasEditPermission) return;
+    
     const newStatus = task.statusType === StatusType.COMPLETED
       ? StatusType.BACKLOG : StatusType.COMPLETED;
     await saveTaskChanges({ statusType: newStatus });
   };
 
   const handleDateChange = async (id: string, date: Date | null) => {
+    if (!hasEditPermission) return;
+    
     await saveTaskChanges({ taskFinishDate: date });
     setShowDatePicker(false);
   };
   
   const handlePriorityChange = async (priority: string) => {
+    if (!hasEditPermission) return;
+    
     await saveTaskChanges({ priorityType: priority });
   };
 
@@ -126,7 +137,8 @@ const TaskDetails: React.FC<TaskDetailsProps> = ({
         <div className="flex flex-col space-y-4">
           <TaskStatus 
             isCompleted={isCompleted} 
-            onStatusChange={handleCompleteTask} 
+            onStatusChange={handleCompleteTask}
+            canEdit={hasEditPermission}
           />
           
           <TaskName 
@@ -137,6 +149,7 @@ const TaskDetails: React.FC<TaskDetailsProps> = ({
             setTaskName={setTaskName}
             onSave={handleSaveName}
             inputRef={inputRef}
+            canEdit={hasEditPermission}
           />
 
           <div className="pt-2">
@@ -146,6 +159,7 @@ const TaskDetails: React.FC<TaskDetailsProps> = ({
               taskId={task?.taskId}
               deskId={deskId}
               onTaskUpdate={onTaskUpdate}
+              canEdit={hasEditPermission}
             />
             
             <TaskDate 
@@ -154,8 +168,9 @@ const TaskDetails: React.FC<TaskDetailsProps> = ({
               taskId={task.taskId}
               deskId={deskId}
               onTaskUpdate={onTaskUpdate}
+              canEdit={hasEditPermission}
             />
-            {showDatePicker && task?.taskId && (
+            {showDatePicker && task?.taskId && hasEditPermission && (
               <DatePicker
                 taskId={task.taskId.toString()}
                 selectedDate={task.taskFinishDate ? new Date(task.taskFinishDate) : null}
@@ -169,6 +184,7 @@ const TaskDetails: React.FC<TaskDetailsProps> = ({
               taskId={task.taskId}
               deskId={deskId}
               onPriorityChange={handlePriorityChange}
+              canEdit={hasEditPermission}
             />
           </div>
 
@@ -179,6 +195,7 @@ const TaskDetails: React.FC<TaskDetailsProps> = ({
             setTaskDescription={setTaskDescription}
             onSave={handleSaveDescription}
             textareaRef={textareaRef}
+            canEdit={hasEditPermission}
           />
         </div>
       </div>

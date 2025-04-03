@@ -10,7 +10,8 @@ const DeskTitleEditor: React.FC<DeskTitleEditorProps> = ({
 	handleEdit,
 	handleBlur,
 	handleKeyDown,
-	inputRef
+	inputRef,
+	hasEditPermission = true // По умолчанию права есть
 }) => {
 	return (
 		<div className="w-[350px]">
@@ -40,7 +41,7 @@ const DeskTitleEditor: React.FC<DeskTitleEditorProps> = ({
 				</div>
 			) : (
 				<h1
-					className="text-2xl font-bold whitespace-nowrap overflow-hidden text-ellipsis cursor-text w-full"
+					className={`text-2xl font-bold whitespace-nowrap overflow-hidden text-ellipsis ${hasEditPermission ? 'cursor-text' : 'cursor-default'}`}
 					onClick={handleEdit}
 				>
 					{deskName || 'Без названия'}

@@ -1,7 +1,8 @@
 import React, {useRef, useState} from 'react'
 import {BsCalendarDate} from 'react-icons/bs'
 import {updateTask} from '../../../../../services/task/Task'
-import DatePicker from '../../../../../components/DatePicker/DatePicker'
+import {format, addMonths, subMonths, startOfMonth, isSameDay, isToday, isBefore} from 'date-fns'
+import {ru} from 'date-fns/locale'
 
 interface TaskDateProps {
   taskCreateDate: string | null;
@@ -9,6 +10,7 @@ interface TaskDateProps {
   taskId: number;
   deskId: number;
   onTaskUpdate: (task: any) => void;
+  canEdit?: boolean;
 }
 
 const TaskDate: React.FC<TaskDateProps> = ({ 
@@ -16,16 +18,21 @@ const TaskDate: React.FC<TaskDateProps> = ({
   taskFinishDate, 
   taskId, 
   deskId, 
-  onTaskUpdate 
+  onTaskUpdate,
+  canEdit = true
 }) => {
   const [isPickerOpen, setIsPickerOpen] = useState(false);
   const [localFinishDate, setLocalFinishDate] = useState(taskFinishDate);
   const [error, setError] = useState<string | null>(null);
+  const [currentMonth, setCurrentMonth] = useState(startOfMonth(localFinishDate ? new Date(localFinishDate) : new Date()));
   const dateRef = useRef<HTMLDivElement>(null);
+  const pickerRef = useRef<HTMLDivElement>(null);
 
   // Преобразование строковых дат в объекты Date
   const startDateObj = taskCreateDate ? new Date(taskCreateDate) : null;
   const endDateObj = localFinishDate ? new Date(localFinishDate) : null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
 
   // Форматирование даты в формат "дд.мм.гггг"
   const formatDate = (dateStr: string | null): string => {
@@ -96,8 +103,21 @@ const TaskDate: React.FC<TaskDateProps> = ({
     return 'дней';
   };
 
+  // Смена месяца
+  const prevMonth = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCurrentMonth(subMonths(currentMonth, 1));
+  };
+  
+  const nextMonth = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCurrentMonth(addMonths(currentMonth, 1));
+  };
+
   // Обработчик изменения даты
-  const handleDateChange = async (taskId: number, date: Date) => {
+  const handleDateChange = async (date: Date | null) => {
+    if (!canEdit) return;
+    
     setError(null);
     
     // Проверяем, есть ли deskId
@@ -107,7 +127,7 @@ const TaskDate: React.FC<TaskDateProps> = ({
     }
     
     // Обновляем локальную дату для UI
-    const newFinishDate = date.toISOString();
+    const newFinishDate = date ? date.toISOString() : null;
     setLocalFinishDate(newFinishDate);
     
     try {
@@ -136,7 +156,39 @@ const TaskDate: React.FC<TaskDateProps> = ({
 
   const { text: daysLeftText, color: daysColor } = getDaysInfo();
 
+  // Обработчик клика по документу для закрытия календаря
+  React.useEffect(() => {
+    if (!isPickerOpen) return;
+    
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        pickerRef.current && 
+        !pickerRef.current.contains(e.target as Node) &&
+        dateRef.current && 
+        !dateRef.current.contains(e.target as Node)
+      ) {
+        setIsPickerOpen(false);
+      }
+    };
+    
+    // Добавляем слушатель с задержкой, чтобы избежать немедленного срабатывания
+    const timer = setTimeout(() => {
+      document.addEventListener('mousedown', handleClickOutside);
+    }, 100);
+    
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isPickerOpen]);
 
+  // Выбор даты
+  const handleDateSelect = (date: Date, e: React.MouseEvent) => {
+    e.stopPropagation();
+    handleDateChange(date);
+  };
+
+  const daysOfWeek = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
 
   return (
     <div className="flex items-center py-2 border-b border-gray-100 relative">
@@ -148,8 +200,10 @@ const TaskDate: React.FC<TaskDateProps> = ({
           <span className="text-gray-500 mr-2">Дата:</span>
           <div
             ref={dateRef}
-            className="text-gray-700 cursor-pointer hover:bg-gray-50 px-2 py-1 rounded transition-colors"
-            onClick={() => {
+            className={`text-gray-700 ${canEdit ? 'cursor-pointer hover:bg-gray-50' : 'cursor-default'} px-2 py-1 rounded transition-colors`}
+            onClick={(e) => {
+              if (!canEdit) return;
+              e.stopPropagation(); // Предотвращаем всплытие события
               setError(null);
               setIsPickerOpen(!isPickerOpen);
             }}
@@ -163,13 +217,128 @@ const TaskDate: React.FC<TaskDateProps> = ({
         </div>
       </div>
       
-      {isPickerOpen && (
-        <DatePicker
-          taskId={taskId}
-          selectedDate={endDateObj || new Date()}
-          onDateChange={handleDateChange}
-          onClose={() => setIsPickerOpen(false)}
-        />
+      {/* Встроенный календарь, который появляется в TaskDetails */}
+      {isPickerOpen && canEdit && (
+        <div 
+          ref={pickerRef}
+          className="absolute right-0 top-full mt-1 z-40 bg-white rounded-lg shadow-lg border border-gray-200"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="p-4 w-64">
+            <div className="flex justify-between items-center mb-4">
+              <button 
+                className="p-1 hover:bg-gray-100 rounded text-gray-500"
+                onClick={prevMonth}
+              >
+                ←
+              </button>
+              <div className="font-semibold">
+                {format(currentMonth, 'LLLL yyyy', { locale: ru })}
+              </div>
+              <button 
+                className="p-1 hover:bg-gray-100 rounded text-gray-500"
+                onClick={nextMonth}
+              >
+                →
+              </button>
+            </div>
+            
+            {/* Дни недели */}
+            <div className="grid grid-cols-7 gap-1 mb-2">
+              {daysOfWeek.map(day => (
+                <div key={day} className="text-center text-xs text-gray-500 font-medium py-1">
+                  {day}
+                </div>
+              ))}
+            </div>
+            
+            {/* Дни месяца */}
+            <div className="grid grid-cols-7 gap-1">
+              {(() => {
+                // Вычисляем первый день месяца
+                const firstDayOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
+                // День недели первого дня (0 - воскресенье, 1 - понедельник и т.д.)
+                let firstDayWeekday = firstDayOfMonth.getDay();
+                // Переводим в формат 0 - понедельник, 6 - воскресенье
+                firstDayWeekday = firstDayWeekday === 0 ? 6 : firstDayWeekday - 1;
+                
+                // Вычисляем последний день месяца
+                const lastDayOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
+                const daysInMonth = lastDayOfMonth.getDate();
+                
+                // Массив для всех дней, которые будем отображать
+                const calendarDays = [];
+                
+                // Дни предыдущего месяца
+                const prevMonthLastDay = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 0).getDate();
+                for (let i = 0; i < firstDayWeekday; i++) {
+                  const day = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, prevMonthLastDay - firstDayWeekday + i + 1);
+                  calendarDays.push(day);
+                }
+                
+                // Дни текущего месяца
+                for (let i = 1; i <= daysInMonth; i++) {
+                  const day = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), i);
+                  calendarDays.push(day);
+                }
+                
+                // Дни следующего месяца (добавляем столько, чтобы общее число было кратно 7)
+                const remainingDays = 7 - (calendarDays.length % 7);
+                if (remainingDays < 7) {
+                  for (let i = 1; i <= remainingDays; i++) {
+                    const day = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, i);
+                    calendarDays.push(day);
+                  }
+                }
+                
+                // Рендерим все дни
+                return calendarDays.map((day, index) => {
+                  const isCurrentMonth = day.getMonth() === currentMonth.getMonth();
+                  const isSelectedDay = endDateObj ? isSameDay(day, endDateObj) : false;
+                  const isPastDay = isBefore(day, today) && !isToday(day);
+                  
+                  return (
+                    <button
+                      key={index}
+                      className={`
+                        w-7 h-7 flex items-center justify-center text-xs rounded-full
+                        ${!isCurrentMonth ? 'text-gray-400' : 'text-gray-800'}
+                        ${isToday(day) ? 'font-bold border border-orange-400' : ''}
+                        ${isSelectedDay ? 'bg-orange-400 text-white' : ''}
+                        ${isPastDay ? 'text-gray-300' : 'hover:bg-gray-100'}
+                      `}
+                      onClick={(e) => !isPastDay && handleDateSelect(day, e)}
+                      disabled={isPastDay}
+                    >
+                      {day.getDate()}
+                    </button>
+                  );
+                });
+              })()}
+            </div>
+            
+            <div className="mt-4 border-t pt-3 flex justify-between">
+              <button 
+                className="text-xs text-gray-500 hover:text-gray-700"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDateChange(null);
+                }}
+              >
+                Очистить
+              </button>
+              <button 
+                className="text-xs text-orange-400 font-medium hover:text-orange-500"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDateSelect(today, e);
+                }}
+              >
+                Сегодня
+              </button>
+            </div>
+          </div>
+        </div>
       )}
       
       {error && (

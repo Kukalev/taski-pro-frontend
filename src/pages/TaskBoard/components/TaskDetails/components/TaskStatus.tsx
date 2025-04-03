@@ -3,16 +3,18 @@ import React from 'react'
 interface TaskStatusProps {
   isCompleted: boolean;
   onStatusChange: () => void;
+  canEdit?: boolean;
 }
 
-const TaskStatus: React.FC<TaskStatusProps> = ({ isCompleted, onStatusChange }) => {
+const TaskStatus: React.FC<TaskStatusProps> = ({ isCompleted, onStatusChange, canEdit = true }) => {
   return (
     <button 
       className={`${isCompleted 
         ? 'bg-green-50 text-green-500' 
         : 'bg-orange-50 text-orange-500'
-      } rounded-lg flex items-center px-3 py-2 cursor-pointer w-fit`}
-      onClick={onStatusChange}
+      } rounded-lg flex items-center px-3 py-2 ${canEdit ? 'cursor-pointer' : 'cursor-default'} w-fit`}
+      onClick={() => canEdit && onStatusChange()}
+      disabled={!canEdit}
     >
       <div className={`w-4 h-4 rounded-full bg-white border-2 ${isCompleted ? 'border-green-500 text-green-500' : 'border-orange-500 text-orange-500'} mr-2 flex items-center justify-center`}>
         {isCompleted && (

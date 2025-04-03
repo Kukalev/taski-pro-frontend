@@ -17,6 +17,7 @@ export interface DeskHeaderProps {
 	updateDeskName: (name: string) => Promise<void>;
 	onDateClick?: (date?: Date | null) => void;
 	selectedDate?: Date | null;
+	hasEditPermission?: boolean;
 }
 
 // Enum для статусов
@@ -41,6 +42,7 @@ export interface DeskTitleEditorProps {
 	handleBlur: () => void;
 	handleKeyDown: (e: React.KeyboardEvent) => void;
 	inputRef: React.RefObject<HTMLInputElement>;
+	hasEditPermission?: boolean;
 }
 
 export interface DateRangeSelectorProps {
@@ -54,6 +56,7 @@ export interface DateRangeSelectorProps {
 	setIsCalendarOpen: (isOpen: boolean) => void;
 	onDeskUpdate: (updatedDesk: Partial<DeskData>) => void;
 	calendarButtonRef: React.RefObject<HTMLButtonElement>;
+	hasEditPermission?: boolean;
 }
 
 export interface StatusSelectorProps {
@@ -61,6 +64,7 @@ export interface StatusSelectorProps {
 	statusMenuOpen: boolean;
 	toggleStatusMenu: () => void;
 	statusButtonRef: React.RefObject<HTMLDivElement>;
+	hasEditPermission?: boolean;
 }
 
 export interface StatusMenuProps {

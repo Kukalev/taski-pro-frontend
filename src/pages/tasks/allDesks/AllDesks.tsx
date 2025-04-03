@@ -14,6 +14,7 @@ import {DeskService} from '../../../services/desk/Desk'
 import {UserService} from '../../../services/users/Users'
 import {DeskTable} from './components/DeskTable'
 import {SearchPanel} from './components/SearchPanel'
+import {canEditDesk} from '../../../utils/permissionUtils'
 
 export const AllDesks = () => {
 	const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
@@ -25,6 +26,7 @@ export const AllDesks = () => {
 	const [searchQuery, setSearchQuery] = useState('')
 	const username = AuthService.getUsername() || ''
 	const [fullDesksData, setFullDesksData] = useState<any[]>([])
+	const [deskPermissions, setDeskPermissions] = useState<{[key: number]: boolean}>({})
 
 	// Получаем данные и функции из контекста
 	const { desks, loading, addDesk, loadDesks, removeDesk } = useDesks()
@@ -55,6 +57,13 @@ export const AllDesks = () => {
 							// Используем UserService.getUsersOnDesk для получения пользователей доски
 							const deskUsers = await UserService.getUsersOnDesk(desk.id);
 							console.log(`Пользователи доски ${desk.id}:`, deskUsers);
+							
+							// Проверяем права пользователя на редактирование
+							const hasPermission = canEditDesk(deskUsers);
+							setDeskPermissions(prev => ({
+								...prev,
+								[desk.id]: hasPermission
+							}));
 							
 							// Ищем пользователя с правом CREATOR
 							const creator = deskUsers.find(user => user.rightType === 'CREATOR');
@@ -106,6 +115,12 @@ export const AllDesks = () => {
 
 	// Открытие модального окна для переименования
 	const handleRenameClick = (id: number) => {
+		// Проверяем права пользователя перед открытием окна
+		if (!deskPermissions[id]) {
+			console.log('У вас нет прав для переименования этой доски');
+			return;
+		}
+		
 		setSelectedDeskId(id)
 		setSelectedDeskName(findDeskName(id))
 		setIsRenameModalOpen(true)
@@ -113,6 +128,12 @@ export const AllDesks = () => {
 
 	// Открытие модального окна для удаления
 	const handleDeleteClick = (id: number) => {
+		// Проверяем права пользователя перед открытием окна
+		if (!deskPermissions[id]) {
+			console.log('У вас нет прав для удаления этой доски');
+			return;
+		}
+		
 		setSelectedDeskId(id)
 		setSelectedDeskName(findDeskName(id))
 		setIsDeleteModalOpen(true)
@@ -120,6 +141,13 @@ export const AllDesks = () => {
 
 	// Подтверждение удаления доски
 	const handleConfirmDelete = async (id: number) => {
+		// Проверяем права пользователя перед удалением
+		if (!deskPermissions[id]) {
+			console.log('У вас нет прав для удаления этой доски');
+			setIsDeleteModalOpen(false);
+			return;
+		}
+		
 		setIsDeleting(true)
 		try {
 			// Оптимистичное удаление из UI
@@ -158,6 +186,7 @@ export const AllDesks = () => {
 				username={username} 
 				onRename={handleRenameClick}
 				onDelete={handleDeleteClick}
+				deskPermissions={deskPermissions}
 			/>
 
 			{/* Модальные окна */}

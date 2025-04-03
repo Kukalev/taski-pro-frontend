@@ -7,6 +7,7 @@ interface TaskDescriptionProps {
   setTaskDescription: (description: string) => void;
   onSave: () => void;
   textareaRef: React.RefObject<HTMLTextAreaElement>;
+  canEdit?: boolean;
 }
 
 const TaskDescription: React.FC<TaskDescriptionProps> = ({
@@ -15,7 +16,8 @@ const TaskDescription: React.FC<TaskDescriptionProps> = ({
   setIsEditingDescription,
   setTaskDescription,
   onSave,
-  textareaRef
+  textareaRef,
+  canEdit = true
 }) => {
   return (
     <div className="mt-4">
@@ -40,8 +42,8 @@ const TaskDescription: React.FC<TaskDescriptionProps> = ({
         />
       ) : (
         <div 
-          className="text-gray-700 whitespace-pre-wrap p-2 cursor-pointer"
-          onClick={() => setIsEditingDescription(true)}
+          className={`text-gray-700 whitespace-pre-wrap p-2 ${canEdit ? 'cursor-pointer' : 'cursor-default'}`}
+          onClick={() => canEdit && setIsEditingDescription(true)}
         >
           {taskDescription ? 
             taskDescription : 

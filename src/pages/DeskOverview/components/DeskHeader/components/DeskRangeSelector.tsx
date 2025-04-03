@@ -15,7 +15,8 @@ const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({
 	isCalendarOpen,
 	setIsCalendarOpen,
 	onDeskUpdate,
-	calendarButtonRef
+	calendarButtonRef,
+	hasEditPermission = true // По умолчанию права есть
 }) => {
 	// Уникальный ID для календаря
 	const calendarId = `desk-date-${deskId || 'main'}`;
@@ -52,10 +53,22 @@ const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({
 		}
 	};
 
+	// Открытие/закрытие календаря - убеждаемся, что календарь не откроется для MEMBER
+	const handleToggleCalendar = () => {
+		// Проверяем права доступа и запрещаем MEMBER открывать календарь
+		if (!hasEditPermission) {
+			console.log('Нет прав на редактирование даты доски');
+			return;
+		}
+		
+		setIsCalendarOpen(!isCalendarOpen);
+	};
+
 	// Функция обновления даты
 	const handleDateChange = async (_taskId: string, date: Date | null) => {
-		if (!deskId) {
-			console.error('ID доски не определен');
+		// Проверяем права доступа
+		if (!hasEditPermission || !deskId) {
+			console.log('Нет прав на редактирование даты доски');
 			setIsCalendarOpen(false);
 			return;
 		}
@@ -150,9 +163,9 @@ const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({
 		<>
 			<button
 				ref={calendarButtonRef}
-				className='flex items-center min-w-[180px] px-4 py-2 bg-gray-50 hover:bg-gray-100 rounded-lg text-base cursor-pointer transition-colors'
+				className={`flex items-center min-w-[180px] px-4 py-2 bg-gray-50 ${hasEditPermission ? 'hover:bg-gray-100 cursor-pointer' : 'cursor-default'} rounded-lg text-base transition-colors`}
 				data-task-id={calendarId}
-				onClick={() => setIsCalendarOpen(!isCalendarOpen)}
+				onClick={handleToggleCalendar}
 			>
 				<svg
 					className={`w-6 h-6 mr-3 flex-shrink-0 transition-colors ${isCalendarOpen ? 'text-orange-500' : ''}`}
@@ -174,8 +187,8 @@ const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({
 				<span className="text-sm font-medium">{getFormattedDateRange()}</span>
 			</button>
 
-			{/* Рендерим DatePicker только если календарь открыт */}
-			{isCalendarOpen && (
+			{/* Рендерим DatePicker только если календарь открыт и у пользователя есть права */}
+			{isCalendarOpen && hasEditPermission && (
 				<DatePicker
 					taskId={calendarId}
 					selectedDate={currentDate}

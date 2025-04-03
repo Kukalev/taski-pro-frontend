@@ -6,6 +6,7 @@ import LoadingState from './components/LoadingState';
 import ErrorState from './components/ErrorState';
 import EmptyState from './components/EmptyState';
 import ParticipantsList from './components/ParticipantsList';
+import { canManageParticipants } from '../../../../utils/permissionUtils';
 
 const DeskParticipants: React.FC<DeskParticipantsProps> = ({ desk }) => {
   const [participants, setParticipants] = useState<UserOnDesk[]>([]);
@@ -46,16 +47,22 @@ const DeskParticipants: React.FC<DeskParticipantsProps> = ({ desk }) => {
     }
   }, [desk?.id]);
 
+  // Проверка прав на управление участниками
+  const hasManagePermission = canManageParticipants(participants);
+
   return (
     <div className='w-full mb-6'>
       <div className='flex justify-between items-center mb-2'>
         <h3 className='text-lg font-medium'>Участники</h3>
-        <button 
-          className='text-sm bg-gray-50 rounded-full px-4 py-1.5 hover:bg-gray-100'
-          onClick={() => setIsModalOpen(true)}
-        >
-          Добавить участников
-        </button>
+        {/* Показываем кнопку добавления только пользователям с правами управления */}
+        {hasManagePermission && (
+          <button 
+            className='text-sm bg-gray-50 rounded-full px-4 py-1.5 hover:bg-gray-100'
+            onClick={() => setIsModalOpen(true)}
+          >
+            Добавить участников
+          </button>
+        )}
       </div>
       
       <div className='bg-white rounded-lg p-4'>
@@ -70,7 +77,7 @@ const DeskParticipants: React.FC<DeskParticipantsProps> = ({ desk }) => {
         )}
       </div>
       
-      {desk && desk.id && (
+      {desk && desk.id && hasManagePermission && (
         <AddUserModal 
           isOpen={isModalOpen} 
           onClose={() => setIsModalOpen(false)} 
