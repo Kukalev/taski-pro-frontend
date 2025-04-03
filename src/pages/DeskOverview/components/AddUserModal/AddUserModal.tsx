@@ -1,7 +1,11 @@
 import React, {useEffect, useRef, useState} from 'react'
-import {UserService} from '../../../services/users/Users'
-import {UserResponseDto} from '../../../services/users/types/types'
+import {UserService} from '../../../../services/users/Users.ts'
+import {UserResponseDto} from './types'
 import ReactDOM from 'react-dom'
+import SearchBar from './components/SearchBar'
+import UsersList from './components/UsersList'
+import SelectedUserPreview from './components/SelectedUserPreview'
+import ModalFooter from './components/ModalFooter'
 
 interface AddUserModalProps {
 	isOpen: boolean;
@@ -10,15 +14,13 @@ interface AddUserModalProps {
 	onUserAdded?: () => void;
 }
 
-const AddUserModal: React.FC<AddUserModalProps> = ({ 
-	isOpen, 
-	onClose, 
-	deskId, 
+const AddUserModal: React.FC<AddUserModalProps> = ({
+	isOpen,
+	onClose,
+	deskId,
 	onUserAdded
 }) => {
 	const [searchQuery, setSearchQuery] = useState('');
-	const [allUsers, setAllUsers] = useState<UserResponseDto[]>([]);
-	const [deskUsers, setDeskUsers] = useState<string[]>([]);
 	const [availableUsers, setAvailableUsers] = useState<UserResponseDto[]>([]);
 	const [filteredUsers, setFilteredUsers] = useState<UserResponseDto[]>([]);
 	const [selectedUser, setSelectedUser] = useState<UserResponseDto | null>(null);
@@ -42,32 +44,30 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
 			// 1. Получаем ВСЕХ пользователей системы
 			const allUsersData = await UserService.getAllUsers();
 			console.log('Все пользователи системы:', allUsersData);
-			setAllUsers(allUsersData);
-			
+
 			// 2. Получаем пользователей доски
 			const deskUsersData = await UserService.getUsersOnDesk(deskId);
 			console.log('Пользователи доски:', deskUsersData);
-			
+
 			// 3. Извлекаем имена пользователей (username или userName)
-			const usernames = deskUsersData.map(user => 
-                user.username || user.userName
-            ).filter(Boolean).map(name => name.toLowerCase());
-			
+			const usernames = deskUsersData.map(user =>
+				user.username || user.userName
+			).filter(Boolean).map(name => name.toLowerCase());
+
 			console.log('Имена пользователей на доске:', usernames);
-			setDeskUsers(usernames);
-			
+
 			// 4. Фильтруем - убираем пользователей доски из общего списка
-			const filteredAvailable = allUsersData.filter(user => 
-				!usernames.includes(user.username.toLowerCase())
-			);
-			
+			const filteredAvailable = allUsersData.filter(user => {
+				const username = user.username || '';
+				return !usernames.includes(username.toLowerCase());
+			});
+
 			console.log('Доступные пользователи:', filteredAvailable);
 			setAvailableUsers(filteredAvailable);
-			
+
 		} catch (error: unknown) {
 			console.error('Ошибка при загрузке данных:', error);
-			setDeskUsers([]);
-			setAvailableUsers(allUsersData);
+			setAvailableUsers([]);
 		} finally {
 			setIsLoading(false);
 		}
@@ -79,13 +79,14 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
 			setFilteredUsers([]);
 			return;
 		}
-		
+
 		const lowerQuery = searchQuery.toLowerCase();
 		const filtered = availableUsers.filter(user => {
-			return user.username.toLowerCase().includes(lowerQuery) || 
-				   (user.email && user.email.toLowerCase().includes(lowerQuery));
+			const username = user.username || user.userName || '';
+			const email = user.email || '';
+			return username.toLowerCase().includes(lowerQuery) || email.toLowerCase().includes(lowerQuery);
 		});
-		
+
 		setFilteredUsers(filtered);
 	}, [searchQuery, availableUsers]);
 
@@ -116,8 +117,9 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
 
 	// Получение инициалов для аватара
 	const getUserInitials = (user: UserResponseDto) => {
-		if (!user.username) return '?';
-		return user.username.charAt(0).toUpperCase();
+		const username = user.username || user.userName || '';
+		if (!username) return '?';
+		return username.charAt(0).toUpperCase();
 	};
 
 	// Выбор пользователя
@@ -143,35 +145,38 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
 		setIsLoading(true);
 		setError('');
 		try {
-			console.log('Добавляем пользователя:', selectedUser.username, 'с правами:', accessType);
-			
+			const username = selectedUser.username || selectedUser.userName || '';
+			console.log('Добавляем пользователя:', username, 'с правами:', accessType);
+
 			// Добавляем пользователя через API
 			await UserService.addUserForDesk(deskId, {
-				username: selectedUser.username,
+				username: username,
 				rightType: accessType
 			});
-			
+
 			console.log('Пользователь успешно добавлен');
-			
+
 			// После успешного добавления обновляем списки
-			const userLower = selectedUser.username.toLowerCase();
-			
+			const userLower = username.toLowerCase();
+
 			// Добавляем в список на доске
-			setDeskUsers(prev => [...prev, userLower]);
-			
+
 			// Удаляем из доступных
-			setAvailableUsers(prev => 
-				prev.filter(u => u.username.toLowerCase() !== userLower)
-			);
-			
+			setAvailableUsers(prev => {
+				return prev.filter(u => {
+					const uname = u.username || u.userName || '';
+					return uname.toLowerCase() !== userLower;
+				});
+			});
+
 			// Сбрасываем выбор
 			setSelectedUser(null);
-			
+
 			// Уведомляем родителя для обновления списка участников
 			if (onUserAdded) {
 				onUserAdded();
 			}
-			
+
 		} catch (err: unknown) {
 			console.error('Ошибка при добавлении пользователя:', err);
 			setError('Не удалось добавить пользователя');
@@ -186,8 +191,8 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
 		<>
 			<div className="fixed inset-0 bg-black opacity-20 z-40"></div>
 			<div className="fixed inset-0 z-50" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-				<div 
-					ref={modalRef} 
+				<div
+					ref={modalRef}
 					className="bg-white rounded-lg w-full max-w-md mx-auto shadow-xl p-6"
 					style={{
 						animation: 'fadeIn 0.2s ease-out',
@@ -198,7 +203,7 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
 				>
 					<div className="flex justify-between items-center mb-4">
 						<h2 className="text-xl font-medium text-gray-800">Добавить участника</h2>
-						<button 
+						<button
 							onClick={onClose}
 							className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100"
 						>
@@ -208,127 +213,46 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
 							</svg>
 						</button>
 					</div>
-					
+
 					{!selectedUser ? (
-						<div className="mb-6">
-							<label className="block text-sm font-medium text-gray-700 mb-1">
-								Имя пользователя
-							</label>
-							<div className="relative">
-								<input
-									ref={inputRef}
-									type="text"
-									className="w-full p-2 border border-orange-300 rounded-md bg-gray-50 focus:outline-none focus:ring-1 focus:ring-orange-500"
-									placeholder="Введите имя пользователя"
-									value={searchQuery}
-									onChange={(e) => setSearchQuery(e.target.value)}
-								/>
-								{isLoading && (
-									<div className="absolute right-3 top-2.5">
-										<div className="animate-spin h-5 w-5 border-2 border-orange-500 rounded-full border-t-transparent"></div>
-									</div>
-								)}
-							</div>
-							
-							{/* Результаты поиска */}
-							{filteredUsers.length > 0 && (
-								<div className="mt-1 border border-gray-200 rounded-md max-h-60 overflow-y-auto shadow-lg bg-white z-10">
-									{filteredUsers.map((user) => (
-										<div
-											key={user.username}
-											className="p-2 hover:bg-orange-50 cursor-pointer flex items-center border-b border-gray-100 last:border-0"
-											onClick={() => handleSelectUser(user)}
-										>
-											<div className="w-8 h-8 bg-orange-200 rounded-full flex items-center justify-center text-orange-600 mr-2">
-												{getUserInitials(user)}
-											</div>
-											<div className="flex-grow">
-												<div className="font-medium">{user.username}</div>
-												{user.email && <div className="text-xs text-gray-500">{user.email}</div>}
-											</div>
-										</div>
-									))}
-								</div>
-							)}
-							
+						<>
+							<SearchBar
+								searchQuery={searchQuery}
+								setSearchQuery={setSearchQuery}
+								isLoading={isLoading}
+								inputRef={inputRef}
+							/>
+
+							<UsersList
+								filteredUsers={filteredUsers}
+								handleSelectUser={handleSelectUser}
+								getUserInitials={getUserInitials}
+							/>
+
 							{/* Сообщение, если ничего не найдено */}
 							{searchQuery && filteredUsers.length === 0 && !isLoading && (
 								<div className="mt-1 p-2 text-gray-500 text-sm">
 									Пользователи не найдены или все соответствующие запросу уже добавлены к доске
 								</div>
 							)}
-						</div>
+						</>
 					) : (
-						<div className="mb-6">
-							<label className="block text-sm font-medium text-gray-700 mb-2">
-								Выбранный пользователь
-							</label>
-							<div className="p-3 bg-orange-50 rounded-md flex items-center mb-4">
-								<div className="w-10 h-10 bg-orange-200 rounded-full flex items-center justify-center text-orange-600 mr-3">
-									{getUserInitials(selectedUser)}
-								</div>
-								<div className="flex-grow">
-									<div className="font-medium">{selectedUser.username}</div>
-									{selectedUser.email && <div className="text-sm text-gray-500">{selectedUser.email}</div>}
-								</div>
-								<button 
-									onClick={handleCancelUserSelection}
-									className="text-gray-400 hover:text-gray-600 p-1"
-								>
-									<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-										<path d="M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-										<path d="M6 6L18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-									</svg>
-								</button>
-							</div>
-							
-							<label className="block text-sm font-medium text-gray-700 mb-1">
-								Тип доступа
-							</label>
-							<select
-								className="w-full p-2 border border-orange-300 rounded-md bg-gray-50 focus:outline-none focus:ring-1 focus:ring-orange-500"
-								value={accessType}
-								onChange={(e) => setAccessType(e.target.value)}
-							>
-								<option value="MEMBER">Участник</option>
-								<option value="CONTRIBUTOR">Редактор</option>
-							</select>
-						</div>
+						<SelectedUserPreview
+							selectedUser={selectedUser}
+							handleCancelUserSelection={handleCancelUserSelection}
+							accessType={accessType}
+							setAccessType={setAccessType}
+							getUserInitials={getUserInitials}
+						/>
 					)}
-					
-					{error && (
-						<div className="mb-4 p-2 bg-red-50 text-red-600 rounded-md text-sm">
-							{error}
-						</div>
-					)}
-					
-					<div className="flex justify-end gap-2">
-						<button 
-							onClick={onClose}
-							className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-						>
-							Отмена
-						</button>
-						
-						{selectedUser && (
-							<button 
-								onClick={handleAddUser}
-								disabled={isLoading}
-								className={`px-4 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 ${
-									isLoading ? 'opacity-70 cursor-not-allowed' : ''
-								}`}
-							>
-								{isLoading ? (
-									<>
-										<span className="inline-block animate-spin mr-2">⟳</span>
-										Добавление...
-									</>
-								) : (
-									'Добавить'
-								)}
-							</button>
-						)}
-					</div>
+
+					<ModalFooter
+						onClose={onClose}
+						handleAddUser={handleAddUser}
+						isLoading={isLoading}
+						selectedUser={selectedUser}
+						error={error}
+					/>
 				</div>
 			</div>
 		</>

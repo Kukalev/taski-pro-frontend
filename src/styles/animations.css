@@ -1,0 +1,51 @@
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.dropdown-animation {
+  animation: fadeIn 0.2s ease-out forwards;
+}
+
+/* Анимации для панели задач */
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideOutRight {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+.task-panel-enter {
+  animation: slideInRight 0.3s ease-out forwards;
+}
+
+.task-panel-exit {
+  animation: slideOutRight 0.3s ease-out forwards;
+}
+
+/* Анимация для выпадающих списков */
+@keyframes dropdown-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.animate-dropdown-fade-in {
+  animation: dropdown-fade-in 0.2s ease-out forwards;
+} 

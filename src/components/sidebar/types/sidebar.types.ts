@@ -7,7 +7,7 @@ export interface DeskData {
 	userLimit?: number
 }
 
-// Убедитесь, что в sidebar.types.ts.ts есть этот интерфейс:
+// Убедитесь, что в sidebar.types.ts.ts.ts есть этот интерфейс:
 export interface SidebarDesksProps {
 	desks: DeskData[]
 	loading: boolean

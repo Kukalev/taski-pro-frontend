@@ -1,13 +1,17 @@
-import React, { useState, useEffect } from 'react'
-import DeskHeader from './components/DeskHeader'
-import DeskDescription from './components/DeskDescription'
+import React, {useEffect, useState} from 'react'
+
+import DeskHeader from './components/DeskHeader/DeskHeader'
+import DeskDescription from './components/DeskDescription/DeskDescription'
 import DeskParticipants from './components/DeskParticipants'
-import { DeskData } from '../../components/sidebar/types/sidebar.types'
-import { useDeskActions } from './hooks/useDeskActions'
-import DeskDatePicker from './components/DeskDatePicker'
+
+import {DeskData} from '../../components/sidebar/types/sidebar.types'
+
+import {useDeskActions} from './hooks/useDeskActions'
+
+import DatePicker from '../../components/DatePicker/DatePicker.tsx'
 
 interface DeskOverviewPageProps {
-  desk?: DeskData;
+  desk: DeskData;
   onDeskUpdate?: (updatedDesk: Partial<DeskData>) => void;
 }
 
@@ -26,6 +30,9 @@ const DeskOverviewPage: React.FC<DeskOverviewPageProps> = ({ desk, onDeskUpdate 
       setSelectedDate(desk.deskFinishDate);
     }
   }, [desk]);
+
+  // Добавляем уникальный ID для календаря
+  const calendarId = `desk-date-${desk?.id || 'main'}`;
 
   // Если доска не передана, отображаем сообщение
   if (!desk) {
@@ -76,12 +83,14 @@ const DeskOverviewPage: React.FC<DeskOverviewPageProps> = ({ desk, onDeskUpdate 
         <DeskParticipants desk={desk} />
       </div>
       
-      <DeskDatePicker 
-        selectedDate={selectedDate}
-        onDateChange={handleDateChange}
-        onClose={handleCloseDatePicker}
-        isVisible={isDatePickerVisible}
-      />
+      {isDatePickerVisible && (
+        <DatePicker
+          taskId={calendarId}
+          selectedDate={selectedDate}
+          onDateChange={(taskId, date) => handleDateChange(date)}
+          onClose={handleCloseDatePicker}
+        />
+      )}
     </div>
   );
 };

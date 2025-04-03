@@ -1,6 +1,6 @@
 import {useEffect, useState} from 'react'
 import {UserService} from '../../../services/users/Users'
-import AddUserModal from './AddUserModal'
+import AddUserModal from './AddUserModal/AddUserModal'
 
 // Простой интерфейс для пользователя на доске
 interface UserOnDesk {

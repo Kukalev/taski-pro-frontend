@@ -7,7 +7,7 @@ export interface DeskCreateDto {
 export interface DeskUpdateDto {
 	deskName: string
 	deskDescription: string
-	deskFinishDate: Date
+	deskFinishDate: Date | null
 }
 
 // Типы для ответов
