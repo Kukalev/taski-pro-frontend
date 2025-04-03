@@ -1,14 +1,24 @@
 import React from 'react';
 import { DeleteZoneProps } from '../types';
+import { canDeleteItems } from '../../../utils/permissionUtils';
 
-const DeleteZone: React.FC<DeleteZoneProps> = ({
+interface ExtendedDeleteZoneProps extends DeleteZoneProps {
+  deskUsers: any[];
+}
+
+const DeleteZone: React.FC<ExtendedDeleteZoneProps> = ({
   visible,
   hovered,
   onDragOver,
   onDragLeave,
-  onDrop
+  onDrop,
+  deskUsers
 }) => {
-  if (!visible) return null;
+  // Проверяем, имеет ли пользователь право удалять задачи
+  const hasDeletePermission = canDeleteItems(deskUsers);
+  
+  // Если у пользователя нет прав на удаление или компонент не видим, не отображаем его
+  if (!visible || !hasDeletePermission) return null;
   
   return (
     <div 

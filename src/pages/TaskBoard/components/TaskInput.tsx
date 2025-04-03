@@ -13,7 +13,7 @@ const TaskInput: React.FC<TaskInputProps> = ({
       <input
         type="text"
         className="w-full h-10 px-3 rounded-lg bg-white text-[12px]
-        text-gray-700 border border-gray-200 focus:border-gray-300
+        text-gray-500 border border-gray-200 focus:border-gray-300
         hover:border-gray-300 focus:outline-none"
         placeholder="Добавить задачу..."
         value={value}

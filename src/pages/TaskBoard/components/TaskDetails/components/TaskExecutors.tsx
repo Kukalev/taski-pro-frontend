@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { PiUserCircleThin } from 'react-icons/pi';
 import { updateTask } from '../../../../../services/task/Task';
 import { AuthService } from '../../../../../services/auth/Auth';
-import { isCurrentUser } from '../../../../../utils/permissionUtils';
+import { isCurrentUser, canManageExecutors } from '../../../../../utils/permissionUtils';
 
 interface TaskExecutorsProps {
   executors: string[];
@@ -24,6 +24,9 @@ const TaskExecutors: React.FC<TaskExecutorsProps> = ({
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   
+  // Проверка может ли пользователь управлять исполнителями (MEMBER не может)
+  const actualCanEdit = canEdit && canManageExecutors(deskUsers, {taskId, executors});
+  
   // Закрытие выпадающего списка при клике вне его
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -40,7 +43,7 @@ const TaskExecutors: React.FC<TaskExecutorsProps> = ({
   
   // Добавление исполнителя
   const handleAddExecutor = async (username: string) => {
-    if (!canEdit) return;
+    if (!actualCanEdit) return;
     
     try {
       const updatedTask = await updateTask(deskId, taskId, {
@@ -57,7 +60,7 @@ const TaskExecutors: React.FC<TaskExecutorsProps> = ({
   
   // Удаление исполнителя
   const handleRemoveExecutor = async (username: string) => {
-    if (!canEdit) return;
+    if (!actualCanEdit) return;
     
     try {
       const updatedTask = await updateTask(deskId, taskId, {
@@ -106,8 +109,8 @@ const TaskExecutors: React.FC<TaskExecutorsProps> = ({
         <span className="text-gray-500 mr-2">Исполнители:</span>
         
         <div 
-          className={`flex items-center ${canEdit ? 'cursor-pointer' : 'cursor-default'}`} 
-          onClick={() => canEdit && setIsDropdownOpen(!isDropdownOpen)}
+          className={`flex items-center ${actualCanEdit ? 'cursor-pointer' : 'cursor-default'}`} 
+          onClick={() => actualCanEdit && setIsDropdownOpen(!isDropdownOpen)}
         >
           {executors && executors.length > 0 ? (
             <div className="flex -space-x-2">
@@ -147,7 +150,7 @@ const TaskExecutors: React.FC<TaskExecutorsProps> = ({
                     </div>
                     <span>{username} {isCurrentUser(username) && <span className="text-gray-400 text-xs">(Вы)</span>}</span>
                   </div>
-                  {canEdit && (
+                  {actualCanEdit && (
                     <span 
                       className="text-gray-400 hover:text-gray-600 cursor-pointer text-xl"
                       onClick={(e) => {
@@ -164,7 +167,7 @@ const TaskExecutors: React.FC<TaskExecutorsProps> = ({
           </div>
           
           {/* Список доступных пользователей */}
-          {canEdit && (
+          {actualCanEdit && (
             <div className="border-t border-gray-100 p-2">
               {deskUsers
                 .filter(user => {

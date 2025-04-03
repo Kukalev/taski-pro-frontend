@@ -80,7 +80,7 @@ const TaskColumn: React.FC<ExtendedTaskColumnProps> = ({
   
   // Получаем роль пользователя и определяем, может ли он создавать задачи
   const userRole = getUserRoleOnDesk(deskUsers);
-  const hasCreatePermission = userRole === UserRightType.CREATOR || userRole === UserRightType.CONTRIBUTOR;
+  const hasCreatePermission = canCreateTasks(deskUsers);
   
   // Проверяем наличие deskId только один раз, убираем лишнее логирование
   useEffect(() => {
@@ -187,28 +187,16 @@ const TaskColumn: React.FC<ExtendedTaskColumnProps> = ({
         <h3 className="text-sm font-medium text-gray-700 ml-3">{status.title}</h3>
       </div>
 
-      {/* Показываем кнопку добавления задачи только для CREATOR и CONTRIBUTOR */}
+      {/* Показываем инпут добавления задачи только для CREATOR и CONTRIBUTOR */}
       {hasCreatePermission && (
         <div ref={addInputRef} className="mb-2">
-          {isAddingInColumn === status.id ? (
-            <TaskInput 
-              statusId={status.id}
-              value={inputValue[status.id] || ''}
-              onChange={onInputChange}
-              onKeyDown={onInputKeyDown}
-              autoFocus={true}
-            />
-          ) : (
-            <button 
-              className="w-full h-10 px-3 bg-white text-[12px] text-gray-500 
-                       text-left rounded-lg flex items-center border border-gray-200
-                       hover:border-gray-300 transition-all shadow-sm"
-              onClick={() => setAddingInColumn(status.id)}
-            >
-              <span className="text-gray-400 mr-1">+</span>
-              <span>Добавить задачу...</span>
-            </button>
-          )}
+          <TaskInput 
+            statusId={status.id}
+            value={inputValue[status.id] || ''}
+            onChange={onInputChange}
+            onKeyDown={onInputKeyDown}
+            autoFocus={false}
+          />
         </div>
       )}
 

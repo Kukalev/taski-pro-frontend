@@ -3,7 +3,7 @@ import {updateTask} from '../../../services/task/Task'
 import {PiUserCircleThin} from 'react-icons/pi'
 import {UserService} from '../../../services/users/Users'
 import {AuthService} from '../../../services/auth/Auth'
-import {canEditTask, getUserRoleOnDesk, UserRightType} from '../../../utils/permissionUtils'
+import {canEditTask, canManageExecutors, getUserRoleOnDesk, UserRightType, isCurrentUser} from '../../../utils/permissionUtils'
 
 // Кэш для пользователей, чтобы не загружать их много раз
 const usersCache = new Map<number, any[]>();
@@ -32,8 +32,9 @@ const TaskExecutors: React.FC<TaskExecutorProps> = ({
   // Получаем текущих исполнителей задачи с защитой от null
   const executors = task?.executors || [];
   
-  // Проверка, может ли пользователь редактировать задачу
-  const actualCanEdit = canEdit && canEditTask(deskUsers, task);
+  // ИЗМЕНЕНО: Проверка, может ли пользователь управлять исполнителями
+  // MEMBER не может добавлять/удалять исполнителей, даже если он исполнитель сам
+  const actualCanEdit = canEdit && canManageExecutors(deskUsers, task);
   
   // Загружаем пользователей только один раз при маунте компонента или изменении deskId
   useEffect(() => {
@@ -166,7 +167,7 @@ const TaskExecutors: React.FC<TaskExecutorProps> = ({
   const toggleDropdown = (e: React.MouseEvent) => {
     e.stopPropagation();
     
-    // MEMBER не может открывать выпадающий список, если он не исполнитель задачи
+    // Проверяем права доступа перед открытием списка
     if (!actualCanEdit) return;
     
     setIsOpen(!isOpen);
@@ -233,7 +234,7 @@ const TaskExecutors: React.FC<TaskExecutorProps> = ({
                     <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-medium text-gray-700 border border-solid ${getBorderColor(executor)} bg-white mr-2`}>
                       {getUserInitials(executor)}
                     </div>
-                    <span className="text-sm">{executor}</span>
+                    <span className="text-sm">{executor} {isCurrentUser(executor) && <span className="text-gray-400 text-xs">(Вы)</span>}</span>
                     <button 
                       className="ml-auto text-gray-400 hover:text-red-500 cursor-pointer"
                       onClick={(e) => handleRemoveExecutor(executor, e)}

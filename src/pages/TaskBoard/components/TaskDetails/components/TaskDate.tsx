@@ -3,12 +3,14 @@ import {BsCalendarDate} from 'react-icons/bs'
 import {updateTask} from '../../../../../services/task/Task'
 import {format, addMonths, subMonths, startOfMonth, isSameDay, isToday, isBefore} from 'date-fns'
 import {ru} from 'date-fns/locale'
+import {canEditTaskDate} from '../../../../../utils/permissionUtils'
 
 interface TaskDateProps {
   taskCreateDate: string | null;
   taskFinishDate: string | null;
   taskId: number;
   deskId: number;
+  deskUsers: any[];
   onTaskUpdate: (task: any) => void;
   canEdit?: boolean;
 }
@@ -17,7 +19,8 @@ const TaskDate: React.FC<TaskDateProps> = ({
   taskCreateDate, 
   taskFinishDate, 
   taskId, 
-  deskId, 
+  deskId,
+  deskUsers,
   onTaskUpdate,
   canEdit = true
 }) => {
@@ -27,6 +30,9 @@ const TaskDate: React.FC<TaskDateProps> = ({
   const [currentMonth, setCurrentMonth] = useState(startOfMonth(localFinishDate ? new Date(localFinishDate) : new Date()));
   const dateRef = useRef<HTMLDivElement>(null);
   const pickerRef = useRef<HTMLDivElement>(null);
+
+  // Проверка может ли пользователь менять дату (MEMBER не может)
+  const actualCanEdit = canEdit && canEditTaskDate(deskUsers, {taskId, taskFinishDate});
 
   // Преобразование строковых дат в объекты Date
   const startDateObj = taskCreateDate ? new Date(taskCreateDate) : null;
@@ -116,7 +122,7 @@ const TaskDate: React.FC<TaskDateProps> = ({
 
   // Обработчик изменения даты
   const handleDateChange = async (date: Date | null) => {
-    if (!canEdit) return;
+    if (!actualCanEdit) return;
     
     setError(null);
     
@@ -200,9 +206,9 @@ const TaskDate: React.FC<TaskDateProps> = ({
           <span className="text-gray-500 mr-2">Дата:</span>
           <div
             ref={dateRef}
-            className={`text-gray-700 ${canEdit ? 'cursor-pointer hover:bg-gray-50' : 'cursor-default'} px-2 py-1 rounded transition-colors`}
+            className={`text-gray-700 ${actualCanEdit ? 'cursor-pointer hover:bg-gray-50' : 'cursor-default'} px-2 py-1 rounded transition-colors`}
             onClick={(e) => {
-              if (!canEdit) return;
+              if (!actualCanEdit) return;
               e.stopPropagation(); // Предотвращаем всплытие события
               setError(null);
               setIsPickerOpen(!isPickerOpen);
@@ -218,7 +224,7 @@ const TaskDate: React.FC<TaskDateProps> = ({
       </div>
       
       {/* Встроенный календарь, который появляется в TaskDetails */}
-      {isPickerOpen && canEdit && (
+      {isPickerOpen && actualCanEdit && (
         <div 
           ref={pickerRef}
           className="absolute right-0 top-full mt-1 z-40 bg-white rounded-lg shadow-lg border border-gray-200"
