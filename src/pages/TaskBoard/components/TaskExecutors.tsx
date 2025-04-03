@@ -127,18 +127,23 @@ const TaskExecutors: React.FC<TaskExecutorProps> = ({ task, deskUsers, deskId, o
   // Определяем цвет обводки в зависимости от роли пользователя
   const getBorderColor = (username: string) => {
     // Найдем пользователя в списке
-    const user = localDeskUsers.find(u => u.username === username);
+    const user = localDeskUsers.find(u => u.username === username || u.userName === username);
     
     if (!user) return 'border-gray-300';
     
-    // Определяем цвет по роли
-    if (user.role === 'CREATOR' || username === 'shaly') {
-      return 'border-red-500'; // Красный для CREATOR
-    } else if (user.role === 'MEMBER') {
-      return 'border-green-500'; // Зеленый для MEMBER
-    } else {
-      return 'border-yellow-400'; // Желтый для других ролей
+    // Проверяем rightType вместо role
+    const userRole = user.rightType || user.role;
+    
+    switch(userRole) {
+      case 'CREATOR':
+        return 'border-red-500'; // Красный для CREATOR
+      case 'MEMBER':
+        return 'border-green-500'; // Зеленый для MEMBER
+      case 'CONTRIBUTOR':
+        return 'border-yellow-400'; // Желтый для CONTRIBUTOR
     }
+    
+    return 'border-gray-300'; // Дефолтный цвет, если роль не определена
   };
 
   // Функция для открытия/закрытия выпадающего списка

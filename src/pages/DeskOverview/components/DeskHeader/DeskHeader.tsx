@@ -6,16 +6,14 @@ import DateRangeSelector from './components/DeskRangeSelector'
 import StatusSelector from './components/StatusSelector'
 import StatusMenu from './components/StatusMenu'
 import {DeskService} from '../../../../services/desk/Desk'
-import {useNavigate} from 'react-router-dom'
 // Исправленный путь импорта
-import { DESK_UPDATE_EVENT } from "../../hooks/useDeskActions"
+import {DESK_UPDATE_EVENT} from '../../hooks/useDeskActions'
 
 const DeskHeader: React.FC<DeskHeaderProps> = ({
 	desk,
 	onDeskUpdate,
 	isLoading = false,
-	updateDeskName,
-	onDateClick,
+
 	selectedDate
 }) => {
 	// Локальное состояние
@@ -32,7 +30,6 @@ const DeskHeader: React.FC<DeskHeaderProps> = ({
 	const statusButtonRef = useRef<HTMLDivElement>(null);
 	const statusMenuRef = useRef<HTMLDivElement>(null);
 	const calendarButtonRef = useRef<HTMLButtonElement>(null);
-	const navigate = useNavigate();
 
 	// Синхронизируем локальное имя с props только при смене доски
 	useEffect(() => {

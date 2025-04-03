@@ -1,17 +1,21 @@
 import React, {useEffect, useRef, useState} from 'react'
-import {STATUSES, TaskBoardProps} from './types'
+import {STATUSES, StatusType, TaskBoardProps} from './types'
 import {useTaskDragAndDrop} from './hooks/useTaskDragAndDrop'
 import TaskColumn from './components/TaskColumn'
 import DeleteZone from './components/DeleteZone'
 import DeleteModal from './components/DeleteModal'
-import TaskDetails from './components/TaskDetails'
+import TaskDetails from './components/TaskDetails/TaskDetails'
 import {fadeInAnimation} from './styles/animations'
-import {getTasksByDeskId, createTask, updateTask, deleteTask} from '../../services/task/Task'
+import {
+  createTask,
+  deleteTask,
+  getTasksByDeskId,
+  updateTask
+} from '../../services/task/Task'
 import {Task} from '../../services/task/types/task.types'
-import {StatusType} from './types'
 import {UserService} from '../../services/users/Users'
 import {DeskService} from '../../services/desk/Desk'
-import { createPortal } from 'react-dom';
+import {createPortal} from 'react-dom'
 
 // Основной компонент
 const TaskBoardPage: React.FC<TaskBoardProps> = ({ deskId }) => {
@@ -46,10 +50,6 @@ const TaskBoardPage: React.FC<TaskBoardProps> = ({ deskId }) => {
     handleDropZoneDragLeave
   } = useTaskDragAndDrop();
   
-  // Добавляем состояние для отслеживания анимации закрытия и смены задачи
-  const [isTaskTransitioning, setIsTaskTransitioning] = useState(false);
-  const [nextTask, setNextTask] = useState<Task | null>(null);
-  
   // Добавляем состояния для анимации
   const [animatingTask, setAnimatingTask] = useState<Task | null>(null);
   const [animationDetails, setAnimationDetails] = useState({
@@ -59,6 +59,12 @@ const TaskBoardPage: React.FC<TaskBoardProps> = ({ deskId }) => {
     endPos: { x: 0, y: 0 }
   });
   const [isAnimating, setIsAnimating] = useState(false);
+  
+  // Добавляем ref для внешнего контейнера
+  const taskDetailsRef = useRef<HTMLDivElement>(null);
+  
+  // Добавим состояние для отслеживания закрытия с анимацией
+  const [isClosingTaskDetails, setIsClosingTaskDetails] = useState(false);
   
   // Загрузка пользователей доски
   useEffect(() => {
@@ -144,6 +150,28 @@ const TaskBoardPage: React.FC<TaskBoardProps> = ({ deskId }) => {
 
     fetchDeskDetails();
   }, [deskId]);
+
+  // Обновляем обработчик клика вне панели
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (!selectedTask || isClosingTaskDetails) return;
+      
+      if (
+        taskDetailsRef.current && 
+        !taskDetailsRef.current.contains(event.target as Node) &&
+        !(event.target as Element).closest('.task-card')
+      ) {
+        // Запускаем анимацию закрытия
+        setIsClosingTaskDetails(true);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [selectedTask, isClosingTaskDetails]);
 
   // ОСНОВНЫЕ ФУНКЦИИ ДЛЯ РАБОТЫ С ЗАДАЧАМИ
   
@@ -247,40 +275,42 @@ const TaskBoardPage: React.FC<TaskBoardProps> = ({ deskId }) => {
     }
   };
   
-  // Обработчик клика по задаче
+  // Обновленный обработчик клика по задаче
   const handleTaskClick = (task: Task) => {
-    // Если клик по той же задаче - закрываем панель
+    // Если панель закрывается, не реагируем на клики
+    if (isClosingTaskDetails) return;
+    
+    // Если клик по той же задаче - запускаем анимацию закрытия
     if (selectedTask && selectedTask.taskId === task.taskId) {
-      setIsTaskTransitioning(true);
-      setNextTask(null);
+      setIsClosingTaskDetails(true);
       return;
     }
     
-    // Если уже открыта другая задача - запускаем анимацию переключения
+    // Если открыта другая задача - сначала закрываем её, потом открываем новую
     if (selectedTask) {
-      setIsTaskTransitioning(true);
-      setNextTask(task);
+      setIsClosingTaskDetails(true);
+      // Сохраняем следующую задачу для открытия после закрытия текущей
+      const nextTask = task;
+      setTimeout(() => {
+        setSelectedTask(nextTask);
+        setIsClosingTaskDetails(false);
+      }, 300);
     } else {
-      // Иначе просто открываем панель
+      // Иначе просто открываем задачу
       setSelectedTask(task);
     }
   };
   
-  // Обработчик закрытия панели задачи
+  // Обновленный обработчик закрытия панели
   const handleCloseTaskDetails = () => {
     // Запускаем анимацию закрытия
-    setIsTaskTransitioning(true);
-    // Устанавливаем следующую задачу в null (полностью закрываем панель)
-    setNextTask(null);
-  };
-  
-  // Обработчик завершения анимации
-  const handleTransitionEnd = () => {
-    if (isTaskTransitioning) {
-      // Обновляем задачу только после завершения анимации
-      setSelectedTask(nextTask);
-      setIsTaskTransitioning(false);
-    }
+    setIsClosingTaskDetails(true);
+    
+    // Удаляем компонент только после завершения анимации
+    setTimeout(() => {
+      setSelectedTask(null);
+      setIsClosingTaskDetails(false);
+    }, 300); // Время должно соответствовать длительности анимации
   };
   
   // ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
@@ -371,15 +401,6 @@ const TaskBoardPage: React.FC<TaskBoardProps> = ({ deskId }) => {
       setSelectedTask(updatedTask);
     }
   };
-
-  // Также добавим отключение выбранной задачи при размонтировании компонента
-  useEffect(() => {
-    return () => {
-      setSelectedTask(null);
-      setNextTask(null);
-      setIsTaskTransitioning(false);
-    };
-  }, []);
 
   // Функция для расчета позиций карточек задач
   const calculateTaskPosition = (statusType: string, taskId: number) => {
@@ -502,17 +523,24 @@ const TaskBoardPage: React.FC<TaskBoardProps> = ({ deskId }) => {
       
       {/* Панель с деталями задачи */}
       {selectedTask && (
-        <TaskDetails 
-          task={selectedTask}
-          deskId={deskId}
-          deskUsers={deskUsers}
-          onClose={handleCloseTaskDetails}
-          onTaskUpdate={handleTaskUpdate}
-          isTransitioning={isTaskTransitioning}
-          onTransitionEnd={handleTransitionEnd}
-          deskName={deskName}
-          onAnimateStatusChange={handleAnimateStatusChange}
-        />
+        <div ref={taskDetailsRef}>
+          <TaskDetails 
+            task={selectedTask}
+            deskId={deskId}
+            deskUsers={deskUsers}
+            onClose={handleCloseTaskDetails}
+            onTaskUpdate={handleTaskUpdate}
+            deskName={deskName}
+            isClosing={isClosingTaskDetails}
+            onAnimationEnd={() => {
+              if (isClosingTaskDetails) {
+                setSelectedTask(null);
+                setIsClosingTaskDetails(false);
+              }
+            }}
+            onAnimateStatusChange={handleAnimateStatusChange}
+          />
+        </div>
       )}
       
       {/* Анимация перемещения задачи */}

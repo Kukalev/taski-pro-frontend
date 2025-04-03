@@ -2,7 +2,7 @@ import React, {useEffect, useState} from 'react'
 
 import DeskHeader from './components/DeskHeader/DeskHeader'
 import DeskDescription from './components/DeskDescription/DeskDescription'
-import DeskParticipants from './components/DeskParticipants'
+import DeskParticipants from './components/DeskParticipants/DeskParticipants'
 
 import {DeskData} from '../../components/sidebar/types/sidebar.types'
 
