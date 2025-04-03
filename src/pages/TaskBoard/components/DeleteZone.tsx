@@ -12,10 +12,12 @@ const DeleteZone: React.FC<ExtendedDeleteZoneProps> = ({
   onDragOver,
   onDragLeave,
   onDrop,
-  deskUsers
+  deskUsers = [] // Установим пустой массив по умолчанию
 }) => {
-  // Проверяем, имеет ли пользователь право удалять задачи
-  const hasDeletePermission = canDeleteItems(deskUsers);
+  // Проверяем, что массив deskUsers существует и не пуст перед проверкой прав
+  const hasDeletePermission = Array.isArray(deskUsers) && deskUsers.length > 0 
+    ? canDeleteItems(deskUsers) 
+    : false; // По умолчанию запрещаем удаление, если пользователи не загружены
   
   // Если у пользователя нет прав на удаление или компонент не видим, не отображаем его
   if (!visible || !hasDeletePermission) return null;

@@ -10,34 +10,31 @@ export enum UserRightType {
  * Получает роль пользователя на указанной доске с логированием для отладки
  */
 export const getUserRoleOnDesk = (deskUsers: any[], username?: string) => {
-  if (!deskUsers || deskUsers.length === 0) {
-    console.warn('DeskUsers массив пуст или не определен');
-    return null;
+  // Проверка на корректность массива пользователей
+  if (!Array.isArray(deskUsers) || deskUsers.length === 0) {
+    return UserRightType.MEMBER; // По умолчанию даем минимальные права
   }
   
   // Если имя пользователя не указано, используем имя текущего пользователя
   const currentUsername = username || AuthService.getUsername();
   if (!currentUsername) {
-    console.warn('Не удалось получить имя текущего пользователя');
-    return null;
+    return UserRightType.MEMBER; // Если не удалось получить имя пользователя, даем минимальные права
   }
   
-  // Находим пользователя в списке, с поддержкой разных форматов имен
+  // Находим пользователя в списке
   const user = deskUsers.find(u => {
-    const userMatch = 
-      (u.username && u.username.toLowerCase() === currentUsername.toLowerCase()) || 
-      (u.userName && u.userName.toLowerCase() === currentUsername.toLowerCase());
+    if (!u) return false;
     
-    return userMatch;
+    return (u.username && u.username.toLowerCase() === currentUsername.toLowerCase()) || 
+           (u.userName && u.userName.toLowerCase() === currentUsername.toLowerCase());
   });
   
   if (!user) {
-    console.warn('Пользователь не найден в списке пользователей доски');
-    return UserRightType.MEMBER; // По умолчанию даем роль MEMBER, если не найден
+    return UserRightType.MEMBER; // Если пользователь не найден, даем роль MEMBER
   }
   
   // Проверяем все возможные варианты полей для роли
-  const role = user.rightType || user.role || user.type || user.userRightType || 'MEMBER';
+  const role = user.rightType || user.role || user.type || user.userRightType || UserRightType.MEMBER;
   
   return role;
 };
@@ -125,6 +122,11 @@ export const canManageExecutors = (deskUsers: any[], task: any): boolean => {
 
 // Проверка, имеет ли пользователь права на удаление задач/доски
 export const canDeleteItems = (deskUsers: any[]): boolean => {
+  // Проверка на существование и непустоту массива
+  if (!Array.isArray(deskUsers) || deskUsers.length === 0) {
+    return false; // Если массив не определён или пуст, запрещаем удаление
+  }
+
   const role = getUserRoleOnDesk(deskUsers);
   return role === UserRightType.CREATOR || role === UserRightType.CONTRIBUTOR;
 };
