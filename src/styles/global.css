@@ -1,0 +1,8 @@
+:root {
+  /* Переменные темы, которые будут меняться через JS */
+  --theme-color: var(--teal-500);
+  --theme-color-light: var(--teal-400);
+  --theme-color-dark: var(--teal-600);
+  --theme-color-bg: var(--teal-50);
+}
+
