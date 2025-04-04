@@ -17,3 +17,4 @@ export const cancelSubscription = async (): Promise<void> => {
     throw error;
   }
 };
+

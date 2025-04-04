@@ -18,3 +18,4 @@ export const updateSubscription = async (subscriptionType: SubscriptionType): Pr
     throw error;
   }
 };
+

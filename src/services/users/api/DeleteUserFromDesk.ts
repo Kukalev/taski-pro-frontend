@@ -29,3 +29,4 @@ export const deleteUserFromDesk = async (deskId: number, userId: number): Promis
     }
   }
 };
+

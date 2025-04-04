@@ -1,22 +1,26 @@
-import { HeaderButtonsProps } from '../types/header.types'
+import {HeaderButtonsProps} from '../types/header.types'
+// getGradient больше не нужен
 
 export const HeaderButtons = ({ onProClick, onInviteClick }: HeaderButtonsProps) => {
+	
 	return (
 		<div className='flex items-center'>
-			{/* Кнопка Pro */}
-			<button onClick={onProClick} className='mr-2 bg-gradient-to-r from-orange-400 to-yellow-300 rounded-lg text-white px-4 py-1.5 text-sm font-medium hover:opacity-90 transition-opacity'>
+			{/* Кнопка Pro - применяем градиент напрямую через CSS переменные */}
+			<button 
+				onClick={onProClick} 
+				// Убираем Tailwind градиент классы (bg-gradient-to-r и ${gradient})
+				className={`mr-2 rounded-lg text-white px-4 py-1.5 text-sm font-medium hover:opacity-90 transition-opacity cursor-pointer`}
+				style={{
+					// Устанавливаем фон как линейный градиент с нашими переменными
+					// Браузер сам подставит актуальные значения --theme-gradient-from и --theme-gradient-to
+					backgroundImage: 'linear-gradient(to right, var(--theme-gradient-from), var(--theme-gradient-to))',
+				} as React.CSSProperties} // Указываем тип для TypeScript
+			>
 				Получить «Pro»
 			</button>
 
-			{/* Кнопка Пригласить команду */}
-			<button onClick={onInviteClick} className='mr-4 bg-orange-100 text-orange-500 rounded-lg px-4 py-1.5 text-sm font-medium hover:bg-orange-200 transition-colors'>
-				<div className='flex items-center'>
-					<svg className='w-4 h-4 mr-1' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='2'>
-						<path d='M12 4v16m8-8H4' />
-					</svg>
-					Пригласить команду
-				</div>
-			</button>
+			{/* Здесь может быть кнопка Invite, если она нужна */}
+			{/* <button onClick={onInviteClick} ...>Invite</button> */}
 		</div>
 	)
 }

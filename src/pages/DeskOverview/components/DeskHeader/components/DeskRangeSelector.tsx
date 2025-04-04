@@ -168,7 +168,8 @@ const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({
 				onClick={handleToggleCalendar}
 			>
 				<svg
-					className={`w-6 h-6 mr-3 flex-shrink-0 transition-colors ${isCalendarOpen ? 'text-orange-500' : ''}`}
+					className={`w-6 h-6 mr-3 flex-shrink-0 transition-colors`}
+					style={isCalendarOpen ? { color: 'var(--theme-color)' } : {}}
 					viewBox="0 0 24 24"
 					fill="none"
 					xmlns="http://www.w3.org/2000/svg"

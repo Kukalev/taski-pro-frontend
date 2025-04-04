@@ -20,3 +20,4 @@ export const createUserSubscription = async (subscriptionType: SubscriptionType)
     throw error;
   }
 };
+

@@ -34,7 +34,8 @@ const StatusSelector: React.FC<StatusSelectorProps> = ({
 					<span className='mr-2 whitespace-nowrap'>{currentStatus}</span>
 				</div>
 				<svg
-					className={`w-5 h-5 transition-colors ${statusMenuOpen ? 'text-orange-500' : 'text-gray-400'} flex-shrink-0`}
+					className={`w-5 h-5 transition-colors flex-shrink-0`}
+					style={statusMenuOpen ? { color: 'var(--theme-color)' } : { color: '#a0aec0' }}
 					fill="none"
 					viewBox="0 0 24 24"
 					stroke="currentColor"

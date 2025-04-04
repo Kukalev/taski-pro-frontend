@@ -1,5 +1,5 @@
-import { HeaderIconsProps } from '../types/header.types'
-import { IconButton } from './IconButton'
+import {HeaderIconsProps} from '../types/header.types'
+import {IconButton} from './IconButton'
 
 export const HeaderIcons = ({}: HeaderIconsProps) => {
 	return (
@@ -31,7 +31,7 @@ export const HeaderIcons = ({}: HeaderIconsProps) => {
 
 			<IconButton
 				icon={
-					<svg className='w-5 h-5' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='2'>
+					<svg className='w-5 h-5 ' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='2'>
 						<circle cx='11' cy='11' r='8' />
 						<path d='M21 21l-4.3-4.3' />
 					</svg>

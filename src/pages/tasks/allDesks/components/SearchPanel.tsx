@@ -1,4 +1,5 @@
 import {SearchIcon} from './SearchIcon'
+import {ThemedButton} from '../../../../components/ui/ThemedButton'
 
 interface SearchPanelProps {
 	searchQuery: string
@@ -16,9 +17,12 @@ export const SearchPanel = ({ searchQuery, onSearchChange, onAddDesk }: SearchPa
 				</div>
 			</div>
 
-			<button onClick={onAddDesk} className='bg-orange-500 text-white px-4 py-2 m-5 rounded-lg hover:bg-orange-600 transition-colors'>
+			<ThemedButton 
+				onClick={onAddDesk} 
+				className="px-4 py-2 m-5 rounded-lg"
+			>
 				Добавить доску
-			</button>
+			</ThemedButton>
 		</div>
 	)
 }

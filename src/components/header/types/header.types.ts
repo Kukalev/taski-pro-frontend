@@ -11,7 +11,9 @@ export interface HeaderIconsProps {
 
 export interface UserAvatarProps {
 	username: string
+	email?: string
 	onLogout: () => void
+	onSettingsClick?: () => void
 }
 
 export interface IconButtonProps {

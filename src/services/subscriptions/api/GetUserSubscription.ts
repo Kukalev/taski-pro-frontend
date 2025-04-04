@@ -21,3 +21,4 @@ export const getUserSubscription = async (): Promise<UserSubscriptionResponseDto
     throw error;
   }
 };
+

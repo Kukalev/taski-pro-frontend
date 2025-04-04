@@ -1,11 +1,11 @@
-import React, { useEffect } from 'react'
+import React from 'react'
 import {FaCheck, FaRegCircle} from 'react-icons/fa'
 import {IoCalendarNumberOutline} from 'react-icons/io5'
 import {StatusType, TaskCardProps} from '../types'
 import {format} from 'date-fns'
 import {ru} from 'date-fns/locale'
 import TaskExecutors from './TaskExecutors'
-import {canEditTask, canEditTaskDate, getUserRoleOnDesk, UserRightType} from '../../../utils/permissionUtils'
+import {canEditTask, canEditTaskDate} from '../../../utils/permissionUtils'
 
 // Форматирование даты для отображения в карточке
 const formatShortDate = (date: Date) => {
@@ -22,7 +22,6 @@ const TaskCard: React.FC<TaskCardProps> = ({
   onComplete,
   onDateClick,
   selectedDate,
-  isDatePickerOpen,
   hoveredCheckCircle,
   hoveredCalendar,
   setHoveredCheckCircle,

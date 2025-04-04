@@ -40,3 +40,4 @@ export const updateUserRightsOnDesk = async (deskId: number, changeUserRightsDto
     }
   }
 };
+

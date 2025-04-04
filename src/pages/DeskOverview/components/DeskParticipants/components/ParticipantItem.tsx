@@ -1,10 +1,15 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { ParticipantItemProps } from '../types';
-import { getUserName, getUserInitials, getRoleDisplayName, getRoleBadgeClass } from '../utilities';
-import { GrEdit } from "react-icons/gr";
-import { FaTimes } from "react-icons/fa";
-import { RightType } from '../../../../../services/users/api/UpdateUserFromDesk';
-import { isCurrentUser } from '../../../../../utils/permissionUtils';
+import React, {useEffect, useRef, useState} from 'react'
+import {ParticipantItemProps} from '../types'
+import {
+  getRoleBadgeClass,
+  getRoleDisplayName,
+  getUserInitials,
+  getUserName
+} from '../utilities'
+import {GrEdit} from 'react-icons/gr'
+import {FaTimes} from 'react-icons/fa'
+import {RightType} from '../../../../../services/users/api/UpdateUserFromDesk'
+import {isCurrentUser} from '../../../../../utils/permissionUtils'
 
 const ParticipantItem: React.FC<ParticipantItemProps> = ({ 
   user, 
@@ -105,7 +110,7 @@ const ParticipantItem: React.FC<ParticipantItemProps> = ({
                     <button 
                       className={`w-full text-left px-4 py-2.5 cursor-pointer ${
                         user.rightType === 'MEMBER' 
-                          ? 'bg-green-50 text-green-700 font-medium' 
+                          ? 'bg-green-100 text-green-700 font-medium' 
                           : 'text-gray-700 hover:bg-gray-50'
                       }`}
                       onClick={() => handleRoleChange(RightType.MEMBER)}

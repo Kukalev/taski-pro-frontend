@@ -36,12 +36,19 @@ const SelectedUserPreview: React.FC<SelectedUserPreviewProps> = ({
 				Тип доступа
 			</label>
 			<select
-				className="w-full p-2 border border-orange-300 rounded-md bg-gray-50 focus:outline-none focus:ring-1 focus:ring-orange-500"
+				className="w-full p-2 rounded-md bg-gray-50 focus:outline-none cursor-pointer"
+				style={{
+					border: '1px solid var(--theme-color)',
+					'--tw-ring-color': 'var(--theme-color)',
+					'--tw-ring-offset-shadow': 'var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color)',
+					'--tw-ring-shadow': 'var(--tw-ring-inset) 0 0 0 calc(1px + var(--tw-ring-offset-width)) var(--tw-ring-color)',
+					boxShadow: 'var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000)'
+				} as React.CSSProperties}
 				value={accessType}
 				onChange={(e) => setAccessType(e.target.value)}
 			>
-				<option value="MEMBER">Участник</option>
-				<option value="CONTRIBUTOR">Редактор</option>
+				<option className='cursor-pointer' value="MEMBER">Участник</option>
+				<option className='cursor-pointer' value="CONTRIBUTOR">Редактор</option>
 			</select>
 		</div>
 	);

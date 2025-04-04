@@ -18,7 +18,7 @@ export const DeskDetails = () => {
 	const loadingRef = useRef(false) // Для предотвращения двойных вызовов
 	const [deskUsers, setDeskUsers] = useState<any[]>([])
 	const [hasEditPermission, setHasEditPermission] = useState(false)
-
+	
 	const loadDesk = useCallback(async () => {
 		if (!id) return
 
@@ -52,19 +52,26 @@ export const DeskDetails = () => {
 				console.error('Ошибка при загрузке пользователей:', userError)
 				setHasEditPermission(false)
 			}
-		} catch (err: unknown) {
+		} catch (err) {
 			console.error('Ошибка при загрузке доски:', err)
-			setError(err.message || 'Не удалось загрузить информацию о доске')
+			setError(err instanceof Error ? err.message : 'Не удалось загрузить информацию о доске')
 		} finally {
 			setLoading(false)
 			loadingRef.current = false
 		}
-	}, [id, updateCounter])
+	}, [id]) // Удаляем updateCounter из зависимостей
 
 	// Загрузка доски при первом рендере или изменении ID
 	useEffect(() => {
 		loadDesk()
 	}, [loadDesk])
+
+	// Загрузка доски при изменении updateCounter
+	useEffect(() => {
+		if (updateCounter > 0) {
+			loadDesk()
+		}
+	}, [updateCounter, loadDesk])
 
 	// Подписка на обновления доски
 	useEffect(() => {
@@ -117,12 +124,14 @@ export const DeskDetails = () => {
 		return <Navigate to='/desk' replace />
 	}
 
+	// Определяем активные вкладки
 	const isOverviewActive = location.pathname.includes('/overview')
+	// Считаем активной, если путь содержит /board или заканчивается на /desk/ID
 	const isBoardActive = location.pathname.includes('/board') || location.pathname === `/desk/${id}`
 
-	// Получаем первую букву названия доски для логотипа
+	// Получаем первую букву названия доски
 	const getFirstLetter = () => {
-		if (!desk.deskName) return 'Ф'
+		if (!desk || !desk.deskName) return 'Д'
 		return desk.deskName.charAt(0).toUpperCase()
 	}
 
@@ -133,24 +142,40 @@ export const DeskDetails = () => {
 				<div className='flex items-center'>
 					{/* Логотип */}
 					<div className='flex items-center'>
-						<div className='w-7 h-7 bg-red-400 rounded-md flex items-center justify-center text-white mr-3'>
+						<div 
+							className='w-7 h-7 rounded-md flex items-center justify-center text-white mr-3'
+							// Применяем цвет темы к фону логотипа
+							style={{ backgroundColor: 'var(--theme-color)' }}
+						>
 							{getFirstLetter()}
 						</div>
 						<span className='font-medium text-gray-900'>{desk.deskName}</span>
 					</div>
 					
-					{/* Статус */}
+					{/* Статус (можно оставить зеленым или тоже привязать к теме) */}
 					<div className='flex items-center text-sm ml-4'>
 						<span className='w-2 h-2 bg-green-500 rounded-full mr-1'></span>
 						<span>В работе</span>
 					</div>
 					
-					{/* Навигационные вкладки - только Обзор и Задачи */}
+					{/* Навигационные вкладки */}
 					<div className='flex ml-4'>
-						<Link to={`/desk/${id}/overview`} className={`py-1 px-3 font-medium ${isOverviewActive ? 'text-orange-500' : 'text-gray-600 hover:text-gray-900'}`}>
+						<Link 
+							to={`/desk/${id}/overview`} 
+							// Убираем text-indigo-300 из активного класса
+							className={`py-1 px-3 font-medium ${!isOverviewActive ? 'text-gray-600 hover:text-gray-900' : ''}`}
+							// Устанавливаем цвет текста через стиль, если активно
+							style={isOverviewActive ? { color: 'var(--theme-color)' } : {}}
+						>
 							Обзор
 						</Link>
-						<Link to={`/desk/${id}/board`} className={`py-1 px-3 font-medium ${isBoardActive ? 'text-orange-500' : 'text-gray-600 hover:text-gray-900'}`}>
+						<Link 
+							to={`/desk/${id}/board`} 
+							// Убираем text-indigo-300 из активного класса
+							className={`py-1 px-3 font-medium ${!isBoardActive ? 'text-gray-600 hover:text-gray-900' : ''}`}
+							// Устанавливаем цвет текста через стиль, если активно
+							style={isBoardActive ? { color: 'var(--theme-color)' } : {}}
+						>
 							Задачи
 						</Link>
 					</div>

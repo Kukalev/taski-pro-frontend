@@ -13,7 +13,7 @@ const ModalFooter: React.FC<ModalFooterProps> = ({ onClose, handleAddUser, isLoa
 			<div className="flex justify-end gap-2">
 				<button
 					onClick={onClose}
-					className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+					className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 cursor-pointer"
 				>
 					Отмена
 				</button>
@@ -22,9 +22,15 @@ const ModalFooter: React.FC<ModalFooterProps> = ({ onClose, handleAddUser, isLoa
 					<button
 						onClick={handleAddUser}
 						disabled={isLoading}
-						className={`px-4 py-2 bg-orange-500 text-white rounded-md hover:bg-orange-600 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 ${
+						className={`px-4 py-2 text-white rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 transition duration-150 ease-in-out cursor-pointer${
 							isLoading ? 'opacity-70 cursor-not-allowed' : ''
 						}`}
+						style={{ 
+							backgroundColor: 'var(--theme-color)',
+							'--tw-ring-color': 'var(--theme-color)' 
+						} as React.CSSProperties}
+						onMouseOver={(e) => !isLoading && (e.currentTarget.style.backgroundColor = 'var(--theme-color-dark)')}
+						onMouseOut={(e) => !isLoading && (e.currentTarget.style.backgroundColor = 'var(--theme-color)')}
 					>
 						{isLoading ? (
 							<>

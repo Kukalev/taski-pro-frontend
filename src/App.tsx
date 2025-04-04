@@ -1,3 +1,4 @@
+import React, { useEffect } from 'react';
 import {BrowserRouter, Navigate, Route, Routes} from 'react-router-dom'
 import {NotFound} from './components/NotFound'
 import {DeskProvider} from './contexts/DeskContext'
@@ -13,6 +14,12 @@ import {MyTasks} from './pages/tasks/MyTasks'
 import {Team} from './pages/welcome/team/Team'
 import {Welcome} from './pages/welcome/Welcome'
 import {AuthService} from './services/auth/Auth'
+import { Settings } from './pages/Settings/Settings'
+import { SettingsLayout } from './layouts/SettingsLayout'
+import { ProfileSettings } from './pages/Settings/components/ProfileSettings/ProfileSettings'
+import { AppearanceSettings } from './pages/Settings/components/AppearanceSettings/AppearanceSettings'
+import { SecuritySettings } from './pages/Settings/components/SecuritySettings/SecuritySettings'
+import { applyTheme } from './styles/theme'
 
 // Простой компонент для защиты роутов
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -23,6 +30,11 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 }
 
 function App() {
+	// Применяем тему при монтировании компонента App
+	useEffect(() => {
+		applyTheme(); // Устанавливает CSS переменные для темы по умолчанию или последней выбранной
+	}, []); // Пустой массив зависимостей = запуск один раз
+
 	return (
 		<BrowserRouter>
 			<Routes>
@@ -111,6 +123,25 @@ function App() {
 
 				{/* Глобальный 404 для всех остальных маршрутов */}
 				<Route path='*' element={<NotFound />} />
+
+				{/* Маршруты для страницы настроек */}
+				<Route
+					path='/settings'
+					element={
+						<ProtectedRoute>
+							<DeskProvider>
+								<SettingsLayout>
+									<Settings />
+								</SettingsLayout>
+							</DeskProvider>
+						</ProtectedRoute>
+					}
+				>
+					<Route path="profile" element={<ProfileSettings />} />
+					<Route path="appearance" element={<AppearanceSettings />} />
+					<Route path="security" element={<SecuritySettings />} />
+					<Route index element={<Navigate to="profile" replace />} />
+				</Route>
 			</Routes>
 		</BrowserRouter>
 	)
