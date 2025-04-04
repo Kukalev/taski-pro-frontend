@@ -1,30 +1,32 @@
 import React, {useEffect, useRef, useState} from 'react'
 import {UserService} from '../../../../services/users/Users.ts'
-import {UserResponseDto} from './types'
+import {UserResponseDto, AddUserModalProps} from './types'
+import {UserOnDesk} from '../../components/DeskParticipants/types'
+import {RightType} from '../../../../services/users/api/UpdateUserFromDesk'
 import ReactDOM from 'react-dom'
 import SearchBar from './components/SearchBar'
 import UsersList from './components/UsersList'
 import SelectedUserPreview from './components/SelectedUserPreview'
 import ModalFooter from './components/ModalFooter'
 
-interface AddUserModalProps {
+interface ModifiedAddUserModalProps {
 	isOpen: boolean;
 	onClose: () => void;
 	deskId: number;
-	onUserAdded?: () => void;
+	onAddSuccess: (newUser: UserOnDesk) => void;
 }
 
-const AddUserModal: React.FC<AddUserModalProps> = ({
+const AddUserModal: React.FC<ModifiedAddUserModalProps> = ({
 	isOpen,
 	onClose,
 	deskId,
-	onUserAdded
+	onAddSuccess
 }) => {
 	const [searchQuery, setSearchQuery] = useState('');
 	const [availableUsers, setAvailableUsers] = useState<UserResponseDto[]>([]);
 	const [filteredUsers, setFilteredUsers] = useState<UserResponseDto[]>([]);
 	const [selectedUser, setSelectedUser] = useState<UserResponseDto | null>(null);
-	const [accessType, setAccessType] = useState<string>('MEMBER');
+	const [accessType, setAccessType] = useState<RightType>(RightType.MEMBER);
 	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState('');
 	const modalRef = useRef<HTMLDivElement>(null);
@@ -154,32 +156,32 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
 				rightType: accessType
 			});
 
-			console.log('Пользователь успешно добавлен');
+			console.log('Пользователь успешно добавлен на сервер');
 
-			// После успешного добавления обновляем списки
-			const userLower = username.toLowerCase();
+			// Создаем объект для передачи обратно
+			// ВАЖНО: ID здесь будет НЕКОРРЕКТНЫМ (или временным), 
+			// т.к. API его скорее всего не вернул. Используем временный ID.
+			// Можно использовать Date.now() или отрицательное число.
+			const newUserForState: UserOnDesk = {
+				id: Date.now(), // Временный ID для ключа React
+				username: username,
+				userName: selectedUser.userName, 
+				rightType: accessType
+			};
 
-			// Добавляем в список на доске
+			// Вызываем новый callback
+			onAddSuccess(newUserForState); 
 
-			// Удаляем из доступных
-			setAvailableUsers(prev => {
-				return prev.filter(u => {
-					const uname = u.username || u.userName || '';
-					return uname.toLowerCase() !== userLower;
-				});
-			});
-
-			// Сбрасываем выбор
+			// Сбрасываем состояние модального окна
 			setSelectedUser(null);
-
-			// Уведомляем родителя для обновления списка участников
-			if (onUserAdded) {
-				onUserAdded();
-			}
+			setSearchQuery('');
+			setAccessType(RightType.MEMBER); // Сброс на дефолтную роль
+			onClose(); // Закрываем модальное окно
 
 		} catch (err: unknown) {
 			console.error('Ошибка при добавлении пользователя:', err);
-			setError('Не удалось добавить пользователя');
+			setError('Не удалось добавить пользователя. Возможно, он уже добавлен.'); 
+			// Оставляем модальное окно открытым при ошибке
 		} finally {
 			setIsLoading(false);
 		}
@@ -205,7 +207,7 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
 						<h2 className="text-xl font-medium text-gray-800">Добавить участника</h2>
 						<button
 							onClick={onClose}
-							className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100"
+							className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100 cursor-pointer"
 						>
 							<svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
 								<path d="M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -241,7 +243,7 @@ const AddUserModal: React.FC<AddUserModalProps> = ({
 							selectedUser={selectedUser}
 							handleCancelUserSelection={handleCancelUserSelection}
 							accessType={accessType}
-							setAccessType={setAccessType}
+							setAccessType={(value: string) => setAccessType(value as RightType)}
 							getUserInitials={getUserInitials}
 						/>
 					)}
