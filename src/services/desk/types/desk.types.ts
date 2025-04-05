@@ -16,7 +16,7 @@ export interface DeskResponseDto {
 	deskName: string
 	deskDescription: string
 	deskCreateDate: Date
-	deskFinishDate: Date
+	deskFinishDate: Date | null
 	userLimit: number
 	username:string
 }

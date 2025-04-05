@@ -10,9 +10,11 @@ import {Button} from '../../components/ui/Button'
 import {Input} from '../../components/ui/Input'
 import {AuthService} from '../../services/auth/Auth'
 import {RegisterFormData, RegisterRequest} from '../../types/auth.types'
+import { useAuth } from '../../contexts/AuthContext'
 
 export const RegisterPage = () => {
 	const navigate = useNavigate()
+	const { login: authContextLogin } = useAuth()
 	const [formData, setFormData] = useState<RegisterFormData>({
 		firstName: '',
 		lastName: '',
@@ -253,22 +255,24 @@ export const RegisterPage = () => {
 				username: formData.username,
 				email: formData.email,
 				password: formData.password,
-				firstname: formData.firstName,
-				lastname: formData.lastName
+				firstName: formData.firstName,
+				lastName: formData.lastName
 			}
 			console.log(requestData, 'REGISTATION')
 
-			// Используем функцию register
-			const response = await AuthService.register(requestData)
+			// Используем функцию register и передаем authContextLogin
+			const response = await AuthService.register(requestData, authContextLogin)
 			console.log(response)
 
 			// Перенаправляем после успешной регистрации
 			navigate('/welcome')
 		} catch (err: any) {
 			// Показываем ошибку с сервера
-			setServerError(err.message)
+			const errorMessage = err.response?.data?.message || err.message || 'Произошла ошибка при регистрации.'
+			setServerError(errorMessage)
 			setErrorType('server')
 			setIsErrorVisible(true)
+			console.error('[RegisterPage] Ошибка регистрации:', err);
 		} finally {
 			setIsLoading(false)
 		}

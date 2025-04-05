@@ -23,13 +23,15 @@ const refreshTokenRequest = async () => {
   if (!tokens?.refreshToken) return null;
 
   try {
-    // Используем проксированный путь вместо прямого URL
-    const response = await axios.post('/api/auth/refresh_token', {}, {
-      headers: { 
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${tokens.refreshToken}`
+    // Используем проксированный путь и отправляем токен в теле запроса
+    const response = await axios.post('/api/auth/refresh_token', 
+      { refreshToken: tokens.refreshToken },
+      {
+        headers: { 
+          'Content-Type': 'application/json',
+        }
       }
-    });
+    );
     
     if (response.data?.accessToken) {
       saveTokens({

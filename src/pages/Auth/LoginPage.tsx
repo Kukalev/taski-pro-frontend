@@ -7,9 +7,11 @@ import {Button} from '../../components/ui/Button'
 import {Input} from '../../components/ui/Input'
 import {AuthService} from '../../services/auth/Auth'
 import {ApiError, LoginFormData} from '../../types/auth.types'
+import { useAuth } from '../../contexts/AuthContext'
 
 export const LoginPage = () => {
 	const navigate = useNavigate()
+	const { login: authContextLogin } = useAuth()
 
 	const [formData, setFormData] = useState<LoginFormData>({
 		username: '',
@@ -101,43 +103,32 @@ export const LoginPage = () => {
 	const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
 		e.preventDefault()
 
-		// Проверяем валидность формы
 		const isValid = validateForm()
-
-		// Если форма невалидна, просто обновляем анимацию и выходим
 		if (!isValid) {
-			// Эти строки для обновления анимации (мигание)
 			setIsErrorVisible(false)
 			setTimeout(() => setIsErrorVisible(true), 50)
 			return
 		}
 
-		// Очищаем все предыдущие ошибки, только если форма валидна
 		setValidationError(null)
 		setAuthError(null)
 		setIsErrorVisible(false)
 		setIsLoading(true)
 
 		try {
-			// Формируем данные для отправки согласно API бэкенда
 			const requestData = {
 				username: formData.username,
 				password: formData.password
 			}
-
 			console.log('Отправляем данные:', requestData)
-			
-			// Используем функцию login напрямую
-			const response = await AuthService.login(requestData)
-			if (!response){
-				console.log('Не логин')
-			}
-			// После успешного входа перенаправляем на главную страницу
+
+			const response = await AuthService.login(requestData, authContextLogin)
+
 			navigate('/welcome')
 		} catch (err: unknown) {
 			const apiError = err as ApiError
-			setAuthError(apiError.message || 'Неверное имя пользователя или пароль')
-			// Активируем анимацию
+			console.error('[LoginPage] Ошибка при попытке входа:', apiError);
+			setAuthError(apiError.response?.data?.message || apiError.message || 'Неверное имя пользователя или пароль')
 			setIsErrorVisible(true)
 		} finally {
 			setIsLoading(false)

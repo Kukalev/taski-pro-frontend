@@ -1,11 +1,14 @@
 import api from '../../api'
-import { AuthResponse, RegisterRequest } from '../types/Auth.types'
-import { login } from './LoginApi'
+import {AuthResponse, RegisterRequest} from '../types/Auth.types'
+import {login} from './LoginApi'
 
-export const register = async (data: RegisterRequest): Promise<AuthResponse> => {
+// ---> Добавляем параметр authContextLogin <---
+export const register = async (data: RegisterRequest, authContextLogin: () => void): Promise<AuthResponse> => {
 	try {
 		// Регистрация
+		console.log(`[RegisterApi] Отправка запроса на /auth/registration для пользователя: ${data.username}`);
 		await api.post('/auth/registration', data)
+		console.log(`[RegisterApi] Регистрация для ${data.username} УСПЕШНА. Выполняется автоматический вход...`);
 
 		// Автоматический вход после успешной регистрации
 		const loginData = {
@@ -13,9 +16,11 @@ export const register = async (data: RegisterRequest): Promise<AuthResponse> => 
 			password: data.password
 		}
 
-		// Используем функцию login для входа
-		return await login(loginData)
+		// ---> Передаем authContextLogin в login <---
+		console.log(`[RegisterApi] Вызов login() для автоматического входа ${data.username} и обновления AuthContext...`);
+		return await login(loginData, authContextLogin)
 	} catch (error) {
+		console.error(`[RegisterApi] Ошибка при регистрации или автоматическом входе для ${data.username}:`, error);
 		// Просто пробрасываем ошибку дальше
 		throw error
 	}

@@ -28,37 +28,44 @@ export const AllDesks = () => {
 	// Получаем данные и функции из контекста
 	const { desks, loading, addDesk, loadDesks, removeDesk, updateDesk: updateDeskInContext } = useDesks()
 
-	// Обработчик создания доски
-	const handleDeskCreated = useCallback((newDesk: DeskData) => {
-		addDesk(newDesk)
-		setIsCreateModalOpen(false)
+	// ---> Удаляем useEffect, который проверял sessionStorage <-----
+	// useEffect(() => {
+	// 	// Проверяем флаг 'setupComplete'
+	// 	const setupComplete = sessionStorage.getItem('setupComplete');
+	// 	if (setupComplete === 'true') {
+	// 		console.log('[AllDesks] Обнаружен флаг setupComplete, вызываем loadDesks()');
+	// 		loadDesks(); // Вызываем загрузку досок из контекста
+	// 		sessionStorage.removeItem('setupComplete'); // Удаляем флаг, чтобы не вызывать повторно
+	// 	}
+	// }, [loadDesks]);
+
+	const handleDeskCreated = useCallback(async (newDesk: DeskData) => {
+		console.log('[AllDesks] Новая доска создана, обновляем список...')
+		addDesk(newDesk) // Используем addDesk из контекста
+		// Не нужно вызывать loadDesks(), так как addDesk уже обновил состояние
 	}, [addDesk])
 
 	// Обновленный обработчик для открытия модалки переименования
 	const handleRenameRequest = useCallback((id: number, initialName: string, initialDescription: string) => {
 		console.log(`[AllDesks] Запрос на переименование ID: ${id}, Имя: "${initialName}", Описание: "${initialDescription}"`);
 		setSelectedDeskId(id);
-		setSelectedDeskName(initialName); // Используем переданное имя
-		setSelectedDeskDescription(initialDescription); // Используем переданное описание
+		setSelectedDeskName(initialName);
+		setSelectedDeskDescription(initialDescription);
 		setIsRenameModalOpen(true);
-	}, []); // Убрали зависимость от findDeskDataById
+	}, []);
 
 	// Обработчик успешного переименования из модального окна
-	const handleRenameSuccess = useCallback((updatedDesk: DeskData) => {
-		if (updateDeskInContext) {
-			updateDeskInContext(updatedDesk)
-		} else {
-			loadDesks()
-		}
+	const handleRenameSuccess = useCallback((updatedDesk: Partial<DeskData>) => {
+		loadDesks();
 		setIsRenameModalOpen(false)
-	}, [updateDeskInContext, loadDesks])
+	}, [loadDesks])
 
 	// Обновленный обработчик для открытия модалки удаления
 	const handleDeleteRequest = useCallback((id: number, deskName: string) => {
 		setSelectedDeskId(id);
-		setSelectedDeskName(deskName); // Используем переданное имя
+		setSelectedDeskName(deskName);
 		setIsDeleteModalOpen(true);
-	}, []); // Убрали зависимость от findDeskDataById
+	}, []);
 
 	// Подтверждение удаления доски
 	const handleConfirmDelete = useCallback(async (id: number) => {
@@ -105,9 +112,8 @@ export const AllDesks = () => {
 				isOpen={isRenameModalOpen} 
 				deskId={selectedDeskId} 
 				initialDeskName={selectedDeskName}
-				initialDeskDescription={selectedDeskDescription}
 				onClose={() => setIsRenameModalOpen(false)} 
-				onSuccess={handleRenameSuccess} 
+				onSuccess={handleRenameSuccess}
 			/>
 			<DeleteDeskModal isOpen={isDeleteModalOpen} deskId={selectedDeskId} deskName={selectedDeskName} onClose={() => setIsDeleteModalOpen(false)} onConfirm={handleConfirmDelete} isLoading={isDeleting} />
 		</div>

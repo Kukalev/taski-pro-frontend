@@ -7,5 +7,5 @@ import { applyTheme, mainColor } from './styles/theme'
 applyTheme(mainColor)
 
 createRoot(document.getElementById('root')!).render(
-    <App />
+  <App />
 )

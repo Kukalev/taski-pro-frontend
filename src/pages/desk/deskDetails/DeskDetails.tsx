@@ -178,6 +178,15 @@ export const DeskDetails = () => {
 						>
 							Задачи
 						</Link>
+						{/* Новая ссылка на GitHub */}
+						<a 
+							href='https://github.com' 
+							target='_blank' 
+							rel='noopener noreferrer' 
+							className='py-1 px-3 font-medium text-gray-600 hover:text-gray-900'
+						>
+							GitHub
+						</a>
 					</div>
 				</div>
 			</div>

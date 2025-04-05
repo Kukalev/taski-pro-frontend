@@ -1,6 +1,15 @@
-import { createContext, ReactNode, useContext, useEffect, useState, useCallback, useMemo } from 'react'
-import { AuthService } from '../services/auth/Auth'
-import { DeskService } from '../services/desk/Desk'
+import {
+	createContext,
+	ReactNode,
+	useCallback,
+	useContext,
+	useEffect,
+	useMemo,
+	useState,
+	useRef
+} from 'react'
+import {DeskService} from '../services/desk/Desk'
+import {useAuth} from './AuthContext'
 
 // Интерфейс для доски
 export interface DeskData {
@@ -32,27 +41,70 @@ export function DeskProvider({ children }: { children: ReactNode }) {
 	const [desks, setDesks] = useState<DeskData[]>([])
 	const [loading, setLoading] = useState<boolean>(false)
 	const [error, setError] = useState<string | null>(null)
+	const { isAuthenticated } = useAuth()
+	const loadingRef = useRef(false)
+	const initialLoadDoneRef = useRef(false)
 
 	const loadDesks = useCallback(async () => {
-		if (!AuthService.isAuthenticated()) {
-			console.log('Пользователь не авторизован, пропускаем загрузку досок')
-			setDesks([])
+		if (!isAuthenticated) {
+			console.log('[DeskContext] loadDesks: Пользователь не авторизован (AuthContext), пропускаем.')
 			return
 		}
-		console.log('[DeskContext] Загрузка досок...')
+		if (loadingRef.current) {
+			console.log('[DeskContext] loadDesks: Загрузка уже идет, пропускаем.')
+			return;
+		}
+		console.log('[DeskContext] loadDesks: Пользователь авторизован (AuthContext). НАЧАЛО ЗАГРУЗКИ досок...')
 		try {
 			setLoading(true)
+			loadingRef.current = true
 			setError(null)
+			console.log('[DeskContext] loadDesks: Вызов DeskService.getAllDesks()...');
 			const data = await DeskService.getAllDesks()
-			console.log('[DeskContext] Доски успешно загружены:', data)
+			console.log(`[DeskContext] loadDesks: DeskService.getAllDesks() УСПЕШНО вернул ${data.length} досок.`);
 			setDesks(data)
+			initialLoadDoneRef.current = true
 		} catch (error: any) {
-			console.error('[DeskContext] Ошибка при загрузке досок:', error)
+			console.error('[DeskContext] loadDesks: ОШИБКА при вызове DeskService.getAllDesks():', error)
 			setError('Не удалось загрузить доски')
+			setDesks([])
 		} finally {
 			setLoading(false)
+			loadingRef.current = false
+			console.log('[DeskContext] loadDesks: ЗАВЕРШЕНИЕ операции загрузки (finally).')
 		}
-	}, [])
+	}, [isAuthenticated])
+
+	// Используем useRef для отслеживания предыдущего состояния isAuthenticated
+	const prevIsAuthenticatedRef = useRef(isAuthenticated)
+
+	// useEffect для отслеживания изменений isAuthenticated
+	useEffect(() => {
+		// Проверяем, изменилось ли состояние аутентификации
+		if (isAuthenticated !== prevIsAuthenticatedRef.current) {
+			console.log('[DeskContext] useEffect[isAuthenticated]: isAuthenticated изменился на', isAuthenticated);
+			
+			if (isAuthenticated) {
+				console.log('[DeskContext] useEffect[isAuthenticated]: isAuthenticated стало true.');
+				console.log('[DeskContext] useEffect[isAuthenticated]: Вызов loadDesks...');
+				loadDesks();
+			} else {
+				console.log('[DeskContext] useEffect[isAuthenticated]: isAuthenticated стало false, очищаем доски.')
+				setDesks([]);
+			}
+			
+			// Обновляем предыдущее значение
+			prevIsAuthenticatedRef.current = isAuthenticated;
+		}
+	}, [isAuthenticated, loadDesks]);
+
+	// Дополнительный useEffect для загрузки досок при монтировании компонента
+	useEffect(() => {
+		if (isAuthenticated && !initialLoadDoneRef.current) {
+			console.log('[DeskContext] useEffect[mount]: Первичная загрузка досок при монтировании...');
+			loadDesks();
+		}
+	}, [loadDesks, isAuthenticated]);
 
 	const addDesk = useCallback((desk: DeskData) => {
 		console.log('[DeskContext] Добавление доски:', desk)
@@ -73,10 +125,6 @@ export function DeskProvider({ children }: { children: ReactNode }) {
 			)
 		)
 	}, [])
-
-	useEffect(() => {
-		loadDesks()
-	}, [loadDesks])
 
 	const contextValue = useMemo(() => ({ 
 		desks, 

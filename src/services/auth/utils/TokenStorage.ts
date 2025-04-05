@@ -1,6 +1,7 @@
 import {TokenStorage} from '../types/Auth.types'
 
 export const saveTokens = (data: TokenStorage): void => {
+	console.log(`[TokenStorage] saveTokens: Сохранение токена для пользователя: ${data.username}`);
 	localStorage.setItem('token', data.accessToken)
 
 	if (data.refreshToken) {
@@ -8,6 +9,7 @@ export const saveTokens = (data: TokenStorage): void => {
 	}
 
 	localStorage.setItem('username', data.username)
+	console.log(`[TokenStorage] saveTokens: Токены для ${data.username} сохранены в localStorage.`);
 }
 
 export const getTokens = (): TokenStorage | null => {

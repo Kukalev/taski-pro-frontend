@@ -1,6 +1,6 @@
-import { login } from './api/LoginApi'
-import { register } from './api/RegisterApi'
-import { clearTokens } from './utils/TokenStorage'
+import {login} from './api/LoginApi'
+import {register} from './api/RegisterApi'
+import {clearTokens} from './utils/TokenStorage'
 
 export const AuthService = {
 	login,
@@ -17,6 +17,6 @@ export const AuthService = {
 
 	logout() {
 		clearTokens()
-		window.location.href = '/register'
+		window.location.href = '/login'
 	}
 }
