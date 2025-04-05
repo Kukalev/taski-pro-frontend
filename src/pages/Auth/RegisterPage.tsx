@@ -256,9 +256,11 @@ export const RegisterPage = () => {
 				firstname: formData.firstName,
 				lastname: formData.lastName
 			}
+			console.log(requestData, 'REGISTATION')
 
 			// Используем функцию register
 			const response = await AuthService.register(requestData)
+			console.log(response)
 
 			// Перенаправляем после успешной регистрации
 			navigate('/welcome')

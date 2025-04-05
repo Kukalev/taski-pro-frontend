@@ -1,5 +1,5 @@
-import React, {useEffect, useRef, useState} from 'react'
-import {STATUSES, StatusType, TaskBoardProps} from './types'
+import React, {useCallback, useEffect, useRef, useState} from 'react'
+import {STATUSES, StatusType} from './types'
 import {useTaskDragAndDrop} from './hooks/useTaskDragAndDrop'
 import TaskColumn from './components/TaskColumn'
 import DeleteZone from './components/DeleteZone'
@@ -13,13 +13,17 @@ import {
   updateTask
 } from '../../services/task/Task'
 import {Task} from '../../services/task/types/task.types'
-import {UserService} from '../../services/users/Users'
 import {DeskService} from '../../services/desk/Desk'
 import {createPortal} from 'react-dom'
-import { AuthService } from '../../services/auth/Auth'
+
+// Убираем TaskBoardProps, если deskUsers приходит как проп
+interface TaskBoardPageProps {
+  deskId: number;
+  deskUsers: any[]; // Принимаем пользователей как проп
+}
 
 // Основной компонент
-const TaskBoardPage: React.FC<TaskBoardProps> = ({ deskId }) => {
+const TaskBoardPage: React.FC<TaskBoardPageProps> = ({ deskId, deskUsers }) => {
   // Основные состояния
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
@@ -32,27 +36,21 @@ const TaskBoardPage: React.FC<TaskBoardProps> = ({ deskId }) => {
   const [taskToDelete, setTaskToDelete] = useState<number | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
-  const [deskUsers, setDeskUsers] = useState<any[]>([]);
   const [deskName, setDeskName] = useState('');
-  const [userRole, setUserRole] = useState<string>('');
-  const [hasFullAccess, setHasFullAccess] = useState(true); // Установим true по умолчанию для CREATOR
-  
-  const calendarRef = useRef<HTMLDivElement>(null);
+  const [isClosingTaskDetails, setIsClosingTaskDetails] = useState(false);
+  const taskDetailsRef = useRef<HTMLDivElement>(null);
   const currentDeskIdRef = useRef<number | null>(null);
-  const loadingUsersRef = useRef(false);
-  
-  // Драг-н-дроп
+
   const {
     draggedTask,
     dropTarget,
+    showDropZone,
     dropZoneHovered,
+    setDropTarget,
+    setDropZoneHovered,
     handleDragStart,
-    handleDragEnd,
-    handleTaskDragOver,
-    handleDropZoneDragOver,
-    handleDropZoneDragLeave
   } = useTaskDragAndDrop();
-  
+
   // Добавляем состояния для анимации
   const [animatingTask, setAnimatingTask] = useState<Task | null>(null);
   const [animationDetails, setAnimationDetails] = useState({
@@ -62,52 +60,10 @@ const TaskBoardPage: React.FC<TaskBoardProps> = ({ deskId }) => {
     endPos: { x: 0, y: 0 }
   });
   const [isAnimating, setIsAnimating] = useState(false);
-  
-  // Добавляем ref для внешнего контейнера
-  const taskDetailsRef = useRef<HTMLDivElement>(null);
-  
-  // Добавим состояние для отслеживания закрытия с анимацией
-  const [isClosingTaskDetails, setIsClosingTaskDetails] = useState(false);
-  
+
   // Загрузка пользователей доски
   useEffect(() => {
-    if (loadingUsersRef.current) return;
-    
-    loadingUsersRef.current = true;
-    
-    const loadUsers = async () => {
-      try {
-        const users = await UserService.getUsersOnDesk(deskId);
-        setDeskUsers(users);
-        
-        // Определяем права пользователя
-        const username = AuthService.getUsername();
-        const currentUser = users.find(u => 
-          u.username === username || u.userName === username
-        );
-        
-        const role = currentUser?.rightType || currentUser?.role || 'CREATOR'; // По умолчанию CREATOR
-        setUserRole(role);
-        setHasFullAccess(true); // Всегда устанавливаем true для CREATOR
-        
-        console.log(`Пользователь: ${username}, роль: ${role}, полный доступ: ${true}`);
-        
-      } catch (error) {
-        console.error('Ошибка при загрузке пользователей:', error);
-      } finally {
-        loadingUsersRef.current = false;
-      }
-    };
-    
-    loadUsers();
-  }, [deskId]);
-  
-  // ЗАГРУЗКА ЗАДАЧ - при монтировании и при изменении deskId
-  useEffect(() => {
-    // Проверяем, изменился ли deskId
-    if (currentDeskIdRef.current === deskId) {
-      return;
-    }
+    if (currentDeskIdRef.current === deskId) return;
     
     console.log(`[ЗАДАЧИ] Загрузка для доски ${deskId}`);
     
@@ -139,7 +95,7 @@ const TaskBoardPage: React.FC<TaskBoardProps> = ({ deskId }) => {
     
     loadTasks();
   }, [deskId]);
-  
+
   // Добавление стилей анимации
   useEffect(() => {
     const style = document.createElement('style');
@@ -196,287 +152,264 @@ const TaskBoardPage: React.FC<TaskBoardProps> = ({ deskId }) => {
     return tasks.filter(task => task.statusType === statusType);
   };
   
-  // Создание новой задачи
-  const handleCreateTask = async (statusId: number, taskText: string, statusType: string) => {
-    try {
-      const newTask = await createTask(deskId, taskText.trim(), statusType);
-      setTasks(prev => [...prev, newTask]);
-      return true;
-    } catch (error) {
-      console.error('[СОЗДАНИЕ] Ошибка:', error);
-      return false;
-    }
-  };
-  
-  // Изменение статуса задачи
-  const handleUpdateTaskStatus = async (taskId: number, statusType: string) => {
-    try {
-      const updatedTask = await updateTask(deskId, taskId, { statusType });
-      setTasks(prev => prev.map(t => t.taskId === taskId ? updatedTask : t));
-      
-      // Если это выбранная задача, обновляем ее
-      if (selectedTask && selectedTask.taskId === taskId) {
-        setSelectedTask(updatedTask);
-      }
-      
-      return true;
-    } catch (error) {
-      console.error('[СТАТУС] Ошибка:', error);
-      return false;
-    }
-  };
-  
-  // Обновление даты
-  const handleUpdateTaskDate = async (taskId: number, date: Date | null) => {
-    try {
-      const updatedTask = await updateTask(deskId, taskId, {
-        taskFinishDate: date ? date.toISOString() : null
-      });
-      
-      setTasks(prev => prev.map(t => t.taskId === taskId ? updatedTask : t));
-      setSelectedDate(prev => ({...prev, [taskId]: date}));
-      
-      // Если это выбранная задача, обновляем ее
-      if (selectedTask && selectedTask.taskId === taskId) {
-        setSelectedTask(updatedTask);
-      }
-      
-      return true;
-    } catch (error) {
-      console.error('[ДАТА] Ошибка:', error);
-      return false;
-    }
-  };
-  
-  // Изменение статуса завершения
-  const handleCompleteTask = async (taskId: number) => {
-    try {
-      const task = tasks.find(t => t.taskId === taskId);
-      if (!task) return false;
-      
-      const newStatus = task.statusType === StatusType.COMPLETED 
-        ? StatusType.BACKLOG 
-        : StatusType.COMPLETED;
-        
-      const updatedTask = await updateTask(deskId, taskId, { statusType: newStatus });
-      setTasks(prev => prev.map(t => t.taskId === taskId ? updatedTask : t));
-      
-      // Если это выбранная задача, обновляем ее
-      if (selectedTask && selectedTask.taskId === taskId) {
-        setSelectedTask(updatedTask);
-      }
-      
-      return true;
-    } catch (error) {
-      console.error('[ЗАВЕРШЕНИЕ] Ошибка:', error);
-      return false;
-    }
-  };
-  
-  // Удаление задачи
-  const handleDeleteTask = async (taskId: number) => {
-    try {
-      await deleteTask(deskId, taskId);
-      setTasks(prev => prev.filter(t => t.taskId !== taskId));
-      
-      // Если это выбранная задача, закрываем панель
-      if (selectedTask && selectedTask.taskId === taskId) {
-        setSelectedTask(null);
-      }
-      
-      return true;
-    } catch (error) {
-      console.error('[УДАЛЕНИЕ] Ошибка:', error);
-      return false;
-    }
-  };
-  
-  // Обновленный обработчик клика по задаче
-  const handleTaskClick = (task: Task) => {
-    // Если панель закрывается, не реагируем на клики
-    if (isClosingTaskDetails) return;
-    
-    // Если клик по той же задаче - запускаем анимацию закрытия
-    if (selectedTask && selectedTask.taskId === task.taskId) {
-      setIsClosingTaskDetails(true);
+  // Оптимистичное обновление задачи
+  const updateTaskOptimistically = useCallback(async (
+    taskId: number,
+    updates: Partial<Task> | { executorUsernames?: string[]; removeExecutorUsernames?: string[] },
+    originalTask?: Task
+  ) => {
+    console.log('[TaskBoardPage] Вызван updateTaskOptimistically для задачи:', taskId, 'с изменениями:', updates);
+
+    const originalTasks = tasks;
+    const taskToUpdate = originalTask || tasks.find(t => t.taskId === taskId);
+    if (!taskToUpdate) {
+      console.error('[ОПТИМИСТИЧНОЕ ОБНОВЛЕНИЕ] Задача не найдена:', taskId);
       return;
     }
-    
-    // Если открыта другая задача - сначала закрываем её, потом открываем новую
-    if (selectedTask) {
-      setIsClosingTaskDetails(true);
-      // Сохраняем следующую задачу для открытия после закрытия текущей
-      const nextTask = task;
-      setTimeout(() => {
-        setSelectedTask(nextTask);
-        setIsClosingTaskDetails(false);
-      }, 300);
+
+    let updatedTaskPreview: Task;
+
+    // Обрабатываем добавление/удаление исполнителей для превью
+    if ('executorUsernames' in updates && updates.executorUsernames) {
+      const currentExecutors = taskToUpdate.executors || [];
+      const newExecutors = updates.executorUsernames.filter(u => !currentExecutors.includes(u));
+      updatedTaskPreview = {
+        ...taskToUpdate,
+        executors: [...currentExecutors, ...newExecutors]
+      };
+    } else if ('removeExecutorUsernames' in updates && updates.removeExecutorUsernames) {
+      const currentExecutors = taskToUpdate.executors || [];
+      const executorsToRemove = updates.removeExecutorUsernames;
+      updatedTaskPreview = {
+        ...taskToUpdate,
+        executors: currentExecutors.filter(u => !executorsToRemove.includes(u))
+      };
     } else {
-      // Иначе просто открываем задачу
-      setSelectedTask(task);
+      // Обычное обновление других полей
+      updatedTaskPreview = { ...taskToUpdate, ...updates };
     }
-  };
-  
-  // Обновленный обработчик закрытия панели
-  const handleCloseTaskDetails = () => {
-    // Запускаем анимацию закрытия
-    setIsClosingTaskDetails(true);
-    
-    // Удаляем компонент только после завершения анимации
-    setTimeout(() => {
-      setSelectedTask(null);
-      setIsClosingTaskDetails(false);
-    }, 300); // Время должно соответствовать длительности анимации
-  };
-  
-  // ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
-  
-  // Редактирование текста новой задачи
-  const handleInputChange = (columnId: number, text: string) => {
-    setNewTaskTexts(prev => ({
-      ...prev,
-      [columnId]: text
-    }));
-  };
-  
-  // Обработка клавиш при вводе текста
-  const handleKeyDown = async (e: React.KeyboardEvent, statusId: number) => {
-    const taskText = newTaskTexts[statusId] || '';
-    const status = STATUSES.find(s => s.id === statusId);
-    
-    if (!status) return;
-    
-    if (e.key === 'Enter' && taskText.trim()) {
-      const success = await handleCreateTask(statusId, taskText.trim(), status.type);
-      
-      if (success) {
-        setNewTaskTexts(prev => ({
-          ...prev,
-          [statusId]: ''
-        }));
-        setAddingInColumn(null);
-      }
-    } else if (e.key === 'Escape') {
-      setNewTaskTexts(prev => ({
-        ...prev,
-        [statusId]: ''
-      }));
-      setAddingInColumn(null);
+
+    // 1. Обновляем UI немедленно
+    setTasks(prev => prev.map(t => (t.taskId === taskId ? updatedTaskPreview : t)));
+    if (selectedTask?.taskId === taskId) {
+      setSelectedTask(updatedTaskPreview);
     }
-  };
-  
-  // Сброс задачи в новый статус
-  const handleDrop = async (e: React.DragEvent, targetStatusType: string) => {
-    e.preventDefault();
-    if (!draggedTask || !dropTarget) return;
-    
+
+    // 2. Отправляем запрос к API
     try {
-      if (draggedTask.statusType !== targetStatusType) {
-        await handleUpdateTaskStatus(draggedTask.taskId!, targetStatusType);
-      }
+      // В API отправляем только нужный payload (executorUsernames или removeExecutorUsernames),
+      // а не весь объект task
+      const apiPayload = ('executorUsernames' in updates || 'removeExecutorUsernames' in updates)
+                         ? updates // Отправляем { executorUsernames: [...] } или { removeExecutorUsernames: [...] }
+                         : updates as Partial<Task>; // Отправляем обычные изменения
+
+      const actualUpdatedTask = await updateTask(deskId, taskId, apiPayload);
+
+      // 3. Обновляем UI окончательными данными из API
+      setTasks(prev => prev.map(t => (t.taskId === taskId ? actualUpdatedTask : t)));
+       if (selectedTask?.taskId === taskId) {
+           setSelectedTask(actualUpdatedTask);
+       }
     } catch (error) {
-      console.error('[ПЕРЕМЕЩЕНИЕ] Ошибка:', error);
+      console.error('[ОПТИМИСТИЧНОЕ ОБНОВЛЕНИЕ] Ошибка API:', error);
+      // 4. Откат изменений в UI при ошибке API
+      setTasks(originalTasks);
+      if (selectedTask?.taskId === taskId && taskToUpdate) {
+         setSelectedTask(taskToUpdate);
+      }
+      alert(`Не удалось обновить исполнителей задачи "${taskToUpdate.taskName}". Изменения отменены.`);
     }
-  };
-  
-  // Клик по иконке даты
-  const handleDateClick = (taskId: number) => {
-    setDatePickerTaskId(datePickerTaskId === taskId ? null : taskId);
-  };
-  
-  // Сброс в зону удаления
-  const handleDeleteZoneDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    if (!draggedTask) return;
-    
-    setTaskToDelete(draggedTask.taskId!);
-    setShowDeleteModal(true);
-  };
-  
-  // Подтверждение удаления
-  const handleDeleteConfirm = async () => {
+  }, [tasks, deskId, selectedTask]);
+
+  // Создание задачи
+  const handleCreateTask = useCallback(async (statusId: number, taskText: string, statusType: string) => {
+    const tempId = Date.now(); // Временный ID для UI
+    const newTaskPreview: Task = {
+      taskId: tempId, // Используем временный ID
+      taskName: taskText.trim(),
+      statusType: statusType as StatusType,
+      deskId: deskId,
+      // Другие поля по умолчанию или null
+      taskDescription: '',
+      taskCreateDate: new Date().toISOString(),
+      taskFinishDate: null,
+      executors: [],
+      priorityType: 'MEDIUM' // Пример
+    };
+
+    // 1. Оптимистично добавляем в UI
+    setTasks(prev => [...prev, newTaskPreview]);
+    setNewTaskTexts(prev => ({ ...prev, [statusId]: '' }));
+    setAddingInColumn(null);
+
+    // 2. Отправляем запрос к API
+    try {
+      const createdTask = await createTask(deskId, taskText.trim(), statusType);
+      // 3. Заменяем временную задачу на реальную из API
+      setTasks(prev => prev.map(t => t.taskId === tempId ? createdTask : t));
+    } catch (error) {
+      console.error('[СОЗДАНИЕ] Ошибка API:', error);
+      // 4. Откат - удаляем временную задачу
+      setTasks(prev => prev.filter(t => t.taskId !== tempId));
+      alert('Не удалось создать задачу.');
+    }
+  }, [deskId]);
+
+  // Завершение/Возобновление задачи
+  const handleCompleteTask = useCallback((taskId: number) => {
+    const task = tasks.find(t => t.taskId === taskId);
+    if (!task) return;
+    const newStatus = task.statusType === StatusType.COMPLETED ? StatusType.BACKLOG : StatusType.COMPLETED;
+    updateTaskOptimistically(taskId, { statusType: newStatus }, task);
+  }, [tasks, updateTaskOptimistically]);
+
+  // Обновление даты задачи
+  const handleUpdateTaskDate = useCallback((taskId: number, date: Date | null) => {
+    updateTaskOptimistically(taskId, { taskFinishDate: date ? date.toISOString() : null });
+    setSelectedDate(prev => ({ ...prev, [taskId]: date })); // Обновляем локальное состояние даты для календаря
+    setDatePickerTaskId(null); // Закрываем календарь
+  }, [updateTaskOptimistically]);
+
+  // Удаление задачи
+  const handleDeleteTask = useCallback(async (taskId: number) => {
+    const originalTasks = tasks;
+    const taskToDelete = tasks.find(t => t.taskId === taskId);
+    if (!taskToDelete) return;
+
+    // 1. Оптимистично удаляем из UI
+    setTasks(prev => prev.filter(t => t.taskId !== taskId));
+    if (selectedTask?.taskId === taskId) {
+      setSelectedTask(null);
+      setIsClosingTaskDetails(false); // Закрываем панель деталей сразу
+    }
+
+    // 2. Отправляем запрос к API
+    try {
+      await deleteTask(deskId, taskId);
+    } catch (error) {
+      console.error('[УДАЛЕНИЕ] Ошибка API:', error);
+      // 3. Откат при ошибке
+      setTasks(originalTasks);
+      if (selectedTask?.taskId === taskId) { // Если панель была закрыта, а удаление не удалось
+        setSelectedTask(taskToDelete); // Показываем ее снова
+      }
+      alert(`Не удалось удалить задачу "${taskToDelete.taskName}".`);
+    }
+  }, [tasks, deskId, selectedTask]);
+
+  // Подтверждение удаления в модалке
+  const handleDeleteConfirm = useCallback(() => {
     if (taskToDelete !== null) {
-      await handleDeleteTask(taskToDelete);
+      handleDeleteTask(taskToDelete); // Вызываем оптимистичное удаление
       setShowDeleteModal(false);
       setTaskToDelete(null);
     }
-  };
-  
-  // Обновление задачи
-  const handleTaskUpdate = (updatedTask: Task) => {
-    if (!updatedTask || !updatedTask.taskId) return;
-    
-    setTasks(prevTasks => 
-      prevTasks.map(task => 
-        task.taskId === updatedTask.taskId ? updatedTask : task
-      )
-    );
-    
-    // Если это выбранная задача, обновляем ее
-    if (selectedTask && selectedTask.taskId === updatedTask.taskId) {
-      setSelectedTask(updatedTask);
-    }
-  };
+  }, [taskToDelete, handleDeleteTask]);
 
-  // Функция для расчета позиций карточек задач
-  const calculateTaskPosition = (statusType: string, taskId: number) => {
-    const columnElement = document.querySelector(`[data-status="${statusType}"]`);
-    if (!columnElement) return { x: 0, y: 0 };
-    
-    // Если задача уже существует в колонке, найдем её позицию
-    const taskElement = columnElement.querySelector(`[data-task-id="${taskId}"]`);
-    if (taskElement) {
-      const rect = taskElement.getBoundingClientRect();
-      return {
-        x: rect.left + window.scrollX,
-        y: rect.top + window.scrollY
-      };
+  // Обновленный обработчик клика по задаче
+  const handleTaskClick = useCallback((task: Task) => {
+    if (isClosingTaskDetails) return;
+    if (selectedTask && selectedTask.taskId === task.taskId) {
+      setIsClosingTaskDetails(true);
+    } else if (selectedTask) {
+      setIsClosingTaskDetails(true);
+      setTimeout(() => {
+        setSelectedTask(task);
+        setIsClosingTaskDetails(false);
+      }, 300); // Должно совпадать с анимацией slide-out
+    } else {
+      setSelectedTask(task);
     }
-    
-    // Если задачи нет, берем позицию плейсхолдера или верх колонки
-    const placeholder = columnElement.querySelector('.task-placeholder') || columnElement;
-    const rect = placeholder.getBoundingClientRect();
-    return {
-      x: rect.left + window.scrollX,
-      y: rect.top + window.scrollY
-    };
-  };
-  
-  // Функция для запуска анимации перемещения задачи
-  const handleAnimateStatusChange = (taskId: number, fromStatus: string, toStatus: string) => {
-    // Находим задачу
+  }, [selectedTask, isClosingTaskDetails]);
+
+  // Обновленный обработчик закрытия панели
+  const handleCloseTaskDetails = useCallback(() => {
+    setIsClosingTaskDetails(true);
+  }, []);
+
+  // Завершение анимации закрытия панели деталей
+  const handleDetailsAnimationEnd = useCallback(() => {
+    if (isClosingTaskDetails) {
+      setSelectedTask(null);
+      setIsClosingTaskDetails(false);
+    }
+  }, [isClosingTaskDetails]);
+
+  // Клик по иконке даты (открытие/закрытие календаря)
+  const handleDateClick = useCallback((taskId: number) => {
+    setDatePickerTaskId(prev => (prev === taskId ? null : taskId));
+  }, []);
+
+  // Обработка ввода в поле новой задачи
+  const handleInputChange = useCallback((columnId: number, text: string) => {
+    setNewTaskTexts(prev => ({ ...prev, [columnId]: text }));
+  }, []);
+
+  // Обработка Enter/Escape в поле новой задачи
+  const handleKeyDown = useCallback((e: React.KeyboardEvent, statusId: number) => {
+    const taskText = newTaskTexts[statusId] || '';
+    const status = STATUSES.find(s => s.id === statusId);
+    if (!status) return;
+
+    if (e.key === 'Enter' && taskText.trim()) {
+      handleCreateTask(statusId, taskText.trim(), status.type);
+      // Очистка и закрытие инпута обрабатывается внутри handleCreateTask (оптимистично)
+    } else if (e.key === 'Escape') {
+      setNewTaskTexts(prev => ({ ...prev, [statusId]: '' }));
+      setAddingInColumn(null);
+    }
+  }, [newTaskTexts, handleCreateTask]);
+
+  // Обработка drop на колонку (здесь только обновление статуса)
+  const handleDropOnColumn = useCallback((targetStatusType: string) => {
+    // Вызывается из TaskColumn.onDrop
+    if (!draggedTask || !draggedTask.taskId) {
+      console.error("Drop failed: draggedTask or taskId is missing");
+      return;
+    }
+
+    const taskId = draggedTask.taskId;
+
+    // Обновляем только если статус реально изменился
+    if (draggedTask.statusType !== targetStatusType) {
+      console.log(`[TaskBoardPage] Dropped task ${taskId} onto ${targetStatusType}`);
+      updateTaskOptimistically(taskId, { statusType: targetStatusType as StatusType }, draggedTask);
+    } else {
+      console.log(`[TaskBoardPage] Dropped task ${taskId} onto same status ${targetStatusType}, no update needed.`);
+    }
+    // Состояние DND сбросится глобальным обработчиком 'dragend'
+  }, [draggedTask, updateTaskOptimistically]); // Добавили зависимости
+
+  // Обработчик drop на зону удаления
+  const handleDeleteZoneDrop = useCallback(() => {
+    // Вызывается из DeleteZone.onDrop
+    if (!draggedTask || !draggedTask.taskId) {
+      console.error("Delete drop failed: draggedTask or taskId is missing");
+      return;
+    }
+    console.log(`[TaskBoardPage] Dropped task ${draggedTask.taskId} onto delete zone`);
+    setTaskToDelete(draggedTask.taskId); // Устанавливаем ID для модалки
+    setShowDeleteModal(true);           // Показываем модалку
+     // Состояние DND сбросится глобальным обработчиком 'dragend'
+  }, [draggedTask]); // Добавили зависимость
+
+  // Обработчик обновления задачи из дочерних компонентов
+  const handleTaskUpdateFromChild = useCallback((taskId: number, updates: Partial<Task> | { executorUsernames?: string[]; removeExecutorUsernames?: string[] }) => {
+    console.log('[TaskBoardPage] Вызван handleTaskUpdateFromChild для задачи:', taskId, 'с изменениями:', updates);
     const task = tasks.find(t => t.taskId === taskId);
-    if (!task) return;
-    
-    // Вычисляем позиции начала и конца
-    const startPos = calculateTaskPosition(fromStatus, taskId);
-    const endPos = calculateTaskPosition(toStatus, taskId);
-    
-    // Устанавливаем состояние для анимации
-    setAnimatingTask(task);
-    setAnimationDetails({
-      fromStatus,
-      toStatus,
-      startPos,
-      endPos
-    });
-    
-    // Запускаем анимацию
-    setIsAnimating(true);
-    
-    // Завершаем анимацию через 500мс
-    setTimeout(() => {
-      setIsAnimating(false);
-      setAnimatingTask(null);
-    }, 500);
-  };
+    if (task) {
+      updateTaskOptimistically(taskId, updates, task);
+    } else {
+      console.error('[handleTaskUpdateFromChild] Задача не найдена:', taskId);
+    }
+  }, [tasks, updateTaskOptimistically]);
 
   // РЕНДЕРИНГ
   return (
     <div className="flex-1 p-4 overflow-x-auto h-full">
       {loading ? (
-        <div className="flex justify-center items-center h-[100vh]">
-          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 -mt-150"></div>
+        <div className="flex justify-center items-center h-full">
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
         </div>
       ) : (
         <div className="flex space-x-4 h-full">
@@ -489,11 +422,12 @@ const TaskBoardPage: React.FC<TaskBoardProps> = ({ deskId }) => {
                 status={status}
                 tasks={statusTasks}
                 deskId={deskId}
-                onAddTask={handleCreateTask}
-                onDragOver={handleTaskDragOver}
-                onDrop={handleDrop}
+                deskUsers={deskUsers}
                 draggedTask={draggedTask}
                 dropTarget={dropTarget}
+                setDropTarget={setDropTarget}
+                onDropOnColumn={handleDropOnColumn}
+                onAddTask={handleCreateTask}
                 inputValue={newTaskTexts}
                 onInputChange={handleInputChange}
                 onInputKeyDown={handleKeyDown}
@@ -507,10 +441,9 @@ const TaskBoardPage: React.FC<TaskBoardProps> = ({ deskId }) => {
                 setHoveredCheckCircle={setHoveredCheckCircle}
                 setHoveredCalendar={setHoveredCalendar}
                 onDragStart={handleDragStart}
-                onDragEnd={handleDragEnd}
                 onDateChange={handleUpdateTaskDate}
                 onTaskClick={handleTaskClick}
-                onTaskUpdate={handleTaskUpdate}
+                onTaskUpdate={handleTaskUpdateFromChild}
                 setAddingInColumn={setAddingInColumn}
               />
             );
@@ -520,11 +453,11 @@ const TaskBoardPage: React.FC<TaskBoardProps> = ({ deskId }) => {
 
       {/* Зона удаления */}
       <DeleteZone 
-        visible={!!draggedTask}
+        visible={showDropZone}
         hovered={dropZoneHovered}
-        onDragOver={handleDropZoneDragOver}
-        onDragLeave={handleDropZoneDragLeave}
+        setHovered={setDropZoneHovered}
         onDrop={handleDeleteZoneDrop}
+        deskUsers={deskUsers}
       />
 
       {/* Модальное окно удаления */}
@@ -546,16 +479,10 @@ const TaskBoardPage: React.FC<TaskBoardProps> = ({ deskId }) => {
             deskId={deskId}
             deskUsers={deskUsers}
             onClose={handleCloseTaskDetails}
-            onTaskUpdate={handleTaskUpdate}
+            onTaskUpdate={(updates) => handleTaskUpdateFromChild(updates.taskId, updates)}
             deskName={deskName}
             isClosing={isClosingTaskDetails}
-            onAnimationEnd={() => {
-              if (isClosingTaskDetails) {
-                setSelectedTask(null);
-                setIsClosingTaskDetails(false);
-              }
-            }}
-            onAnimateStatusChange={handleAnimateStatusChange}
+            onAnimationEnd={handleDetailsAnimationEnd}
           />
         </div>
       )}

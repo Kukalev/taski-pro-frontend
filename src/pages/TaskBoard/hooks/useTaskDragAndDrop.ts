@@ -7,111 +7,62 @@ export const useTaskDragAndDrop = () => {
   const [showDropZone, setShowDropZone] = useState(false);
   const [dropZoneHovered, setDropZoneHovered] = useState(false);
 
-  // Установка глобальных обработчиков событий
+  // Оставляем useEffect для глобальных обработчиков dragstart/dragend,
+  // чтобы управлять видимостью DeleteZone
   useEffect(() => {
     const handleDocumentDragStart = () => {
-      setShowDropZone(true);
+      // Небольшая задержка, чтобы DND успел инициализироваться
+      setTimeout(() => setShowDropZone(true), 50);
     };
-    
+
     const handleDocumentDragEnd = () => {
+      // Сбрасываем все при окончании любого DND
+      setDraggedTask(null);
+      setDropTarget(null);
       setShowDropZone(false);
       setDropZoneHovered(false);
+      // console.log('[Global DragEnd] Resetting all DND state');
     };
-    
+
     document.addEventListener('dragstart', handleDocumentDragStart);
     document.addEventListener('dragend', handleDocumentDragEnd);
-    
+
     return () => {
       document.removeEventListener('dragstart', handleDocumentDragStart);
       document.removeEventListener('dragend', handleDocumentDragEnd);
     };
-  }, []);
+  }, []); // Пустой массив зависимостей - выполняется один раз
 
   const handleDragStart = (e: React.DragEvent, task: Task) => {
-    e.dataTransfer.setData('text/plain', JSON.stringify(task));
+    // console.log('[DragStart] Task:', task.taskId);
+    // Устанавливаем данные для DND
+    try {
+        e.dataTransfer.setData('text/plain', JSON.stringify(task));
+        e.dataTransfer.effectAllowed = "move"; // Указываем тип операции
+    } catch (err) {
+        console.error("Failed to set drag data:", err);
+    }
     setDraggedTask(task);
-    setShowDropZone(true);
-    
-    if (e.currentTarget instanceof HTMLElement) {
-      const element = e.currentTarget;
-      setTimeout(() => {
-        if (element && document.body.contains(element)) {
-          element.style.opacity = '0.4';
-        }
-      }, 0);
-    }
+    // setShowDropZone(true); // Управляется глобальным listener'ом
   };
 
-  const handleDragEnd = (e: React.DragEvent) => {
-    setDraggedTask(null);
-    setDropTarget(null);
-    setShowDropZone(false);
-    setDropZoneHovered(false);
-    
-    if (e.currentTarget instanceof HTMLElement) {
-      const element = e.currentTarget;
-      if (element && document.body.contains(element)) {
-        element.style.opacity = '1';
-      }
-    }
-  };
+  // handleDragEnd больше не нужен здесь, управляется глобально
+  // const handleDragEnd = (e: React.DragEvent) => { ... };
 
-  const handleTaskDragOver = (e: React.DragEvent, statusType: string, tasks: Task[]) => {
-    e.preventDefault();
-    if (!draggedTask) return;
-    
-    const column = e.currentTarget;
-    const columnRect = column.getBoundingClientRect();
-    const mouseY = e.clientY - columnRect.top;
-    
-    if (mouseY < 50) {
-      setDropTarget({ statusType, index: 0 });
-      return;
-    }
-    
-    const taskCards = Array.from(column.querySelectorAll('.task-card'));
-    
-    if (taskCards.length === 0) {
-      setDropTarget({ statusType, index: 0 });
-      return;
-    }
-    
-    for (let i = 0; i < taskCards.length; i++) {
-      const card = taskCards[i];
-      const cardRect = card.getBoundingClientRect();
-      const cardMiddle = cardRect.top + cardRect.height / 2 - columnRect.top;
-      
-      if (mouseY < cardMiddle) {
-        setDropTarget({ statusType, index: i });
-        return;
-      }
-    }
-    
-    setDropTarget({ statusType, index: tasks.length });
-  };
-
-  const handleDropZoneDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    setDropZoneHovered(true);
-  };
-
-  const handleDropZoneDragLeave = () => {
-    setDropZoneHovered(false);
-  };
+  // Убираем handleTaskDragOver, handleDropZoneDragOver, handleDropZoneDragLeave
+  // Их логика переедет в компоненты TaskColumn и DeleteZone
 
   return {
-    draggedTask,
-    dropTarget,
-    showDropZone,
-    dropZoneHovered,
-    setDraggedTask,
-    setDropTarget,
-    setShowDropZone,
-    setDropZoneHovered,
-    handleDragStart,
-    handleDragEnd,
-    handleTaskDragOver,
-    handleDropZoneDragOver,
-    handleDropZoneDragLeave
+    draggedTask, // Нужен для проверки в TaskColumn/DeleteZone
+    dropTarget,  // Нужен для отрисовки индикатора в TaskColumn
+    showDropZone, // Нужен для DeleteZone
+    dropZoneHovered, // Нужен для DeleteZone
+    // сеттеры больше не нужны компонентам напрямую
+    // setDraggedTask,
+    setDropTarget, // Нужен TaskColumn
+    // setShowDropZone,
+    setDropZoneHovered, // Нужен DeleteZone
+    handleDragStart, // Нужен TaskCard
+    // handleDragEnd - убран, глобальный обработчик
   };
 };

@@ -1,57 +1,30 @@
-import React, {useEffect, useState, useRef} from 'react'
-import {TaskColumnProps, StatusType} from '../types'
+import React, { useRef, useEffect } from 'react'
+import { TaskColumnProps, StatusType, Task } from '../types'
 import TaskCard from './TaskCard'
 import TaskInput from './TaskInput'
 import TaskDatePicker from './TaskDatePicker'
-import {UserService} from '../../../services/users/Users'
-import { useParams } from 'react-router-dom'
-import { AuthService } from '../../../services/auth/Auth'
-import { canCreateTasks, getUserRoleOnDesk, UserRightType } from '../../../utils/permissionUtils'
+import { canCreateTasks, getUserRoleOnDesk } from '../../../utils/permissionUtils'
 
-// Улучшенный синглтон для хранения пользователей доски
-const DeskUsersState = {
-  usersMap: new Map<number, any[]>(),
-  loadingMap: new Map<number, boolean>(),
-  
-  getUsers(deskId: number) {
-    return this.usersMap.get(deskId) || [];
-  },
-  
-  setUsers(deskId: number, users: any[]) {
-    this.usersMap.set(deskId, users);
-    this.loadingMap.set(deskId, false);
-    // Упрощаем логирование
-    console.log(`[КЭШИРОВАНИЕ] Сохранены пользователи для доски ${deskId}: ${users.length}`);
-  },
-  
-  hasUsers(deskId: number) {
-    return this.usersMap.has(deskId);
-  },
-  
-  isLoading(deskId: number) {
-    return this.loadingMap.get(deskId) || false;
-  },
-  
-  setLoading(deskId: number, loading: boolean) {
-    this.loadingMap.set(deskId, loading);
-  }
-};
-
-// Обновить интерфейс TaskColumnProps, добавив deskId и onTaskUpdate
-interface ExtendedTaskColumnProps extends TaskColumnProps {
-  deskId?: number;
-  onTaskUpdate?: (updatedTask: any) => void;
+// Обновляем интерфейс пропсов, если он не в ../types
+interface ExtendedTaskColumnProps extends Omit<TaskColumnProps, 'onDragOver' | 'onDrop' | 'onDragEnd'> {
+  deskId: number; // Убедимся, что deskId обязателен
+  deskUsers: any[]; // Принимаем пользователей как обязательный проп
+  onTaskUpdate: (taskId: number, updates: Partial<Task> | { executorUsernames?: string[]; removeExecutorUsernames?: string[] }) => void; // Добавляем onTaskUpdate
+  setAddingInColumn: (statusId: number | null) => void; // Добавляем
+  // Новые DND пропсы
+  draggedTask: Task | null;
+  dropTarget: { statusType: string; index: number } | null;
+  setDropTarget: (target: { statusType: string; index: number } | null) => void;
+  onDropOnColumn: (statusType: string) => void; // Обработчик drop из TaskBoardPage
+  onDragStart: (e: React.DragEvent, task: Task) => void; // Для передачи в TaskCard
 }
 
 const TaskColumn: React.FC<ExtendedTaskColumnProps> = ({
   status,
   tasks,
   deskId,
+  deskUsers, // Принимаем как проп
   onAddTask,
-  onDragOver,
-  onDrop,
-  draggedTask,
-  dropTarget,
   inputValue,
   onInputChange,
   onInputKeyDown,
@@ -64,202 +37,162 @@ const TaskColumn: React.FC<ExtendedTaskColumnProps> = ({
   onDateClick,
   setHoveredCheckCircle,
   setHoveredCalendar,
-  onDragStart,
-  onDragEnd,
+  onDragStart, // Принимаем onDragStart
   onDateChange,
   onTaskClick,
-  onTaskUpdate,
-  setAddingInColumn
+  onTaskUpdate, // Принимаем как проп
+  setAddingInColumn, // Принимаем как проп
+  // Новые DND пропсы
+  draggedTask,
+  dropTarget,
+  setDropTarget,
+  onDropOnColumn, // Обработчик drop из TaskBoardPage
 }) => {
-  const [deskUsers, setDeskUsers] = useState<any[]>([]);
-  const { deskId: urlDeskId } = useParams<{ deskId: string }>();
-  const loadingRef = useRef(false);
-  
-  // Добавим ref для инпута добавления задачи
-  const addInputRef = useRef<HTMLDivElement>(null);
-  
-  // Получаем роль пользователя и определяем, может ли он создавать задачи
-  const userRole = getUserRoleOnDesk(deskUsers);
-  const hasCreatePermission = canCreateTasks(deskUsers);
-  
-  // Проверяем наличие deskId только один раз, убираем лишнее логирование
-  useEffect(() => {
-    if (!deskId) {
-      console.error('TaskColumn: deskId не определен');
-    }
-  }, [deskId]);
-  
-  // Используем переданный deskId или ID из URL, или хардкодим для тестирования
-  const actualDeskId = deskId || (urlDeskId ? parseInt(urlDeskId, 10) : 72);
-  
-  // Фильтруем задачи по статусу
-  const columnTasks = tasks.filter(task => task.statusType === status.type);
-  
-  // Загрузка пользователей доски - оптимизирована
-  useEffect(() => {
-    // Отладочное логирование
-    console.log(`Загрузка пользователей для колонки ${status.title}`, {
-      actualDeskId,
-      fromCache: DeskUsersState.hasUsers(actualDeskId),
-      usersCount: DeskUsersState.getUsers(actualDeskId).length,
-      isLoading: DeskUsersState.isLoading(actualDeskId)
-    });
-    
-    // Проверяем, есть ли уже пользователи в кэше
-    if (DeskUsersState.hasUsers(actualDeskId)) {
-      setDeskUsers(DeskUsersState.getUsers(actualDeskId));
-      return;
-    }
-    
-    // Проверяем, загружаются ли уже пользователи
-    if (DeskUsersState.isLoading(actualDeskId) || loadingRef.current) {
-      return;
-    }
-    
-    // Устанавливаем флаги загрузки
-    DeskUsersState.setLoading(actualDeskId, true);
-    loadingRef.current = true;
-    
-    const loadUsers = async () => {
-      try {
-        console.log(`Загрузка пользователей для доски ${actualDeskId}`);
-        const users = await UserService.getUsersOnDesk(actualDeskId);
-        
-        console.log(`Загружены пользователи для доски ${actualDeskId}:`, users);
-        
-        // Сохраняем пользователей в кэш
-        DeskUsersState.setUsers(actualDeskId, users);
-        
-        // Обновляем локальное состояние
-        setDeskUsers(users);
-      } catch (error) {
-        console.error('Ошибка при загрузке пользователей:', error);
-      } finally {
-        loadingRef.current = false;
-        DeskUsersState.setLoading(actualDeskId, false);
-      }
-    };
+  const addInputRef = useRef<HTMLDivElement>(null); // Ref для инпута добавления
 
-    loadUsers();
-  }, [actualDeskId, status.title]);
-  
-  // Отладка прав доступа
-  useEffect(() => {
-    const username = AuthService.getUsername();
-    console.log('Права на создание задач:', {
-      username,
-      deskUsers: deskUsers.length,
-      hasCreatePermission
-    });
-    
-    // Выводим информацию о всех пользователях
-    deskUsers.forEach(user => {
-      console.log('Пользователь доски:', {
-        username: user.username || user.userName,
-        role: user.rightType || user.role,
-        isCurrentUser: (user.username === username || user.userName === username)
-      });
-    });
-  }, [deskUsers, hasCreatePermission]);
-  
+  // Используем переданных deskUsers для определения прав
+  const hasCreatePermission = canCreateTasks(deskUsers);
+
   // Обработчик клика вне инпута для выхода из режима добавления
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (isAddingInColumn !== null && 
-          addInputRef.current && 
-          !addInputRef.current.contains(e.target as Node)) {
-        setAddingInColumn(null);
+      // Проверяем, что клик был ВНЕ компонента TaskInput
+      if (isAddingInColumn === status.id && // Только если добавляем в этой колонке
+        addInputRef.current &&
+        !addInputRef.current.contains(e.target as Node)) {
+        setAddingInColumn(null); // Выход из режима добавления
       }
     };
-    
+
     document.addEventListener('mousedown', handleClickOutside);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [isAddingInColumn, setAddingInColumn]);
-  
+  }, [isAddingInColumn, setAddingInColumn, status.id]); // Добавили зависимости
+
+  // --- Логика расчета индекса прямо здесь ---
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault(); // Обязательно для drop
+    e.dataTransfer.dropEffect = "move"; // Показываем иконку перемещения
+
+    if (!draggedTask) return; // Нечего перетаскивать
+
+    const column = e.currentTarget;
+    if (!(column instanceof HTMLElement)) return;
+
+    const columnRect = column.getBoundingClientRect();
+    const mouseY = e.clientY - columnRect.top;
+
+    // Используем tasks.length (актуальный для этой колонки)
+    let targetIndex = tasks.length;
+
+    const taskCards = Array.from(column.querySelectorAll('.task-card'));
+
+    if (taskCards.length === 0) {
+      targetIndex = 0;
+    } else {
+      for (let i = 0; i < taskCards.length; i++) {
+        const card = taskCards[i];
+        if (!(card instanceof HTMLElement)) continue;
+        const cardRect = card.getBoundingClientRect();
+        const cardMiddleRelative = cardRect.top + cardRect.height / 2 - columnRect.top;
+        if (mouseY < cardMiddleRelative) {
+          targetIndex = i;
+          break;
+        }
+      }
+    }
+
+    // Обновляем dropTarget только если он изменился
+    if (!dropTarget || dropTarget.statusType !== status.type || dropTarget.index !== targetIndex) {
+      // console.log(`[TaskColumn ${status.type}] Setting drop target index: ${targetIndex}`);
+      setDropTarget({ statusType: status.type, index: targetIndex });
+    }
+  };
+
+  // Обработчик Drop
+  const handleDrop = (e: React.DragEvent) => {
+      e.preventDefault();
+      // console.log(`[TaskColumn ${status.type}] Drop event`);
+      onDropOnColumn(status.type); // Вызываем обработчик из TaskBoardPage
+      setDropTarget(null); // Сбрасываем цель сразу после drop'а
+  };
+
   return (
-    <div 
-      className="w-[15%] min-w-[250px] flex flex-col h-[calc(100vh-80px)]"
+    <div
+      className="w-[15%] min-w-[250px] flex flex-col h-[calc(100vh-80px)]" // Убедись, что высота правильная
       data-status={status.type}
+      // --- Новые обработчики ---
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+      onDragLeave={() => setDropTarget(null)} // Сбрасываем цель при выходе из колонки
     >
       <div className="mb-2 rounded-lg bg-white py-2">
         <h3 className="text-sm font-medium text-gray-700 ml-3">{status.title}</h3>
       </div>
 
-      {/* Показываем инпут добавления задачи только для CREATOR и CONTRIBUTOR */}
+      {/* Показываем инпут, если есть права */}
       {hasCreatePermission && (
-        <div ref={addInputRef} className="mb-2">
-          <TaskInput 
-            statusId={status.id}
-            value={inputValue[status.id] || ''}
-            onChange={onInputChange}
-            onKeyDown={onInputKeyDown}
-            autoFocus={false}
-          />
+        <div ref={addInputRef} className="mb-2"> {/* Обертка с ref */}
+          {/* Условный рендеринг TaskInput или кнопки "Добавить задачу" */}
+          {isAddingInColumn === status.id ? (
+            <TaskInput
+              statusId={status.id}
+              value={inputValue[status.id] || ''}
+              onChange={onInputChange}
+              onKeyDown={onInputKeyDown}
+              autoFocus={true} // Автофокус при появлении
+            />
+          ) : (
+            <button
+              onClick={() => setAddingInColumn(status.id)}
+              className="w-full h-10 px-3 rounded-lg bg-white text-[12px] text-left text-gray-400 border border-gray-200 hover:border-gray-300 focus:outline-none"
+            >
+              + Добавить задачу...
+            </button>
+          )}
         </div>
       )}
 
-      <div 
-        className="space-y-2 flex-1 overflow-y-auto max-h-full pr-1 
-        scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent relative"
-        onDragOver={(e) => onDragOver(e, status.type, tasks)}
-        onDrop={(e) => onDrop(e, status.type)}
+      <div
+        className="space-y-2 flex-1 overflow-y-auto max-h-full pr-1 scrollbar-thin scrollbar-thumb-gray-200 scrollbar-track-transparent relative"
       >
         {/* Индикатор вставки в начало */}
-        {draggedTask && (
-          <div 
-            className={`absolute top-0 left-0 right-1 h-1 z-10 ${
-              dropTarget?.statusType === status.type && dropTarget?.index === 0 
-                ? 'bg-orange-400'
-                : 'bg-transparent'
-            }`}
-          />
+        {draggedTask && dropTarget?.statusType === status.type && dropTarget?.index === 0 && (
+          <div className="absolute top-[-2px] left-0 right-1 h-1 z-10 bg-orange-400 rounded" />
         )}
-        
-        {columnTasks.map((task, index) => (
+
+        {tasks.map((task, index) => (
           <div key={task.taskId} className="relative" data-task-id={task.taskId}>
-            <TaskCard 
+            <TaskCard
               task={task}
               deskUsers={deskUsers}
-              deskId={actualDeskId}
-              onDragStart={(e) => onDragStart(e, task)}
-              onDragEnd={onDragEnd}
+              deskId={deskId}
+              onDragStart={onDragStart} // Передаем onDragStart
               onComplete={onTaskComplete}
               onDateClick={onDateClick}
               selectedDate={selectedDates[task.taskId!] || null}
-              isDatePickerOpen={datePickerTaskId === task.taskId}
               hoveredCheckCircle={hoveredCheckCircle}
               hoveredCalendar={hoveredCalendar}
               setHoveredCheckCircle={setHoveredCheckCircle}
               setHoveredCalendar={setHoveredCalendar}
               onTaskClick={onTaskClick}
               onTaskUpdate={onTaskUpdate}
-              canEdit={true} // Проверка прав происходит внутри компонента
+              // isDatePickerOpen - управляется TaskBoardPage
             />
-            
-            {/* Календарь */}
-            {datePickerTaskId === task.taskId && (
-              <TaskDatePicker 
-                taskId={task.taskId!}
-                selectedDate={selectedDates[task.taskId!] || null}
-                onDateChange={onDateChange}
-                onClose={() => onDateClick(task.taskId!)}
-              />
-            )}
-            
-            {/* Индикатор вставки после текущей задачи */}
-            {draggedTask && (
-              <div 
-                className={`absolute bottom-[-4px] left-0 right-1 h-1 z-10 ${
-                  dropTarget?.statusType === status.type && dropTarget?.index === index + 1
-                    ? 'bg-orange-400'
-                    : 'bg-transparent'
-                }`}
-              />
+
+            {/* Индикатор вставки ПОСЛЕ текущей задачи */}
+            {draggedTask && dropTarget?.statusType === status.type && dropTarget?.index === index + 1 && (
+              <div className="absolute bottom-[-2px] left-0 right-1 h-1 z-10 bg-orange-400 rounded"/>
             )}
           </div>
         ))}
+         {/* Можно добавить плейсхолдер в конец для пустых колонок, если нужно */}
+         {tasks.length === 0 && dropTarget?.statusType === status.type && (
+             <div className="h-10 border-2 border-dashed border-gray-200 rounded-lg flex items-center justify-center text-gray-400 text-sm">
+                 Переместите сюда
+             </div>
+         )}
       </div>
     </div>
   );

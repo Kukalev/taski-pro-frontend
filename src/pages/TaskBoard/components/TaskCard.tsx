@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useCallback } from 'react'
 import {FaCheck, FaRegCircle} from 'react-icons/fa'
 import {IoCalendarNumberOutline} from 'react-icons/io5'
 import {StatusType, TaskCardProps} from '../types'
@@ -6,19 +6,30 @@ import {format} from 'date-fns'
 import {ru} from 'date-fns/locale'
 import TaskExecutors from './TaskExecutors'
 import {canEditTask, canEditTaskDate} from '../../../utils/permissionUtils'
+import { Task } from '../../../services/task/types/task.types'
 
 // Форматирование даты для отображения в карточке
-const formatShortDate = (date: Date) => {
-  return format(date, 'd MMM', { locale: ru });
+const formatShortDate = (date: Date | string): string => {
+  try {
+    return format(new Date(date), 'd MMM', { locale: ru });
+  } catch {
+    return ''; // Возвращаем пустую строку в случае ошибки
+  }
 };
 
-const TaskCard: React.FC<TaskCardProps> = ({
+interface ExtendedTaskCardProps extends Omit<TaskCardProps, 'onDragEnd'> {
+  onTaskUpdate: (taskId: number, updates: Partial<Task> | { executorUsernames?: string[]; removeExecutorUsernames?: string[] }) => void;
+  canEdit?: boolean;
+  onDragStart: (e: React.DragEvent, task: Task) => void;
+  setHoveredCheckCircle: (taskId: number | null) => void;
+}
+
+const TaskCard: React.FC<ExtendedTaskCardProps> = ({
   task,
   deskUsers,
   deskId,
   onTaskClick,
   onDragStart,
-  onDragEnd,
   onComplete,
   onDateClick,
   selectedDate,
@@ -38,33 +49,52 @@ const TaskCard: React.FC<TaskCardProps> = ({
   
   // Обработчик клика по карточке
   const handleCardClick = (e: React.MouseEvent) => {
-    // Проверяем, что клик не был по интерактивным элементам внутри карточки
-    const isInteractiveElement = [
-      'button',
-      'a',
-      'input',
-      'textarea',
-      'select'
-    ].includes((e.target as HTMLElement).tagName.toLowerCase());
-    
-    // Не обрабатываем клик, если он был по интерактивному элементу
-    if (isInteractiveElement) {
+    const target = e.target as HTMLElement;
+    // Проверяем клик по интерактивным элементам или по самой иконке/обертке галочки/календаря
+    if (
+      target.closest('button') ||
+      target.closest('a') ||
+      target.closest('input') ||
+      target.closest('textarea') ||
+      target.closest('select') ||
+      target.closest('[data-interactive-control="true"]') // Добавим атрибут оберткам иконок
+    ) {
       return;
     }
-    
-    // Вызываем переданный обработчик клика
     if (onTaskClick) {
       onTaskClick(task);
     }
   };
 
+  // Создаем обертку для onTaskUpdate, которая будет передана в TaskExecutors
+  // Она уже будет знать taskId и будет ожидать только updates
+  const handleExecutorUpdate = useCallback((updates: { executorUsernames?: string[]; removeExecutorUsernames?: string[] }) => {
+    console.log('[TaskCard] Вызван handleExecutorUpdate для задачи:', task?.taskId, 'с изменениями:', updates);
+    if (task?.taskId) {
+      onTaskUpdate(task.taskId, updates);
+    } else {
+      console.error("[TaskCard] ID задачи отсутствует в handleExecutorUpdate");
+    }
+  }, [task, onTaskUpdate]);
+
+  // Определяем права на редактирование для передачи в TaskExecutors
+  // Можно использовать переданный canEdit или вычислить здесь, если нужно
+  const canEditExecutors = canEdit // && canManageExecutors(deskUsers, task); // Проверка прав уже есть внутри TaskExecutors
+
+  const finishDateString = selectedDate instanceof Date
+    ? selectedDate.toISOString()
+    : typeof selectedDate === 'string'
+      ? selectedDate
+      : task.taskFinishDate;
+
+  const formattedFinishDate = finishDateString ? formatShortDate(finishDateString) : null;
+
   return (
     <div
       className="bg-white rounded-lg shadow p-3 mb-2 cursor-pointer hover:shadow-md task-card group relative"
       onClick={handleCardClick}
-      draggable={canMoveOrCompleteTask} // MEMBER может перетаскивать только как исполнитель
+      draggable={canMoveOrCompleteTask}
       onDragStart={(e) => canMoveOrCompleteTask && onDragStart(e, task)}
-      onDragEnd={onDragEnd}
     >
       <div className="mb-2">
         {/* Применяем стиль line-through для названия завершенной задачи */}
@@ -85,8 +115,8 @@ const TaskCard: React.FC<TaskCardProps> = ({
           task={task} 
           deskUsers={deskUsers} 
           deskId={deskId || 0}
-          onTaskUpdate={onTaskUpdate}
-          canEdit={canEdit}
+          onTaskUpdate={handleExecutorUpdate}
+          canEdit={canEditExecutors}
         />
         
         {/* Правая часть - дата и чекбокс */}
@@ -94,7 +124,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
           {/* Календарь - только для CREATOR и CONTRIBUTOR */}
           <div 
             className={`${canChangeDate ? 'cursor-pointer' : 'cursor-default'} ${
-              selectedDate || task.taskFinishDate ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+              formattedFinishDate ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
             } transition-opacity duration-200`}
             data-task-id={task.taskId}
             onMouseEnter={() => canChangeDate && setHoveredCalendar(task.taskId!)}
@@ -103,10 +133,11 @@ const TaskCard: React.FC<TaskCardProps> = ({
               e.stopPropagation();
               if (canChangeDate) onDateClick(task.taskId!);
             }}
+            data-interactive-control="true"
           >
-            {selectedDate || task.taskFinishDate ? (
+            {formattedFinishDate ? (
               <div className="text-xs text-gray-500">
-                {formatShortDate(selectedDate || new Date(task.taskFinishDate))}
+                {formattedFinishDate}
               </div>
             ) : (
               <IoCalendarNumberOutline 
@@ -127,8 +158,12 @@ const TaskCard: React.FC<TaskCardProps> = ({
             onMouseLeave={() => canMoveOrCompleteTask && setHoveredCheckCircle(null)}
             onClick={(e) => {
               e.stopPropagation();
-              if (canMoveOrCompleteTask) onComplete(task.taskId!);
+              if (canMoveOrCompleteTask) {
+                onComplete(task.taskId!);
+                setHoveredCheckCircle(null);
+              }
             }}
+            data-interactive-control="true"
           >
             <div className="relative">
               <FaRegCircle 

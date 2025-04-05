@@ -1,8 +1,6 @@
-import React, {useEffect, useRef, useState} from 'react'
-import {updateTask} from '../../../services/task/Task'
+import React, {useEffect, useRef, useState, useCallback} from 'react'
 import {PiUserCircleThin} from 'react-icons/pi'
 import {UserService} from '../../../services/users/Users'
-import {AuthService} from '../../../services/auth/Auth'
 import {canEditTask, canManageExecutors, getUserRoleOnDesk, UserRightType, isCurrentUser} from '../../../utils/permissionUtils'
 
 // Кэш для пользователей, чтобы не загружать их много раз
@@ -12,7 +10,7 @@ interface TaskExecutorProps {
   task: any;
   deskUsers: any[];
   deskId: number;
-  onTaskUpdate?: (updatedTask: any) => void;
+  onTaskUpdate: (updates: { executorUsernames?: string[]; removeExecutorUsernames?: string[] }) => void;
   canEdit?: boolean; // Проп для проверки прав редактирования
 }
 
@@ -91,50 +89,26 @@ const TaskExecutors: React.FC<TaskExecutorProps> = ({
   }, []);
 
   // Добавляем исполнителя
-  const handleAddExecutor = async (username: string) => {
-    if (!actualCanEdit) return; // Проверка прав доступа
-    
-    try {
-      if (!task?.taskId || !deskId) {
-        console.error('taskId или deskId не определены', { task, deskId });
-        return;
-      }
-
-      const updatedTask = await updateTask(deskId, task.taskId, {
-        executorUsernames: [username]
-      });
-
-      if (onTaskUpdate && updatedTask) {
-        onTaskUpdate(updatedTask);
-      }
-    } catch (error) {
-      console.error('Ошибка при добавлении исполнителя:', error);
+  const handleAddExecutor = useCallback((username: string, e: React.MouseEvent) => {
+    console.log('[TaskExecutors] Попытка добавить:', username);
+    e.stopPropagation();
+    if (!actualCanEdit) {
+      console.log('[TaskExecutors] Нет прав на добавление.');
+      return;
     }
-  };
+    onTaskUpdate({ executorUsernames: [username] });
+  }, [actualCanEdit, onTaskUpdate]);
 
   // Удаляем исполнителя
-  const handleRemoveExecutor = async (username: string, e: React.MouseEvent) => {
+  const handleRemoveExecutor = useCallback((username: string, e: React.MouseEvent) => {
+    console.log('[TaskExecutors] Попытка удалить:', username);
     e.stopPropagation();
-    
-    if (!actualCanEdit) return; // Проверка прав доступа
-    
-    try {
-      if (!task?.taskId || !deskId) {
-        console.error('taskId или deskId не определены', { task, deskId });
-        return;
-      }
-
-      const updatedTask = await updateTask(deskId, task.taskId, {
-        removeExecutorUsernames: [username]
-      });
-
-      if (onTaskUpdate && updatedTask) {
-        onTaskUpdate(updatedTask);
-      }
-    } catch (error) {
-      console.error('Ошибка при удалении исполнителя:', error);
+    if (!actualCanEdit) {
+      console.log('[TaskExecutors] Нет прав на удаление.');
+      return;
     }
-  };
+    onTaskUpdate({ removeExecutorUsernames: [username] });
+  }, [actualCanEdit, onTaskUpdate]);
 
   // Получить инициалы пользователя для аватарки
   const getUserInitials = (username: string) => {
@@ -216,7 +190,10 @@ const TaskExecutors: React.FC<TaskExecutorProps> = ({
       
       {/* Выпадающий список исполнителей - только если пользователь может редактировать */}
       {isOpen && actualCanEdit && (
-        <div className="absolute z-10 mt-1 w-44 bg-white rounded-md shadow-lg border border-gray-200">
+        <div
+          className="absolute z-10 mt-1 w-44 bg-white rounded-md shadow-lg border border-gray-200"
+          onClick={(e) => e.stopPropagation()}
+        >
           <div className="p-2 text-sm text-gray-700 border-b border-gray-200">
             Исполнители:
           </div>
@@ -230,16 +207,19 @@ const TaskExecutors: React.FC<TaskExecutorProps> = ({
             ) : (
               <div className="flex flex-col gap-1">
                 {executors.map((executor: string) => (
-                  <div key={executor} className="flex items-center px-2 py-1">
-                    <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-medium text-gray-700 border border-solid ${getBorderColor(executor)} bg-white mr-2`}>
-                      {getUserInitials(executor)}
+                  <div key={executor} className="flex items-center justify-between px-2 py-1">
+                    <div className="flex items-center">
+                      <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-medium text-gray-700 border border-solid ${getBorderColor(executor)} bg-white mr-2 shrink-0`}>
+                        {getUserInitials(executor)}
+                      </div>
+                      <span className="text-sm truncate" title={executor}>{executor}</span>
+                      {isCurrentUser(executor) && <span className="ml-1 text-gray-400 text-xs">(Вы)</span>}
                     </div>
-                    <span className="text-sm">{executor} {isCurrentUser(executor) && <span className="text-gray-400 text-xs">(Вы)</span>}</span>
                     <button 
-                      className="ml-auto text-gray-400 hover:text-red-500 cursor-pointer"
+                      className="ml-2 text-gray-400 hover:text-red-500 cursor-pointer p-1"
                       onClick={(e) => handleRemoveExecutor(executor, e)}
                     >
-                      <span className="text-sm font-medium">×</span>
+                      <span className="text-sm font-bold">×</span>
                     </button>
                   </div>
                 ))}
@@ -248,7 +228,7 @@ const TaskExecutors: React.FC<TaskExecutorProps> = ({
           </div>
 
           {/* Разделитель */}
-          <div className="border-t border-gray-200"></div>
+          <div className="border-t border-gray-200 my-1"></div>
 
           {/* Доступные пользователи доски */}
           <div className="p-2 max-h-48 overflow-y-auto">
@@ -262,20 +242,17 @@ const TaskExecutors: React.FC<TaskExecutorProps> = ({
               </div>
             ) : (
               localDeskUsers
-                .filter(user => !executors.includes(user.username))
+                .filter(user => user && user.username && !executors.includes(user.username))
                 .map(user => (
                   <div 
                     key={user.username}
                     className="flex items-center py-1 px-2 hover:bg-gray-100 rounded cursor-pointer"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleAddExecutor(user.username);
-                    }}
+                    onClick={(e) => handleAddExecutor(user.username, e)}
                   >
-                    <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-medium text-gray-700 border border-solid ${getBorderColor(user.username)} bg-white mr-2`}>
+                    <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-medium text-gray-700 border border-solid ${getBorderColor(user.username)} bg-white mr-2 shrink-0`}>
                       {getUserInitials(user.username)}
                     </div>
-                    <span className="text-sm">{user.username}</span>
+                    <span className="text-sm truncate" title={user.username}>{user.username}</span>
                   </div>
                 ))
             )}

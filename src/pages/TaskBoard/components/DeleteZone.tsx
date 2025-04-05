@@ -1,18 +1,22 @@
 import React from 'react';
-import { DeleteZoneProps } from '../types';
+// Убираем DeleteZoneProps из types, т.к. интерфейс меняется
+// import { DeleteZoneProps } from '../types';
 import { canDeleteItems } from '../../../utils/permissionUtils';
 
-interface ExtendedDeleteZoneProps extends DeleteZoneProps {
+interface ExtendedDeleteZoneProps {
+  visible: boolean;
+  hovered: boolean;
+  setHovered: (isHovered: boolean) => void; // Принимаем сеттер
+  onDrop: () => void; // Принимаем обработчик drop из TaskBoardPage
   deskUsers: any[];
 }
 
 const DeleteZone: React.FC<ExtendedDeleteZoneProps> = ({
   visible,
   hovered,
-  onDragOver,
-  onDragLeave,
-  onDrop,
-  deskUsers = [] // Установим пустой массив по умолчанию
+  setHovered, // Используем сеттер
+  onDrop,     // Используем обработчик
+  deskUsers = []
 }) => {
   // Проверяем, что массив deskUsers существует и не пуст перед проверкой прав
   const hasDeletePermission = Array.isArray(deskUsers) && deskUsers.length > 0 
@@ -22,6 +26,22 @@ const DeleteZone: React.FC<ExtendedDeleteZoneProps> = ({
   // Если у пользователя нет прав на удаление или компонент не видим, не отображаем его
   if (!visible || !hasDeletePermission) return null;
   
+  const handleDragOver = (e: React.DragEvent) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move"; // Показываем правильный курсор
+      setHovered(true); // Устанавливаем ховер
+  };
+
+  const handleDragLeave = () => {
+      setHovered(false); // Сбрасываем ховер
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+      e.preventDefault();
+      setHovered(false); // Сбрасываем ховер
+      onDrop(); // Вызываем обработчик из TaskBoardPage
+  };
+
   return (
     <div 
       className="fixed bottom-8 left-1/2 transform -translate-x-1/2 h-12 bg-white border-2 border-dashed border-gray-300 
@@ -32,12 +52,9 @@ const DeleteZone: React.FC<ExtendedDeleteZoneProps> = ({
         transition: 'border-color 0.2s',
         borderColor: hovered ? '#FB923C' : '#D1D5DB'
       }}
-      onDragOver={(e) => {
-        e.preventDefault();
-        onDragOver(e);
-      }}
-      onDragLeave={onDragLeave}
-      onDrop={onDrop}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
     >
       <div className="flex items-center text-sm">
         <svg 

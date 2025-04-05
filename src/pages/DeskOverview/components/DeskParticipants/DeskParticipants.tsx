@@ -23,8 +23,7 @@ import {
 import {getUserName} from './utilities'
 
 const DeskParticipants: React.FC<DeskParticipantsProps> = ({ desk, hasEditPermission = true }) => {
-  // --- Используем стабильный ID доски ---
-  const deskId = desk?.id; 
+  const deskId = desk?.id;
   console.log(`DeskParticipants RENDER - Desk ID: ${deskId}`);
 
   const [participants, setParticipants] = useState<UserOnDesk[]>([]);
@@ -32,17 +31,16 @@ const DeskParticipants: React.FC<DeskParticipantsProps> = ({ desk, hasEditPermis
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [actionInProgress, setActionInProgress] = useState(false);
+
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserOnDesk | null>(null);
-  // --- Счетчик для принудительной перезагрузки ПОСЛЕ добавления ---
-  const [reloadCounter, setReloadCounter] = useState(0);
 
-  // Загрузка участников - зависит ТОЛЬКО от deskId
   const loadParticipants = useCallback(async () => {
     if (!deskId) return;
     console.log(`>>> loadParticipants CALLED for desk ID: ${deskId}`);
     setIsLoading(true);
     setError(null);
+
     try {
       const users = await UserService.getUsersOnDesk(deskId);
       const sortedUsers = [...users].sort((a, b) => {
@@ -59,14 +57,12 @@ const DeskParticipants: React.FC<DeskParticipantsProps> = ({ desk, hasEditPermis
     }
   }, [deskId]);
 
-  // Загрузка при монтировании, изменении deskId ИЛИ изменении reloadCounter
   useEffect(() => {
-    console.log(`--- useEffect [deskId, reloadCounter] TRIGGERED --- Desk ID: ${deskId}, Counter: ${reloadCounter}`);
+    console.log(`--- useEffect [deskId] TRIGGERED --- Desk ID: ${deskId}`);
     if (deskId) {
       loadParticipants();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps 
-  }, [deskId, reloadCounter]); // <<< ЗАВИСИМОСТЬ от deskId и reloadCounter
+  }, [deskId, loadParticipants]);
 
   const currentUserRole = getUserRoleOnDesk(participants);
   const hasManagePermission = canManageParticipants(participants) && hasEditPermission;
@@ -80,11 +76,7 @@ const DeskParticipants: React.FC<DeskParticipantsProps> = ({ desk, hasEditPermis
   };
 
   const handleDeleteUser = async (userId: number) => {
-    if (!deskId) {
-      setError('Ошибка: ID доски не определен');
-      return Promise.reject(new Error('Desk ID not defined'));
-    }
-
+    if (!deskId) return Promise.reject(new Error('Desk ID not defined'));
     setActionInProgress(true);
     setError(null);
     console.log(`--- handleDeleteUser STARTED for user ID: ${userId} ---`);
@@ -92,10 +84,7 @@ const DeskParticipants: React.FC<DeskParticipantsProps> = ({ desk, hasEditPermis
     try {
       await deleteUserFromDesk(deskId, userId);
       console.log('--- handleDeleteUser: API call SUCCESS ---');
-      setParticipants(prevParticipants => {
-        console.log('--- handleDeleteUser: Updating local state ---');
-        return prevParticipants.filter(p => p.id !== userId);
-      });
+      setParticipants(prev => prev.filter(p => p.id !== userId));
       setDeleteModalOpen(false);
       setSelectedUser(null);
       console.log('--- handleDeleteUser FINISHED ---');
@@ -111,45 +100,39 @@ const DeskParticipants: React.FC<DeskParticipantsProps> = ({ desk, hasEditPermis
   };
 
   const handleUpdateUserRole = async (userId: number, rightType: RightType) => {
-    if (!deskId) {
-      setError('Ошибка: ID доски не определен');
-      return;
-    }
-
+    if (!deskId) return;
     const originalParticipants = [...participants];
     console.log(`--- handleUpdateUserRole STARTED for user ID: ${userId}, new role: ${rightType} ---`);
 
-    // Оптимистичное обновление
-    setParticipants(prevParticipants => {
-      console.log('--- handleUpdateUserRole: Optimistically updating UI ---');
-      return prevParticipants.map(p =>
-        p.id === userId ? { ...p, rightType: rightType } : p
-      );
-    });
-
+    setParticipants(prev => prev.map(p => p.id === userId ? { ...p, rightType } : p));
     setActionInProgress(true);
     setError(null);
 
     try {
       await updateUserRightsOnDesk(deskId, { userId, rightType });
       console.log('--- handleUpdateUserRole: API call SUCCESS ---');
-      // UI уже обновлен
       console.log('--- handleUpdateUserRole FINISHED ---');
     } catch (error) {
       console.error('Ошибка при обновлении роли пользователя:', error);
       setError('Не удалось обновить роль пользователя');
       console.log('--- handleUpdateUserRole: ERRORED - Rolling back UI ---');
-      setParticipants(originalParticipants); // Откат
+      setParticipants(originalParticipants);
       console.log('--- handleUpdateUserRole ERRORED ---');
     } finally {
       setActionInProgress(false);
     }
   };
 
-  const handleAddSuccess = useCallback(() => {
-    console.log('--- handleAddSuccess CALLED - Triggering reload via counter ---');
-    // Увеличиваем счетчик, чтобы вызвать useEffect[deskId, reloadCounter]
-    setReloadCounter(prev => prev + 1); 
+  const handleAddSuccess = useCallback((newUser: UserOnDesk) => {
+    console.log('--- handleAddSuccess CALLED - Adding user locally ---', newUser);
+    setParticipants(prevParticipants => {
+      const exists = prevParticipants.some(p => p.id === newUser.id || p.username === newUser.username);
+      if (exists) {
+        console.warn("Попытка добавить существующего пользователя локально, пропускаем.");
+        return prevParticipants;
+      }
+      return [...prevParticipants, newUser];
+    });
   }, []);
 
   const handleCloseDeleteModal = () => {
@@ -189,7 +172,6 @@ const DeskParticipants: React.FC<DeskParticipantsProps> = ({ desk, hasEditPermis
         )}
       </div>
 
-      {/* Модальные окна */}
       {deskId && hasManagePermission && (
         <AddUserModal
           isOpen={isModalOpen}
