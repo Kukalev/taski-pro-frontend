@@ -65,10 +65,15 @@ const CalendarGrid: React.FC<CalendarGridProps> = ({
               className={`
                 w-8 h-8 flex items-center justify-center text-sm rounded-full
                 ${!isCurrentMonth ? 'text-gray-400' : 'text-gray-800'}
-                ${isToday(day) ? 'font-bold border border-orange-400' : ''}
-                ${isSelectedDay ? 'bg-orange-400 text-white' : ''}
+                ${isToday(day) ? 'font-bold border' : ''}
+                ${isSelectedDay ? 'text-white' : ''}
                 ${isPastDay ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-gray-100'}
+                ${!isPastDay ? 'cursor-pointer' : ''}
               `}
+              style={{
+                borderColor: isToday(day) ? 'var(--theme-color)' : undefined,
+                backgroundColor: isSelectedDay ? 'var(--theme-color)' : undefined
+              }}
               onClick={(e) => !isPastDay && handleSelectDate(day, e)}
               disabled={isPastDay}
             >

@@ -22,7 +22,7 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
           // Отключаем кнопку "назад", если текущий месяц - текущий месяц года
           isSameMonth(currentMonth, today) 
             ? 'text-gray-300 cursor-not-allowed' 
-            : 'hover:bg-gray-100 text-gray-500'
+            : 'hover:bg-gray-100 text-gray-500 cursor-pointer'
         }`}
         onClick={prevMonth}
         disabled={isSameMonth(currentMonth, today)}
@@ -33,7 +33,7 @@ const CalendarHeader: React.FC<CalendarHeaderProps> = ({
         {format(currentMonth, 'LLLL yyyy', { locale: ru })}
       </div>
       <button 
-        className="p-1 hover:bg-gray-100 rounded text-gray-500"
+        className={`p-1 hover:bg-gray-100 rounded text-gray-500 cursor-pointer`}
         onClick={nextMonth}
       >
         →

@@ -16,7 +16,7 @@ const CalendarFooter: React.FC<CalendarFooterProps> = ({
   return (
     <div className="mt-4 border-t pt-3 flex justify-between">
       <button 
-        className="text-xs text-gray-500 hover:text-gray-700"
+        className="text-xs text-gray-500 hover:text-gray-700 cursor-pointer"
         onClick={(e) => {
           e.stopPropagation();
           onDateChange(taskId, null);
@@ -25,7 +25,10 @@ const CalendarFooter: React.FC<CalendarFooterProps> = ({
         Очистить
       </button>
       <button 
-        className="text-xs text-orange-400 font-medium hover:text-orange-500"
+        className="text-xs font-medium cursor-pointer"
+        style={{ color: 'var(--theme-color)', '--hover-color': 'var(--theme-color-dark)' } as React.CSSProperties}
+        onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--hover-color)')}
+        onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--theme-color)')}
         onClick={(e) => {
           e.stopPropagation();
           handleSelectDate(today, e);

@@ -123,8 +123,9 @@ const DatePicker: React.FC<TaskDatePickerProps> = ({
     >
       <div className="flex justify-between items-center mb-4">
         <button 
-          className="p-1 hover:bg-gray-100 rounded text-gray-500"
+          className="p-1 hover:bg-gray-100 rounded text-gray-500 cursor-pointer"
           onClick={prevMonth}
+          disabled={isSameMonth(currentMonth, startOfMonth(today))}
         >
           ←
         </button>
@@ -132,7 +133,7 @@ const DatePicker: React.FC<TaskDatePickerProps> = ({
           {format(currentMonth, 'LLLL yyyy', { locale: ru })}
         </div>
         <button 
-          className="p-1 hover:bg-gray-100 rounded text-gray-500"
+          className="p-1 hover:bg-gray-100 rounded text-gray-500 cursor-pointer"
           onClick={nextMonth}
         >
           →
@@ -199,10 +200,14 @@ const DatePicker: React.FC<TaskDatePickerProps> = ({
                 className={`
                   w-7 h-7 flex items-center justify-center text-xs rounded-full
                   ${!isCurrentMonth ? 'text-gray-400' : 'text-gray-800'}
-                  ${isToday(day) ? 'font-bold border border-orange-400' : ''}
-                  ${isSelectedDay ? 'bg-orange-400 text-white' : ''}
-                  ${isPastDay ? 'text-gray-300' : 'hover:bg-gray-100'}
+                  ${isToday(day) ? 'font-bold border' : ''}
+                  ${isSelectedDay ? 'text-white' : ''}
+                  ${isPastDay ? 'text-gray-300 cursor-not-allowed' : 'hover:bg-gray-100 cursor-pointer'}
                 `}
+                style={{
+                  borderColor: isToday(day) ? 'var(--theme-color)' : undefined,
+                  backgroundColor: isSelectedDay ? 'var(--theme-color)' : undefined
+                }}
                 onClick={(e) => !isPastDay && handleSelectDate(day, e)}
                 disabled={isPastDay}
               >
@@ -215,7 +220,7 @@ const DatePicker: React.FC<TaskDatePickerProps> = ({
       
       <div className="mt-4 border-t pt-3 flex justify-between">
         <button 
-          className="text-xs text-gray-500 hover:text-gray-700"
+          className="text-xs text-gray-500 hover:text-gray-700 cursor-pointer"
           onClick={(e) => {
             e.stopPropagation();
             onDateChange(taskId, null);
@@ -224,7 +229,10 @@ const DatePicker: React.FC<TaskDatePickerProps> = ({
           Очистить
         </button>
         <button 
-          className="text-xs text-orange-400 font-medium hover:text-orange-500"
+          className="text-xs font-medium cursor-pointer"
+          style={{ color: 'var(--theme-color)', '--hover-color': 'var(--theme-color-dark)' } as React.CSSProperties}
+          onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--hover-color)')}
+          onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--theme-color)')}
           onClick={(e) => {
             e.stopPropagation();
             handleSelectDate(today, e);

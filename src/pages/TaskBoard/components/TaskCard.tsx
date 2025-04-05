@@ -11,9 +11,19 @@ import { Task } from '../../../services/task/types/task.types'
 // Форматирование даты для отображения в карточке
 const formatShortDate = (date: Date | string): string => {
   try {
-    return format(new Date(date), 'd MMM', { locale: ru });
-  } catch {
-    return ''; // Возвращаем пустую строку в случае ошибки
+    // Создаем объект Date. new Date() парсит строки (включая ISO/UTC) и клонирует Date объекты.
+    const parsedDate = new Date(date);
+
+    // Проверяем валидность
+    if (isNaN(parsedDate.getTime())) {
+      return '';
+    }
+
+    // format из date-fns по умолчанию выводит дату в локальном часовом поясе пользователя.
+    return format(parsedDate, 'd MMM', { locale: ru });
+  } catch (error) {
+    console.error("Ошибка форматирования даты:", error);
+    return '';
   }
 };
 
@@ -81,13 +91,13 @@ const TaskCard: React.FC<ExtendedTaskCardProps> = ({
   // Можно использовать переданный canEdit или вычислить здесь, если нужно
   const canEditExecutors = canEdit // && canManageExecutors(deskUsers, task); // Проверка прав уже есть внутри TaskExecutors
 
-  const finishDateString = selectedDate instanceof Date
-    ? selectedDate.toISOString()
-    : typeof selectedDate === 'string'
-      ? selectedDate
-      : task.taskFinishDate;
+  // Определяем дату для форматирования. Приоритет у свежевыбранного объекта Date.
+  const dateToFormat: Date | string | null = selectedDate instanceof Date
+    ? selectedDate // Используем объект Date напрямую
+    : task.taskFinishDate; // Иначе берем строку из данных задачи
 
-  const formattedFinishDate = finishDateString ? formatShortDate(finishDateString) : null;
+  // Форматируем полученное значение
+  const formattedFinishDate = dateToFormat ? formatShortDate(dateToFormat) : null;
 
   return (
     <div
@@ -143,7 +153,7 @@ const TaskCard: React.FC<ExtendedTaskCardProps> = ({
               <IoCalendarNumberOutline 
                 className={`calendar-icon transition-colors duration-300 ${!canChangeDate && 'opacity-50'}`}
                 style={{
-                  color: hoveredCalendar === task.taskId ? '#facc15' : '#9ca3af',
+                  color: hoveredCalendar === task.taskId ? 'var(--theme-color)' : '#9ca3af',
                   width: '16px',
                   height: '16px'
                 }}

@@ -15,6 +15,7 @@ import {
 import {Task} from '../../services/task/types/task.types'
 import {DeskService} from '../../services/desk/Desk'
 import {createPortal} from 'react-dom'
+import DatePicker from '../../components/DatePicker/DatePicker'
 
 // Убираем TaskBoardProps, если deskUsers приходит как проп
 interface TaskBoardPageProps {
@@ -265,7 +266,42 @@ const TaskBoardPage: React.FC<TaskBoardPageProps> = ({ deskId, deskUsers }) => {
 
   // Обновление даты задачи
   const handleUpdateTaskDate = useCallback((taskId: number, date: Date | null) => {
-    updateTaskOptimistically(taskId, { taskFinishDate: date ? date.toISOString() : null });
+    let dateStringForApi: string | null = null;
+    if (date) {
+      // Клонируем дату, чтобы не изменять оригинальный объект в состоянии
+      const adjustedDate = new Date(date);
+
+      // Устанавливаем время на 00:00:00 ЛОКАЛЬНОГО времени выбранного дня
+      adjustedDate.setHours(0, 0, 0, 0);
+
+      // Корректируем время так, чтобы при конвертации в ISO (UTC)
+      // получилась строка, соответствующая 00:00:00 UTC ВЫБРАННОГО ДНЯ.
+      // Для этого вычитаем смещение временной зоны.
+      // adjustedDate.setMinutes(adjustedDate.getMinutes() - adjustedDate.getTimezoneOffset());
+      // --- ИЛИ --- Проще просто отправить YYYY-MM-DD, если бэкенд сможет это правильно
+      // обработать для LocalDateTime (что маловероятно без кастомной логики).
+      // Попробуем самый надежный вариант: отправить ISO строку, которая
+      // представляет полночь UTC для выбранного локального дня.
+      // Для этого, если getTimezoneOffset отрицательный (восточные зоны), мы должны
+      // по факту прибавить часы к UTC, чтобы попасть на нужный день.
+      // Если положительный (западные зоны), вычесть.
+      // date.toISOString() уже делает преобразование в UTC, нам нужно, чтобы
+      // результат был YYYY-MM-DDT00:00:00.000Z, где YYYY-MM-DD - выбранный день.
+
+      // Способ 1: Форматирование строки вручную (менее надежно)
+      // const year = adjustedDate.getFullYear();
+      // const month = (adjustedDate.getMonth() + 1).toString().padStart(2, '0');
+      // const day = adjustedDate.getDate().toString().padStart(2, '0');
+      // dateStringForApi = `${year}-${month}-${day}T00:00:00`; // Отправляем без Z
+
+      // Способ 2: Корректировка объекта Date перед toISOString (предпочтительнее)
+      // Устанавливаем время на 12:00:00 локальное, чтобы избежать проблем с переходом через полночь при конвертации в UTC
+      adjustedDate.setHours(12, 0, 0, 0);
+      dateStringForApi = adjustedDate.toISOString();
+
+    }
+
+    updateTaskOptimistically(taskId, { taskFinishDate: dateStringForApi });
     setSelectedDate(prev => ({ ...prev, [taskId]: date })); // Обновляем локальное состояние даты для календаря
     setDatePickerTaskId(null); // Закрываем календарь
   }, [updateTaskOptimistically]);
@@ -441,7 +477,7 @@ const TaskBoardPage: React.FC<TaskBoardPageProps> = ({ deskId, deskUsers }) => {
                 setHoveredCheckCircle={setHoveredCheckCircle}
                 setHoveredCalendar={setHoveredCalendar}
                 onDragStart={handleDragStart}
-                onDateChange={handleUpdateTaskDate}
+                onDateChange={(taskIdStr, date) => handleUpdateTaskDate(Number(taskIdStr), date)}
                 onTaskClick={handleTaskClick}
                 onTaskUpdate={handleTaskUpdateFromChild}
                 setAddingInColumn={setAddingInColumn}
@@ -539,6 +575,16 @@ const TaskBoardPage: React.FC<TaskBoardPageProps> = ({ deskId, deskUsers }) => {
           </div>
         </div>,
         document.body
+      )}
+      
+      {/* Рендеринг DatePicker */}
+      {datePickerTaskId !== null && (
+        <DatePicker
+          taskId={datePickerTaskId.toString()} // Преобразуем в строку, если нужно
+          selectedDate={selectedDate[datePickerTaskId] || null}
+          onDateChange={(taskIdStr, date) => handleUpdateTaskDate(Number(taskIdStr), date)}
+          onClose={() => setDatePickerTaskId(null)} // Закрываем при клике вне
+        />
       )}
     </div>
   );
