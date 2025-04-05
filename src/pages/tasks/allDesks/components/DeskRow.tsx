@@ -17,15 +17,15 @@ export const DeskRow = React.memo(({ desk, onRename, onDelete }: DeskRowProps) =
 	const menuRef = useRef<HTMLDivElement>(null)
 	const buttonRef = useRef<HTMLButtonElement>(null)
 	
-	// Получаем данные о текущем пользователе ОДИН РАЗ
-	const currentUser = useMemo(() => AuthService.getUser(), [])
+	// Получаем имя текущего пользователя ОДИН РАЗ
+	const currentUsername = useMemo(() => AuthService.getUsername(), [])
 	
-	// Определяем права на редактирование и владельца ИЗ ДАННЫХ ДОСКИ
-	const ownerUsername = desk.deskOwner?.username || null
+	// Определяем владельца ИЗ ДАННЫХ ДОСКИ
+	const ownerUsername = desk.deskOwner || null // Владелец - это строка (username)
 	const hasEditPermission = useMemo(() => {
-		if (!currentUser) return false
-		return ownerUsername === currentUser.username
-	}, [desk, currentUser, ownerUsername])
+		// Проверяем, что владелец совпадает с текущим пользователем и текущий пользователь не пустая строка
+		return ownerUsername === currentUsername && currentUsername !== '';
+	}, [ownerUsername, currentUsername])
 	
 	// Форматирование даты
 	const formatDate = (date: Date | string | null) => {
@@ -175,7 +175,7 @@ export const DeskRow = React.memo(({ desk, onRename, onDelete }: DeskRowProps) =
 							{getInitials(ownerUsername)}
 						</span>
 						<span className='text-gray-700 truncate' title={ownerUsername}>{ownerUsername}</span>
-						{currentUser && isCurrentUser(ownerUsername, currentUser.username) && <span className="ml-1 text-gray-400 text-xs">(Вы)</span>}
+						{currentUsername && isCurrentUser(ownerUsername) && <span className="ml-1 text-gray-400 text-xs">(Вы)</span>}
 					</div>
 				) : (
 					<span className='text-gray-400'>Неизвестен</span>
