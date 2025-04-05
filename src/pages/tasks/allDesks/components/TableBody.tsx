@@ -1,11 +1,11 @@
-import { DeskData } from '../types/desk.types'
+import { DeskData } from '../../../../contexts/DeskContext'
 import { DeskRow } from './DeskRow'
 
 interface TableBodyProps {
 	desks: DeskData[]
 	loading: boolean
-	onRename?: (id: number) => void
-	onDelete?: (id: number) => void
+	onRename?: (deskId: number, initialName: string, initialDescription: string) => void
+	onDelete?: (deskId: number, deskName: string) => void
 }
 
 export const TableBody = ({ desks, loading, onRename, onDelete }: TableBodyProps) => {

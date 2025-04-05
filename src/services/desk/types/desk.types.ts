@@ -6,7 +6,7 @@ export interface DeskCreateDto {
 
 export interface DeskUpdateDto {
 	deskName: string
-	deskDescription: string
+	deskDescription?: string
 	deskFinishDate?: Date | null
 }
 

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { DeskData } from '../types/desk.types'
+import { DeskData } from '../../../../contexts/DeskContext'
 import { getDeskColor } from '../../../../utils/deskColors'
 import { AuthService } from '../../../../services/auth/Auth'
 import { isCurrentUser } from '../../../../utils/permissionUtils'
@@ -20,11 +20,12 @@ export const DeskRow = React.memo(({ desk, onRename, onDelete }: DeskRowProps) =
 	// Получаем имя текущего пользователя ОДИН РАЗ
 	const currentUsername = useMemo(() => AuthService.getUsername(), [])
 	
-	// Определяем владельца ИЗ ДАННЫХ ДОСКИ
-	const ownerUsername = desk.deskOwner || null // Владелец - это строка (username)
+	// Определяем владельца ИЗ ДАННЫХ ДОСКИ - ИСПОЛЬЗУЕМ ПОЛЕ 'username'
+	const ownerUsername = desk.username || null // Владелец - это строка (username), а не deskOwner
 	const hasEditPermission = useMemo(() => {
-		// Проверяем, что владелец совпадает с текущим пользователем и текущий пользователь не пустая строка
-		return ownerUsername === currentUsername && currentUsername !== '';
+		// Упрощенная проверка: права есть, если владелец доски совпадает с текущим пользователем
+		// В идеале нужна проверка роли (CREATOR/CONTRIBUTOR) через deskUsers
+		return !!ownerUsername && ownerUsername === currentUsername;
 	}, [ownerUsername, currentUsername])
 	
 	// Форматирование даты
@@ -122,7 +123,7 @@ export const DeskRow = React.memo(({ desk, onRename, onDelete }: DeskRowProps) =
 						<button 
 							ref={buttonRef}
 							onClick={handleMenuClick}
-							className="h-8 w-8 flex items-center justify-center text-gray-500 hover:bg-gray-100 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+							className="h-8 w-8 flex items-center justify-center text-gray-500 hover:bg-gray-100 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shrink-0 cursor-pointer">
 							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
 								<circle cx="12" cy="6" r="1" />
 								<circle cx="12" cy="12" r="1" />
@@ -163,8 +164,8 @@ export const DeskRow = React.memo(({ desk, onRename, onDelete }: DeskRowProps) =
 			</td>
 			<td className='py-3 px-4'>
 				<div className='flex items-center'>
-					<div className={`w-2 h-2 ${desk.status === 'ARCHIVED' ? 'bg-gray-400' : 'bg-green-500'} rounded-full mr-2`}></div>
-					<span className='text-gray-700 truncate'>{desk.status === 'ARCHIVED' ? 'Архивна' : 'В работе'}</span>
+					<div className={`w-2 h-2 bg-green-500 rounded-full mr-2`}></div>
+					<span className='text-gray-700 truncate'>В работе</span>
 				</div>
 			</td>
 			<td className='py-3 px-4 text-gray-700 truncate'>{formatDateRange()}</td>

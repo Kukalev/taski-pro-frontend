@@ -13,7 +13,7 @@ import {AuthService} from '../../../services/auth/Auth'
 import {DeskService} from '../../../services/desk/Desk'
 import {DeskTable} from './components/DeskTable'
 import {SearchPanel} from './components/SearchPanel'
-import {DeskData} from './types/desk.types'
+import { DeskData } from '../../../contexts/DeskContext'
 
 export const AllDesks = () => {
 	const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
@@ -36,6 +36,7 @@ export const AllDesks = () => {
 
 	// Обновленный обработчик для открытия модалки переименования
 	const handleRenameRequest = useCallback((id: number, initialName: string, initialDescription: string) => {
+		console.log(`[AllDesks] Запрос на переименование ID: ${id}, Имя: "${initialName}", Описание: "${initialDescription}"`);
 		setSelectedDeskId(id);
 		setSelectedDeskName(initialName); // Используем переданное имя
 		setSelectedDeskDescription(initialDescription); // Используем переданное описание

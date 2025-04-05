@@ -1,7 +1,7 @@
-import React, { useEffect, useState, useRef } from 'react'
-import { DeskService } from '../../../services/desk/Desk'
-import { DeskData } from '../../../contexts/DeskContext'
-import { ThemedButton } from '../../ui/ThemedButton'
+import React, {useEffect, useRef, useState} from 'react'
+import {DeskService} from '../../../services/desk/Desk'
+import {DeskData} from '../../../contexts/DeskContext'
+import {ThemedButton} from '../../ui/ThemedButton'
 
 // Создаем более надежный механизм для оповещения об обновлении доски
 export const DeskUpdateEvents = {
@@ -45,14 +45,15 @@ interface RenameDeskModalProps {
 	isOpen: boolean
 	deskId: number | null
 	initialDeskName: string
-	initialDeskDescription: string
+	// initialDeskDescription: string 
 	onClose: () => void
-	onSuccess: (updatedDeskData: DeskData) => void
+	onSuccess: (updatedDeskData: Partial<DeskData>) => void
 }
 
-export const RenameDeskModal = ({ isOpen, deskId, initialDeskName, initialDeskDescription, onClose, onSuccess }: RenameDeskModalProps) => {
+export const RenameDeskModal = ({ isOpen, deskId, initialDeskName, /* initialDeskDescription, */ onClose, onSuccess }: RenameDeskModalProps) => {
 	const [deskName, setDeskName] = useState(initialDeskName)
-	const [deskDescription, setDeskDescription] = useState(initialDeskDescription)
+	// Убираем состояние описания
+	// const [deskDescription, setDeskDescription] = useState(initialDeskDescription)
 	const [error, setError] = useState<string | null>(null)
 	const [isLoading, setIsLoading] = useState(false)
 	const modalRef = useRef<HTMLDivElement>(null)
@@ -61,9 +62,11 @@ export const RenameDeskModal = ({ isOpen, deskId, initialDeskName, initialDeskDe
 		if (isOpen) {
 			setError(null)
 			setDeskName(initialDeskName)
-			setDeskDescription(initialDeskDescription)
+			// Убираем установку описания
+			// setDeskDescription(initialDeskDescription)
 		}
-	}, [isOpen, initialDeskName, initialDeskDescription])
+		// Убираем initialDeskDescription из зависимостей
+	}, [isOpen, initialDeskName]) 
 
 	useEffect(() => {
 		const handleClickOutside = (event: MouseEvent) => {
@@ -107,19 +110,24 @@ export const RenameDeskModal = ({ isOpen, deskId, initialDeskName, initialDeskDe
 		setIsLoading(true)
 
 		try {
-			const payload = { deskName, deskDescription }
+			// Отправляем только deskName
+			const payload = { deskName }; 
 			console.log(`[RenameDeskModal] Отправка данных для ID ${deskId}:`, payload)
 
-			const updatedDesk = await DeskService.updateDesk(deskId, payload)
+			const response = await DeskService.updateDesk(deskId, payload)
+			console.log('[RenameDeskModal] Ответ сервера (статус):', response.status)
 
-			console.log('[RenameDeskModal] Успешный ответ:', updatedDesk)
-
-			if (typeof updatedDesk === 'object' && updatedDesk !== null && 'id' in updatedDesk && 'deskName' in updatedDesk) {
-				onSuccess(updatedDesk as DeskData)
+			if (response.status === 200) {
+				console.log('[RenameDeskModal] Успешное обновление (статус 200)')
+				// Передаем только ID и имя
+				onSuccess({ 
+					id: deskId, 
+					deskName: deskName 
+				} as Partial<DeskData>); 
 				onClose()
 			} else {
-				console.error('[RenameDeskModal] Сервис вернул неожиданный формат данных:', updatedDesk)
-				setError('Не удалось обновить доску: получен неверный ответ от сервера.')
+				console.error(`[RenameDeskModal] Сервер вернул статус ${response.status}, но ожидался 200.`)
+				setError(`Не удалось обновить доску: неожиданный статус ${response.status}`)
 			}
 		} catch (err: any) {
 			console.error('[RenameDeskModal] Ошибка при обновлении:', err)
@@ -148,40 +156,52 @@ export const RenameDeskModal = ({ isOpen, deskId, initialDeskName, initialDeskDe
 
 	if (!isOpen) return null
 
+	// Логика isChanged теперь только для имени
+	const isChanged = typeof initialDeskName === 'string' && 
+					  deskName.trim() !== initialDeskName.trim() && 
+					  deskName.trim() !== '';
+	// console.log('[RenameDeskModal] Значение isChanged перед рендером:', { isChanged });
+
 	return (
 		<div
-			className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 transition-opacity duration-300"
+			className="fixed inset-0 z-50 flex items-center justify-center p-4 transition-opacity duration-300"
+			style={{ backgroundColor: 'rgba(0, 0, 0, 0.25)' }} 
 			aria-labelledby="modal-title"
 			role="dialog"
 			aria-modal="true"
+			onClick={onClose} // Закрытие по клику на фон
 		>
+			{/* Внутренний div с stopPropagation */}
 			<div
 				ref={modalRef}
-				className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md mx-auto transform transition-all duration-300"
+				className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md transform transition-all duration-300"
+				onClick={(e) => e.stopPropagation()} // Предотвращаем закрытие при клике внутри
 			>
 				<div className="flex justify-between items-center mb-4">
 					<h2 id="modal-title" className="text-lg font-semibold text-gray-900">
-						Переименовать доску
+						Редактирование проекта
 					</h2>
 					<button
 						type="button"
 						onClick={onClose}
-						className="text-gray-400 hover:text-gray-600"
+						className="text-gray-400 hover:text-gray-600 cursor-pointer"
 						aria-label="Закрыть"
 						disabled={isLoading}
 					>
-						<svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+						<svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 							<path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
 						</svg>
 					</button>
 				</div>
 
+				{/* Форма без верхней границы */}
 				<form onSubmit={handleSubmit}>
 					{error && <p className='text-red-500 text-sm mb-4'>{error}</p>}
 					<div className='mb-4'>
-						<label htmlFor='deskNameInput' className="block text-sm font-medium text-gray-700 mb-1">
-							Название доски
+						<label htmlFor='deskNameInput' className="block text-sm font-medium text-gray-700 mb-2">
+							Название проекта
 						</label>
+						{/* Убираем бордер, добавляем фон и скругление */}
 						<input
 							type="text"
 							id='deskNameInput'
@@ -190,27 +210,16 @@ export const RenameDeskModal = ({ isOpen, deskId, initialDeskName, initialDeskDe
 							required
 							disabled={isLoading}
 							autoComplete="off"
-							className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm disabled:bg-gray-50"
+							className="w-full px-3 py-2 bg-gray-100 rounded-lg shadow-sm focus:outline-none focus:ring-1 focus:border-[var(--theme-color)] focus:ring-[var(--theme-color)] sm:text-sm disabled:bg-gray-50"
 						/>
 					</div>
-					<div className='mb-6'>
-						<label htmlFor='deskDescriptionInput' className="block text-sm font-medium text-gray-700 mb-1">
-							Описание (необязательно)
-						</label>
-						<textarea
-							id='deskDescriptionInput'
-							value={deskDescription}
-							onChange={e => setDeskDescription(e.target.value)}
-							rows={3}
-							disabled={isLoading}
-							className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm disabled:bg-gray-50"
-						/>
-					</div>
-					<div className='flex justify-end space-x-3 border-t border-gray-200 pt-4 mt-6'>
-						<ThemedButton type='button' variant='secondary' onClick={onClose} disabled={isLoading}>
-							Отмена
-						</ThemedButton>
-						<ThemedButton type='submit' disabled={isLoading}>
+					{/* Описание удалено */}
+					{/* Кнопка Сохранить справа */}
+					<div className='flex justify-end space-x-3 mt-6'> 
+						<ThemedButton 
+							type='submit' 
+							disabled={isLoading || !isChanged} 
+							className="px-5 py-2 rounded-lg transition-colors duration-200"> 
 							{isLoading ? 'Сохранение...' : 'Сохранить'}
 						</ThemedButton>
 					</div>
