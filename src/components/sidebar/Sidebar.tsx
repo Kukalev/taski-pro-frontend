@@ -18,7 +18,6 @@ export const Sidebar = () => {
 	const [isRenameModalOpen, setIsRenameModalOpen] = useState(false)
 	const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
 	const [selectedDeskId, setSelectedDeskId] = useState<number | null>(null)
-	const [selectedDeskName, setSelectedDeskName] = useState<string>('')
 	const [isDeleting, setIsDeleting] = useState(false)
 	const [hasEditPermission, setHasEditPermission] = useState(false)
 
@@ -27,29 +26,6 @@ export const Sidebar = () => {
 
 	// Получаем данные и функции из контекста
 	const { desks, loading, addDesk, loadDesks, removeDesk, updateDesk } = useDesks()
-
-	// Найти имя доски по ID и проверить права пользователя
-	useEffect(() => {
-		if (selectedDeskId && desks.length > 0) {
-			const desk = desks.find(d => d.id === selectedDeskId)
-			if (desk) {
-				setSelectedDeskName(desk.deskName)
-				
-				// Проверяем права пользователя на редактирование
-				const checkPermissions = async () => {
-					try {
-						const users = await UserService.getUsersOnDesk(selectedDeskId)
-						setHasEditPermission(canEditDesk(users))
-					} catch (error) {
-						console.error('Ошибка при проверке прав пользователя:', error)
-						setHasEditPermission(false)
-					}
-				}
-				
-				checkPermissions()
-			}
-		}
-	}, [selectedDeskId, desks])
 
 	// Переход на нужный маршрут
 	const handleItemClick = (path: string) => {
@@ -63,18 +39,27 @@ export const Sidebar = () => {
 
 	// Открытие модального окна для переименования
 	const handleRenameClick = async (id: number) => {
+		// Находим доску в актуальном списке desks
+		const deskToRename = desks.find(d => d.id === id);
+		if (!deskToRename) {
+			console.error(`Доска с ID ${id} не найдена.`);
+			return;
+		}
+
 		setSelectedDeskId(id)
 		
 		// Проверяем права пользователя перед открытием модального окна
 		try {
 			const users = await UserService.getUsersOnDesk(id)
 			const canEdit = canEditDesk(users)
+			setHasEditPermission(canEdit) // Сохраняем права для handleDelete
 			
 			if (!canEdit) {
 				console.log('У вас нет прав для переименования этой доски')
 				return
 			}
 			
+			// Открываем модальное окно
 			setIsRenameModalOpen(true)
 		} catch (error) {
 			console.error('Ошибка при проверке прав пользователя:', error)
@@ -83,12 +68,20 @@ export const Sidebar = () => {
 
 	// Открытие модального окна для удаления
 	const handleDeleteClick = async (id: number) => {
+		// Находим доску в актуальном списке desks
+		const deskToDelete = desks.find(d => d.id === id);
+		if (!deskToDelete) {
+			console.error(`Доска с ID ${id} не найдена.`);
+			return;
+		}
+		
 		setSelectedDeskId(id)
 		
 		// Проверяем права пользователя перед открытием модального окна
 		try {
 			const users = await UserService.getUsersOnDesk(id)
 			const canEdit = canEditDesk(users)
+			setHasEditPermission(canEdit) // Сохраняем права для handleConfirmDelete
 			
 			if (!canEdit) {
 				console.log('У вас нет прав для удаления этой доски')
@@ -165,6 +158,14 @@ export const Sidebar = () => {
 		};
 	}, [updateDesk]); // Зависит от функции updateDesk
 
+	// Находим имя доски для DeleteDeskModal прямо перед рендером
+	const deskForDeleteModal = desks.find(d => d.id === selectedDeskId);
+	const deskNameForDeleteModal = deskForDeleteModal?.deskName || '';
+
+	// Находим имя доски для RenameDeskModal прямо перед рендером
+	const deskForRenameModal = desks.find(d => d.id === selectedDeskId);
+	const initialDeskNameForRename = deskForRenameModal?.deskName || '';
+
 	return (
 		<>
 			<div className='w-70 min-w-[300px] bg-gray-50 h-[calc(100vh-3.5rem)] p-4 flex flex-col border-r border-gray-200'>
@@ -184,9 +185,22 @@ export const Sidebar = () => {
 			{/* Модальные окна */}
 			<CreateDeskModal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} onDeskCreated={handleDeskCreated} />
 
-			<RenameDeskModal isOpen={isRenameModalOpen} deskId={selectedDeskId} onClose={() => setIsRenameModalOpen(false)} onSuccess={handleRenameSuccess} />
+			<RenameDeskModal 
+				isOpen={isRenameModalOpen} 
+				deskId={selectedDeskId} 
+				initialDeskName={initialDeskNameForRename}
+				onClose={() => setIsRenameModalOpen(false)} 
+				onSuccess={handleRenameSuccess} 
+			/>
 
-			<DeleteDeskModal isOpen={isDeleteModalOpen} deskId={selectedDeskId} deskName={selectedDeskName} onClose={() => setIsDeleteModalOpen(false)} onConfirm={handleConfirmDelete} isLoading={isDeleting} />
+			<DeleteDeskModal 
+				isOpen={isDeleteModalOpen} 
+				deskId={selectedDeskId} 
+				deskName={deskNameForDeleteModal}
+				onClose={() => setIsDeleteModalOpen(false)} 
+				onConfirm={handleConfirmDelete} 
+				isLoading={isDeleting} 
+			/>
 		</>
 	)
 }

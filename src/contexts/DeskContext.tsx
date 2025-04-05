@@ -6,12 +6,12 @@ import { DeskService } from '../services/desk/Desk'
 export interface DeskData {
 	id: number
 	deskName: string
-	deskDescription: string
+	deskDescription?: string
 	deskCreateDate: Date | string
 	deskFinishDate: Date | string | null
 	userLimit?: number
 	status?: string
-	deskOwner?: string
+	username?: string
 }
 
 // Интерфейс контекста - добавляем setDesks

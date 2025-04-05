@@ -6,8 +6,8 @@ import DateRangeSelector from './components/DeskRangeSelector'
 import StatusSelector from './components/StatusSelector'
 import StatusMenu from './components/StatusMenu'
 import {DeskService} from '../../../../services/desk/Desk'
-// Исправленный путь импорта
 import {DESK_UPDATE_EVENT} from '../../hooks/useDeskActions'
+import { useDesks } from '../../../../contexts/DeskContext'
 
 const DeskHeader: React.FC<DeskHeaderProps> = ({
 	desk,
@@ -16,6 +16,9 @@ const DeskHeader: React.FC<DeskHeaderProps> = ({
 	selectedDate,
 	hasEditPermission = true // По умолчанию права есть
 }) => {
+	// Получаем функцию updateDesk из контекста
+	const { updateDesk: updateDeskInContext } = useDesks();
+	
 	// Локальное состояние
 	const [isEditing, setIsEditing] = useState(false);
 	const [localDeskName, setLocalDeskName] = useState(desk.deskName || '');
@@ -89,25 +92,42 @@ const DeskHeader: React.FC<DeskHeaderProps> = ({
 			// Сохраняем на сервер
 			await DeskService.updateDesk(Number(desk.id), {
 				deskName: name,
-				deskDescription: desk.deskDescription || '',
-				deskFinishDate: desk.deskFinishDate
+				// deskDescription: desk.deskDescription || '', // Убедимся, что не отправляем лишнее
+				// deskFinishDate: desk.deskFinishDate
 			});
 			
 			// Обновляем заголовок страницы
 			document.title = name || 'Taski';
 			
-			// Обновляем объект напрямую для сохранности данных
-			desk.deskName = name;
+			// Обновляем объект напрямую для сохранности данных (можно убрать, если контекст работает надежно)
+			// desk.deskName = name;
 			
-			// Обновляем UI через callback
+			// === Обновляем UI через КОНТЕКСТ ===
+			// Убеждаемся, что передаем только поля, определенные в DeskData
+			const updatedDeskData: DeskData = {
+				id: desk.id,
+				deskName: name,
+				deskDescription: desk.deskDescription,
+				deskCreateDate: desk.deskCreateDate || new Date(), // Добавляем дату создания, если она есть
+				deskFinishDate: desk.deskFinishDate,
+				status: desk.status, // Добавляем статус, если он есть
+				username: desk.username // Добавляем username, если он есть
+			};
+			updateDeskInContext(updatedDeskData); 
+			console.log('Обновлен контекст доски:', updatedDeskData);
+
+			// Обновляем UI через callback (ОПЦИОНАЛЬНО, можно оставить для обратной совместимости или убрать)
+			/*
 			if (typeof onDeskUpdate === 'function') {
-				onDeskUpdate({
-					id: desk.id,
-					deskName: name
+				onDeskUpdate({ 
+					id: desk.id, 
+					deskName: name 
 				});
 			}
+			*/
 			
-			// Дополнительно отправляем событие для обновления сайдбара и хедера
+			// Дополнительно отправляем событие для обновления сайдбара и хедера (можно убрать, если контекст справляется)
+			/*
 			window.dispatchEvent(new CustomEvent(DESK_UPDATE_EVENT, {
 				detail: {
 					deskId: desk.id,
@@ -116,8 +136,8 @@ const DeskHeader: React.FC<DeskHeaderProps> = ({
 					}
 				}
 			}));
-			
 			console.log('Отправлено событие обновления доски:', desk.id, name);
+			*/
 		} catch (error) {
 			console.error('Ошибка при сохранении имени доски:', error);
 		}
@@ -162,9 +182,10 @@ const DeskHeader: React.FC<DeskHeaderProps> = ({
 		setStatusMenuOpen(false);
 		
 		if (typeof onDeskUpdate === 'function') {
+			// Передаем Partial<DeskData>
 			onDeskUpdate({
 				id: desk.id,
-				status: status
+				status: status 
 			});
 		}
 	};

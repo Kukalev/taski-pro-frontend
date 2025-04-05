@@ -41,7 +41,7 @@ export interface DeskTitleEditorProps {
 	handleEdit: () => void;
 	handleBlur: () => void;
 	handleKeyDown: (e: React.KeyboardEvent) => void;
-	inputRef: React.RefObject<HTMLInputElement>;
+	inputRef: React.RefObject<HTMLInputElement | null>;
 	hasEditPermission?: boolean;
 }
 
@@ -55,7 +55,7 @@ export interface DateRangeSelectorProps {
 	isCalendarOpen: boolean;
 	setIsCalendarOpen: (isOpen: boolean) => void;
 	onDeskUpdate: (updatedDesk: Partial<DeskData>) => void;
-	calendarButtonRef: React.RefObject<HTMLButtonElement>;
+	calendarButtonRef: React.RefObject<HTMLButtonElement | null>;
 	hasEditPermission?: boolean;
 }
 
@@ -63,12 +63,12 @@ export interface StatusSelectorProps {
 	currentStatus: DeskStatus;
 	statusMenuOpen: boolean;
 	toggleStatusMenu: () => void;
-	statusButtonRef: React.RefObject<HTMLDivElement>;
+	statusButtonRef: React.RefObject<HTMLDivElement | null>;
 	hasEditPermission?: boolean;
 }
 
 export interface StatusMenuProps {
 	isOpen: boolean;
 	handleStatusChange: (status: DeskStatus) => void;
-	statusMenuRef: React.RefObject<HTMLDivElement>;
+	statusMenuRef: React.RefObject<HTMLDivElement | null>;
 }

@@ -51,7 +51,8 @@ interface RenameDeskModalProps {
 }
 
 export const RenameDeskModal = ({ isOpen, deskId, initialDeskName, /* initialDeskDescription, */ onClose, onSuccess }: RenameDeskModalProps) => {
-	const [deskName, setDeskName] = useState(initialDeskName)
+	// Гарантируем, что deskName инициализируется строкой
+	const [deskName, setDeskName] = useState(initialDeskName || '')
 	// Убираем состояние описания
 	// const [deskDescription, setDeskDescription] = useState(initialDeskDescription)
 	const [error, setError] = useState<string | null>(null)
@@ -61,12 +62,10 @@ export const RenameDeskModal = ({ isOpen, deskId, initialDeskName, /* initialDes
 	useEffect(() => {
 		if (isOpen) {
 			setError(null)
-			setDeskName(initialDeskName)
-			// Убираем установку описания
-			// setDeskDescription(initialDeskDescription)
+			// Гарантируем, что deskName устанавливается в строку при открытии
+			setDeskName(initialDeskName || '')
 		}
-		// Убираем initialDeskDescription из зависимостей
-	}, [isOpen, initialDeskName]) 
+	}, [isOpen, initialDeskName])
 
 	useEffect(() => {
 		const handleClickOutside = (event: MouseEvent) => {

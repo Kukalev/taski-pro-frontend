@@ -1,10 +1,10 @@
 import api from '../../api'
-import { DeskUpdateDto } from '../types/desk.types'
-import { AxiosResponse } from 'axios'
+import {DeskUpdateDto} from '../types/desk.types'
+import {AxiosResponse} from 'axios'
 
 const BASE_URL = '/api/v1/desk'
 
-export const updateDesk = async (id: number, data: Partial<DeskUpdateDto>): Promise<AxiosResponse<any>> => {
+export const updateDesk = async (id: number, data: Partial<DeskUpdateDto>): Promise<AxiosResponse<DeskUpdateDto>> => {
 	console.log(`Обновление доски ID: ${id} с данными:`, data)
 	try {
 		const response = await api.put(`${BASE_URL}/${id}`, data)
