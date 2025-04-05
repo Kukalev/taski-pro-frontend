@@ -1,7 +1,10 @@
-import { SettingsSection } from '../SettingsSection'
-import { PasswordChange } from './components/PasswordChange'
-import { DeleteAccount } from './components/DeleteAccount'
-import { AuthService } from '../../../../services/auth/Auth'
+import {PasswordChange} from './components/PasswordChange'
+import {DeleteAccount} from './components/DeleteAccount'
+import {AuthService} from '../../../../services/auth/Auth'
+
+// Иконки VK и Яндекса
+const VKIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path fillRule="evenodd" clipRule="evenodd" d="M16.975 17.175C17.725 16.65 18.85 15.45 19.75 13.95C20.4 12.9 20.575 11.925 20.4 11.175C20.15 9.975 18.85 9.45 17.65 9.45H15.475C14.875 9.45 14.425 9.75 14.2 10.2C14.125 10.35 13.825 10.95 13.3 11.7C12.625 12.675 12.175 12.825 11.95 12.675C11.5 12.3 11.425 11.55 11.425 10.65C11.425 9.675 11.725 9.15 10.825 9.15C10.45 9.15 10.15 9.45 9.85 9.9C9.475 10.5 9.25 11.175 9.325 11.475C9.4 11.85 9.7 12 10.15 12.15C10.675 12.375 10.825 12.675 10.675 12.975C10.525 13.275 10 14.1 9.1 15.075C8.425 15.825 7.825 16.35 7.525 16.5C7.075 16.8 6.625 16.95 6.1 16.95C5.05 16.95 3.775 16.8 2.8 15.3C2.05 14.175 2.05 12.975 2.2 11.775C2.35 10.725 3.175 9.45 4.375 8.025C5.875 6.15 7.75 4.875 9.775 4.875C10.6 4.875 11.125 5.1 11.425 5.475C11.8 5.925 11.95 6.525 11.875 7.275C11.8 7.8 11.725 8.175 11.65 8.4C11.275 9.15 10.9 9.45 10.75 9.45C10.525 9.45 10.3 9.3 10.3 8.925C10.3 8.175 10.75 6.9 12.025 6.75C12.475 6.675 13.45 6.75 14.125 7.5C14.575 7.95 14.725 8.4 14.8 8.85C14.95 9.45 14.95 10.05 15.475 10.35H16.15C16.825 10.35 17.125 10.2 17.35 9.975C17.875 9.375 17.575 8.475 16.675 7.8C16.15 7.425 16.3 7.05 17.05 6.45C17.8 5.85 18.175 5.4 18.325 5.1C18.85 4.125 18.55 3.75 17.725 3.75C17.05 3.75 15.925 4.125 14.95 5.175C14.2 5.925 13.225 6.975 12.55 7.575C12.1 8 11.725 8.175 11.65 8.25C11.275 8.55 10.75 8.7 10.3 8.7C9.625 8.7 8.725 8.1 8.65 7.05C8.575 6.075 9.1 5.1 9.7 4.575C10.45 3.825 11.575 3.45 12.55 3.45H13.15C14.425 3.45 15.55 3.75 16.45 4.275C18.025 5.1 18.85 6.45 19.15 7.575C19.525 8.925 19.15 10.05 18.325 10.875C19.15 11.1 19.6 11.925 19.75 12.675C20.05 13.875 19.6 15.15 18.4 16.575C17.425 17.85 16.3 18.75 15.475 18.75H15.175C14.35 18.75 13.975 18.45 13.6 17.925C13.075 17.1 12.25 16.125 11.65 15.45C11.125 14.775 10.825 14.475 10.825 14.325C10.825 14.1 11.05 13.875 11.425 13.65C11.95 13.275 12.25 13.35 12.85 14.4C13.375 15.375 13.975 16.05 14.5 16.425C15.25 16.95 16.075 17.25 16.975 17.175Z" fill="#0077FF"/></svg>;
+const YandexIcon = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M9.013 4.15H12.32L16.216 19.85H12.743L11.516 14.807H7.817L6.625 19.85H3.151L7.198 4.15H9.013ZM10.884 7.483L9.67 12.675H11.585C11.621 12.675 11.658 12.675 11.694 12.675L10.884 7.483ZM17.116 19.85H20.838V4.15H17.116V19.85Z" fill="#FF0000"/></svg>;
 
 export const SecuritySettings = () => {
   const handleLogout = () => {
@@ -9,34 +12,25 @@ export const SecuritySettings = () => {
     window.location.href = '/login'
   }
   
+  // Общий стиль кнопок "Подключить"
+
+  
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-semibold mb-6">Аутентификация</h1>
+    <div className="bg-white rounded-2xl shadow px-5 py-4 max-w-[430px] -ml-2 -mt-2.5">
+      <h1 className="text-[20px] font-medium mb-5 ">Аутентификация</h1>
       
-      <SettingsSection title="Изменение пароля">
+      {/* Секция "Изменение пароля" */}
+      <div className="mb-8"> {/* Увеличил отступ */}
         <PasswordChange />
-      </SettingsSection>
+      </div>
       
-      <SettingsSection title="Способы авторизации">
-        <div className="flex gap-4">
-          <button className="flex items-center gap-2 px-4 py-2 bg-[#0077FF] text-white rounded-lg">
-            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M15.07 2H8.93C3.33 2 2 3.33 2 8.93v6.14C2 20.67 3.33 22 8.93 22h6.14c5.6 0 6.93-1.33 6.93-6.93V8.93C22 3.33 20.67 2 15.07 2z"/>
-            </svg>
-            Подключить
-          </button>
-          <button className="flex items-center gap-2 px-4 py-2 bg-[#FF0000] text-white rounded-lg">
-            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M15.07 2H8.93C3.33 2 2 3.33 2 8.93v6.14C2 20.67 3.33 22 8.93 22h6.14c5.6 0 6.93-1.33 6.93-6.93V8.93C22 3.33 20.67 2 15.07 2z"/>
-            </svg>
-            Подключить
-          </button>
-        </div>
-      </SettingsSection>
+
       
-      <SettingsSection title="Удаление аккаунта">
+      {/* Секция "Удаление аккаунта" */}
+      <div> 
+        <h3 className="font-semibold mb-4 text-lg ">Удаление аккаунта</h3> {/* Изменил стиль заголовка */}
         <DeleteAccount onLogout={handleLogout} />
-      </SettingsSection>
+      </div>
     </div>
   )
 } 

@@ -1,10 +1,12 @@
 export interface DeskData {
 	id: number
 	deskName: string
-	deskDescription: string
-	deskCreateDate: Date
-	deskFinishDate: Date | null
+	deskDescription?: string
+	deskCreateDate: Date | string
+	deskFinishDate: Date | string | null
 	userLimit?: number
+	status?: string
+	username?: string
 }
 
 // Убедитесь, что в sidebar.types.ts.ts.ts есть этот интерфейс:

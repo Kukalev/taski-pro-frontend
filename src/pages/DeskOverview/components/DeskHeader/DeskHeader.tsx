@@ -7,7 +7,7 @@ import StatusSelector from './components/StatusSelector'
 import StatusMenu from './components/StatusMenu'
 import {DeskService} from '../../../../services/desk/Desk'
 import {DESK_UPDATE_EVENT} from '../../hooks/useDeskActions'
-import { useDesks } from '../../../../contexts/DeskContext'
+import { useDesks, DeskData } from '../../../../contexts/DeskContext'
 
 const DeskHeader: React.FC<DeskHeaderProps> = ({
 	desk,
@@ -108,12 +108,12 @@ const DeskHeader: React.FC<DeskHeaderProps> = ({
 				id: desk.id,
 				deskName: name,
 				deskDescription: desk.deskDescription,
-				deskCreateDate: desk.deskCreateDate || new Date(), // Добавляем дату создания, если она есть
-				deskFinishDate: desk.deskFinishDate,
-				status: desk.status, // Добавляем статус, если он есть
-				username: desk.username // Добавляем username, если он есть
+				deskCreateDate: desk.deskCreateDate || new Date().toISOString(),
+				deskFinishDate: desk.deskFinishDate === undefined ? null : desk.deskFinishDate, // Гарантируем null, если undefined
+				status: desk.status,
+				username: desk.username
 			};
-			updateDeskInContext(updatedDeskData); 
+			updateDeskInContext(updatedDeskData);
 			console.log('Обновлен контекст доски:', updatedDeskData);
 
 			// Обновляем UI через callback (ОПЦИОНАЛЬНО, можно оставить для обратной совместимости или убрать)
@@ -182,11 +182,12 @@ const DeskHeader: React.FC<DeskHeaderProps> = ({
 		setStatusMenuOpen(false);
 		
 		if (typeof onDeskUpdate === 'function') {
-			// Передаем Partial<DeskData>
-			onDeskUpdate({
+			// Передаем Partial<DeskData>, включая опциональный status
+			const updatePayload: Partial<DeskData> = {
 				id: desk.id,
-				status: status 
-			});
+				status: status // status из DeskStatus enum нужно преобразовать в строку, если требуется
+			};
+			onDeskUpdate(updatePayload);
 		}
 	};
 

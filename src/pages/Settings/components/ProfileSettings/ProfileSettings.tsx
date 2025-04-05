@@ -1,24 +1,26 @@
-import { UserAvatar } from './components/UserAvatar'
-import { ProfileForm } from './components/ProfileForm'
-import { AuthService } from '../../../../services/auth/Auth'
+import {UserAvatar} from './components/UserAvatar'
+import {ProfileForm} from './components/ProfileForm'
+import {AuthService} from '../../../../services/auth/Auth'
 
 export const ProfileSettings = () => {
   const username = AuthService.getUsername() || 'User'
-  const email = localStorage.getItem('email') || 'kukalevna22@mail.ru'
+  const email = localStorage.getItem('email') || 'example@mail.com'
   
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-semibold mb-6">Профиль</h1>
-      
-      <p className="text-gray-600 mb-4">
-        Здесь настраивается учетная запись WEEEK. Профиль для рабочего пространства меняется <a href="#" className="text-blue-600 hover:underline">в разделе «Пользователи»</a>
+    <div className="bg-white rounded-2xl shadow px-5 py-4 max-w-[430px] -ml-2 -mt-2.5">
+      <h1 className="text-[20px] font-medium mb-1 ">Профиль</h1>
+
+      <p className="text-gray-600 mb-4 text-sm">
+        Здесь настраивается учетная запись TASKI.PRO.
       </p>
-      
-      <div className="flex justify-center mb-6">
-        <UserAvatar username={username} />
+
+      <div className="flex mb-4">
+        <UserAvatar username={username} size='lg'/>
       </div>
-      
-      <ProfileForm username={username} email={email} />
+
+      <div>
+        <ProfileForm username={username} email={email} />
+      </div>
     </div>
   )
 } 

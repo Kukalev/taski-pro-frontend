@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import {useState} from 'react'
 
 export const PasswordChange = () => {
   const [oldPassword, setOldPassword] = useState('')
@@ -32,44 +32,47 @@ export const PasswordChange = () => {
     setConfirmPassword('')
   }
   
+  // Стиль для полей ввода
+  const inputStyle = "p-1.5 bg-gray-50 rounded-lg w-full focus:outline-none placeholder-gray-400 hover:bg-gray-100 focus:bg-gray-100"
+
   return (
     <form onSubmit={handleSubmit}>
-      <div className="mb-4">
+      <div className="mb-4 mr-4">
         <label htmlFor="old-password" className="block text-sm font-medium text-gray-700 mb-1">
           Старый пароль
         </label>
         <input
           id="old-password"
           type="password"
-          className="w-full p-2 border border-gray-300 rounded-md"
+          className={inputStyle}
           value={oldPassword}
           onChange={(e) => setOldPassword(e.target.value)}
           placeholder="Введите старый пароль"
         />
       </div>
       
-      <div className="mb-4">
+      <div className="mb-4 mr-4">
         <label htmlFor="new-password" className="block text-sm font-medium text-gray-700 mb-1">
           Новый пароль
         </label>
         <input
           id="new-password"
           type="password"
-          className="w-full p-2 border border-gray-300 rounded-md"
+          className={inputStyle}
           value={newPassword}
           onChange={(e) => setNewPassword(e.target.value)}
           placeholder="Введите новый пароль"
         />
       </div>
       
-      <div className="mb-4">
+      <div className="mb-4 mr-4">
         <label htmlFor="confirm-password" className="block text-sm font-medium text-gray-700 mb-1">
           Повторите пароль
         </label>
         <input
           id="confirm-password"
           type="password"
-          className="w-full p-2 border border-gray-300 rounded-md"
+          className={inputStyle}
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
           placeholder="Введите новый пароль повторно"
@@ -91,7 +94,7 @@ export const PasswordChange = () => {
       <div className="flex justify-end">
         <button
           type="submit"
-          className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-md"
+          className="px-6 py-2 bg-gray-100 text-gray-400 rounded-lg hover:bg-gray-200 hover:text-gray-500 focus:outline-none  cursor-pointer transition-colors mr-4"
         >
           Изменить пароль
         </button>

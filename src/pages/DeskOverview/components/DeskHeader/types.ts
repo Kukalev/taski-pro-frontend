@@ -10,6 +10,7 @@ export interface DeskHeaderProps {
 		deskCreateDate?: string | Date;
 		deskFinishDate?: string | Date | null;
 		status?: DeskStatus;
+		username?: string;
 	};
 	onDeskUpdate: (updatedDesk: Partial<DeskData>) => void;
 	isLoading?: boolean;

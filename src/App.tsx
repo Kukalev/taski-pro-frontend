@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, {useEffect} from 'react'
 import {BrowserRouter, Navigate, Route, Routes} from 'react-router-dom'
 import {NotFound} from './components/NotFound'
 import {DeskProvider} from './contexts/DeskContext'
@@ -14,12 +14,17 @@ import {MyTasks} from './pages/tasks/MyTasks'
 import {Team} from './pages/welcome/team/Team'
 import {Welcome} from './pages/welcome/Welcome'
 import {AuthService} from './services/auth/Auth'
+import {
+	ProfileSettings
+} from './pages/Settings/components/ProfileSettings/ProfileSettings'
+import {
+	AppearanceSettings
+} from './pages/Settings/components/AppearanceSettings/AppearanceSettings'
+import {
+	SecuritySettings
+} from './pages/Settings/components/SecuritySettings/SecuritySettings'
+import {applyTheme} from './styles/theme'
 import { Settings } from './pages/Settings/Settings'
-import { SettingsLayout } from './layouts/SettingsLayout'
-import { ProfileSettings } from './pages/Settings/components/ProfileSettings/ProfileSettings'
-import { AppearanceSettings } from './pages/Settings/components/AppearanceSettings/AppearanceSettings'
-import { SecuritySettings } from './pages/Settings/components/SecuritySettings/SecuritySettings'
-import { applyTheme } from './styles/theme'
 
 // Простой компонент для защиты роутов
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -37,112 +42,102 @@ function App() {
 
 	return (
 		<BrowserRouter>
-			<Routes>
-				{/* Публичные роуты */}
-				<Route path='/login' element={<LoginPage />} />
-				<Route path='/register' element={<RegisterPage />} />
+			<DeskProvider>
+				<Routes>
+					{/* Публичные роуты */}
+					<Route path='/login' element={<LoginPage />} />
+					<Route path='/register' element={<RegisterPage />} />
 
-				{/* Защищенные welcome роуты */}
-				<Route
-					path='/welcome'
-					element={
-						<ProtectedRoute>
-							<Welcome />
-						</ProtectedRoute>
-					}
-				/>
-				<Route
-					path='/welcome/team'
-					element={
-						<ProtectedRoute>
-							<Team />
-						</ProtectedRoute>
-					}
-				/>
+					{/* Защищенные welcome роуты */}
+					<Route
+						path='/welcome'
+						element={
+							<ProtectedRoute>
+								<Welcome />
+							</ProtectedRoute>
+						}
+					/>
+					<Route
+						path='/welcome/team'
+						element={
+							<ProtectedRoute>
+								<Team />
+							</ProtectedRoute>
+						}
+					/>
 
-				{/* Корневой маршрут desk */}
-				<Route
-					path='/desk'
-					element={
-						<ProtectedRoute>
-							<DeskProvider>
+					{/* Корневой маршрут desk */}
+					<Route
+						path='/desk'
+						element={
+							<ProtectedRoute>
 								<DeskLayout>
 									<Desk />
 								</DeskLayout>
-							</DeskProvider>
-						</ProtectedRoute>
-					}
-				/>
+							</ProtectedRoute>
+						}
+					/>
 
-				{/* Маршруты для конкретной доски по ID */}
-				<Route
-					path='/desk/:id'
-					element={
-						<ProtectedRoute>
-							<DeskProvider>
-									<DeskLayout>
-										<DeskDetails />
-									</DeskLayout>
-							</DeskProvider>
-						</ProtectedRoute>
-					}
-				>
-					<Route path="overview" element={<DeskOverview />} />
-					<Route path="board" element={<DeskBoard />} />
-					<Route index element={<Navigate to="board" replace />} />
-				</Route>
+					{/* Маршруты для конкретной доски по ID */}
+					<Route
+						path='/desk/:id'
+						element={
+							<ProtectedRoute>
+								<DeskLayout>
+									<DeskDetails />
+								</DeskLayout>
+							</ProtectedRoute>
+						}
+					>
+						<Route path="overview" element={<DeskOverview />} />
+						<Route path="board" element={<DeskBoard />} />
+						<Route index element={<Navigate to="board" replace />} />
+					</Route>
 
-				{/* Специальные подмаршруты desk */}
-				<Route
-					path='/desk/myTasks'
-					element={
-						<ProtectedRoute>
-							<DeskProvider>
-									<DeskLayout>
-										<MyTasks />
-									</DeskLayout>
-							</DeskProvider>
-						</ProtectedRoute>
-					}
-				/>
-				<Route
-					path='/desk/allTasks'
-					element={
-						<ProtectedRoute>
-							<DeskProvider>
-									<DeskLayout>
-										<AllTasks />
-									</DeskLayout>
-							</DeskProvider>
-						</ProtectedRoute>
-					}
-				/>
+					{/* Специальные подмаршруты desk */}
+					<Route
+						path='/desk/myTasks'
+						element={
+							<ProtectedRoute>
+								<DeskLayout>
+									<MyTasks />
+								</DeskLayout>
+							</ProtectedRoute>
+						}
+					/>
+					<Route
+						path='/desk/allTasks'
+						element={
+							<ProtectedRoute>
+								<DeskLayout>
+									<AllTasks />
+								</DeskLayout>
+							</ProtectedRoute>
+						}
+					/>
 
-				{/* Редирект с главной */}
-				<Route path='/' element={AuthService.isAuthenticated() ? <Navigate to='/welcome' replace /> : <Navigate to='/register' replace />} />
+					{/* Редирект с главной */}
+					<Route path='/' element={AuthService.isAuthenticated() ? <Navigate to='/welcome' replace /> : <Navigate to='/register' replace />} />
 
-				{/* Глобальный 404 для всех остальных маршрутов */}
-				<Route path='*' element={<NotFound />} />
+					{/* Глобальный 404 для всех остальных маршрутов */}
+					<Route path='*' element={<NotFound />} />
 
-				{/* Маршруты для страницы настроек */}
-				<Route
-					path='/settings'
-					element={
-						<ProtectedRoute>
-							<DeskProvider>
-								<SettingsLayout>
-									<Settings />
-								</SettingsLayout>
-							</DeskProvider>
-						</ProtectedRoute>
-					}
-				>
-					<Route path="profile" element={<ProfileSettings />} />
-					<Route path="appearance" element={<AppearanceSettings />} />
-					<Route path="security" element={<SecuritySettings />} />
-					<Route index element={<Navigate to="profile" replace />} />
-				</Route>
-			</Routes>
+					{/* Маршруты для страницы настроек */}
+					<Route
+						path='/settings'
+						element={
+							<ProtectedRoute>
+								<Settings />
+							</ProtectedRoute>
+						}
+					>
+						<Route path="profile" element={<ProfileSettings />} />
+						<Route path="appearance" element={<AppearanceSettings />} />
+						<Route path="security" element={<SecuritySettings />} />
+						<Route index element={<Navigate to="profile" replace />} />
+					</Route>
+				</Routes>
+			</DeskProvider>
 		</BrowserRouter>
 	)
 }
