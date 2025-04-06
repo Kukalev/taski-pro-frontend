@@ -10,7 +10,7 @@ import {Button} from '../../components/ui/Button'
 import {Input} from '../../components/ui/Input'
 import {AuthService} from '../../services/auth/Auth'
 import {RegisterFormData, RegisterRequest} from '../../types/auth.types'
-import { useAuth } from '../../contexts/AuthContext'
+import {useAuth} from '../../contexts/AuthContext'
 
 export const RegisterPage = () => {
 	const navigate = useNavigate()
@@ -255,8 +255,8 @@ export const RegisterPage = () => {
 				username: formData.username,
 				email: formData.email,
 				password: formData.password,
-				firstName: formData.firstName,
-				lastName: formData.lastName
+				firstname: formData.firstName,
+				lastname: formData.lastName
 			}
 			console.log(requestData, 'REGISTATION')
 

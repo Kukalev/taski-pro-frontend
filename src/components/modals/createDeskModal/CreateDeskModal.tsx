@@ -13,10 +13,19 @@ export const CreateDeskModal = ({ isOpen, onClose, onDeskCreated }: CreateDeskMo
 	const [error, setError] = useState<string | null>(null)
 	const modalRef = useRef<HTMLDivElement>(null)
 
-	// Обработчик клика вне модального окна
+	// Внутренняя функция закрытия: сбрасывает состояние и вызывает родительскую onClose
+	const handleInternalClose = () => {
+		console.log("Internal close: Resetting state and closing.");
+		setDeskName(''); // Сброс имени
+		setDeskDescription(''); // Сброс описания
+		setError(null); // Сброс ошибки
+		onClose(); // Вызов функции закрытия из родителя
+	};
+
+	// Обработчик клика вне модального окна использует internal close
 	const handleOutsideClick = (event: MouseEvent) => {
 		if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
-			onClose()
+			handleInternalClose();
 		}
 	}
 
@@ -24,13 +33,21 @@ export const CreateDeskModal = ({ isOpen, onClose, onDeskCreated }: CreateDeskMo
 	useEffect(() => {
 		if (isOpen) {
 			document.addEventListener('mousedown', handleOutsideClick)
-		}
+		} else {
+            // Если модалка закрывается извне (isOpen стал false), тоже сбросим на всякий случай,
+            // хотя handleInternalClose должен был сработать раньше в большинстве случаев.
+            setDeskName('');
+            setDeskDescription('');
+            setError(null);
+        }
 		return () => {
 			document.removeEventListener('mousedown', handleOutsideClick)
 		}
-	}, [isOpen])
+	// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [isOpen]) // Оставляем зависимость только от isOpen, handleInternalClose стабильна
 
-	// Сбрасываем состояние при закрытии/открытии модального окна
+	// Убираем useEffect, который сбрасывал состояние при открытии
+	/*
 	useEffect(() => {
 		if (isOpen) {
 			setDeskName('')
@@ -38,31 +55,27 @@ export const CreateDeskModal = ({ isOpen, onClose, onDeskCreated }: CreateDeskMo
 			setError(null)
 		}
 	}, [isOpen])
+	*/
 
 	const handleSubmit = async () => {
 		setIsLoading(true)
 		setError(null)
 
 		try {
-			// Создаем доску и получаем ID
 			const deskId = await DeskService.createDesk({
 				deskName: deskName.trim(),
 				deskDescription: deskDescription.trim()
 			})
-
-			// Получаем полные данные созданной доски
 			const newDesk = await DeskService.getDeskById(Number(deskId))
-
-			// Уведомляем родительский компонент о новой доске
 			if (onDeskCreated) {
 				onDeskCreated(newDesk)
 			}
-
-			// Закрываем модальное окно
-			onClose()
+			// Используем internal close после успешного создания
+			handleInternalClose();
 		} catch (error: any) {
 			console.error('Ошибка при создании доски:', error)
 			setError(error.message || 'Произошла ошибка при создании доски')
+            // Не закрываем окно при ошибке, чтобы пользователь видел сообщение
 		} finally {
 			setIsLoading(false)
 		}
@@ -80,8 +93,8 @@ export const CreateDeskModal = ({ isOpen, onClose, onDeskCreated }: CreateDeskMo
 
 			{/* Модальное окно */}
 			<div ref={modalRef} className='relative bg-gray-100 rounded-xl w-[480px] shadow-xl'>
-				{/* Заголовок */}
-				<ModalHeader title='Создание доски' onClose={onClose} />
+				{/* Заголовок - передаем handleInternalClose */}
+				<ModalHeader title='Создание доски' onClose={handleInternalClose} />
 
 				{/* Контент */}
 				<ModalContent deskName={deskName} deskDescription={deskDescription} setDeskName={setDeskName} setDeskDescription={setDeskDescription} error={error} />

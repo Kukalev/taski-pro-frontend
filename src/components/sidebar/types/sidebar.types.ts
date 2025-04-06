@@ -17,10 +17,14 @@ export interface SidebarDesksProps {
 	onAddClick: () => void
 	onRename: (id: number) => void
 	onDelete: (id: number) => void
+	searchQuery: string
+	originalDesksCount: number
 }
 
 export interface SidebarSearchProps {
 	placeholder?: string
+	searchQuery: string
+	onSearchChange: (query: string) => void
 }
 
 export interface SidebarMenuProps {

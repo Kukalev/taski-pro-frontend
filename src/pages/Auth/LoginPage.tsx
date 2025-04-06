@@ -7,7 +7,7 @@ import {Button} from '../../components/ui/Button'
 import {Input} from '../../components/ui/Input'
 import {AuthService} from '../../services/auth/Auth'
 import {ApiError, LoginFormData} from '../../types/auth.types'
-import { useAuth } from '../../contexts/AuthContext'
+import {useAuth} from '../../contexts/AuthContext'
 
 export const LoginPage = () => {
 	const navigate = useNavigate()
@@ -123,6 +123,9 @@ export const LoginPage = () => {
 			console.log('Отправляем данные:', requestData)
 
 			const response = await AuthService.login(requestData, authContextLogin)
+			if (!response) {
+				console.log('Ошибка')
+			}
 
 			navigate('/welcome')
 		} catch (err: unknown) {

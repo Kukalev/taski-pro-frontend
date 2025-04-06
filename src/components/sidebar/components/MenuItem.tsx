@@ -1,6 +1,6 @@
-import { MenuItemProps } from '../types/sidebar.types'
+import {MenuItemProps} from '../types/sidebar.types'
 
-export const MenuItem = ({ path, icon, label, isActive, onClick }: MenuItemProps) => {
+export const MenuItem = ({  icon, label, isActive, onClick }: MenuItemProps) => {
 	return (
 		<button
 			className={`w-full h-[36px] text-left px-4 py-1 rounded-md flex items-center gap-3 cursor-pointer text-[14px] transition-all duration-200 

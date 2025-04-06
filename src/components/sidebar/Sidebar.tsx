@@ -12,6 +12,7 @@ import {SidebarSearch} from './components/SidebarSearch'
 import { DESK_UPDATE_EVENT } from '../../pages/DeskOverview/hooks/useDeskActions'
 import { UserService } from '../../services/users/Users'
 import { canEditDesk } from '../../utils/permissionUtils'
+import { DeskData } from './types/sidebar.types'
 
 export const Sidebar = () => {
 	const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
@@ -20,6 +21,7 @@ export const Sidebar = () => {
 	const [selectedDeskId, setSelectedDeskId] = useState<number | null>(null)
 	const [isDeleting, setIsDeleting] = useState(false)
 	const [hasEditPermission, setHasEditPermission] = useState(false)
+	const [searchQuery, setSearchQuery] = useState('')
 
 	const navigate = useNavigate()
 	const location = useLocation()
@@ -158,6 +160,11 @@ export const Sidebar = () => {
 		};
 	}, [updateDesk]); // Зависит от функции updateDesk
 
+	// Фильтрация досок
+	const filteredDesks = desks.filter(desk =>
+		desk.deskName.toLowerCase().includes(searchQuery.toLowerCase())
+	);
+
 	// Находим имя доски для DeleteDeskModal прямо перед рендером
 	const deskForDeleteModal = desks.find(d => d.id === selectedDeskId);
 	const deskNameForDeleteModal = deskForDeleteModal?.deskName || '';
@@ -170,15 +177,24 @@ export const Sidebar = () => {
 		<>
 			<div className='w-70 min-w-[300px] bg-gray-50 h-[calc(100vh-3.5rem)] p-4 flex flex-col border-r border-gray-200'>
 				{/* Поиск */}
-				<SidebarSearch />
+				<SidebarSearch searchQuery={searchQuery} onSearchChange={setSearchQuery} />
 
 				{/* Основное меню */}
 				<SidebarMenu location={location} onItemClick={handleItemClick} />
 
 				{/* Компонент с досками */}
-				<SidebarDesks desks={desks} loading={loading} onDeskClick={handleDeskClick} onAddClick={() => setIsCreateModalOpen(true)} onRename={handleRenameClick} onDelete={handleDeleteClick} />
+				<SidebarDesks
+					desks={filteredDesks}
+					loading={loading}
+					onDeskClick={handleDeskClick}
+					onAddClick={() => setIsCreateModalOpen(true)}
+					onRename={handleRenameClick}
+					onDelete={handleDeleteClick}
+					searchQuery={searchQuery}
+					originalDesksCount={desks.length}
+				/>
 
-				{/* Счетчик досок */}
+				{/* Счетчик досок - используем desks.length для общего количества */}
 				<SidebarFooter desksCount={desks.length} />
 			</div>
 
