@@ -1,7 +1,44 @@
 // src/pages/gitHub/components/Commits/Commits.tsx
-import React from 'react'
+import React, { useState } from 'react'
 import {CommitsListProps} from './types'
 import { ThemedButton } from '../../../../components/ui/ThemedButton'
+
+// Функция для определения тега/типа коммита на основе текста сообщения
+const getCommitTag = (message?: string): { text: string; color: string } => {
+	// Проверка на существование сообщения
+	if (!message) {
+		return { text: 'commit', color: 'bg-gray-100 text-gray-800' };
+	}
+	
+	const lowerMessage = message.toLowerCase();
+	
+	if (lowerMessage.includes('fix') || lowerMessage.includes('исправлен')) {
+		return { text: 'fix', color: 'bg-yellow-100 text-yellow-800' };
+	} else if (lowerMessage.includes('feature') || lowerMessage.includes('добавлен')) {
+		return { text: 'feature', color: 'bg-green-100 text-green-800' };
+	} else if (lowerMessage.includes('ui') || lowerMessage.includes('интерфейс')) {
+		return { text: 'ui', color: 'bg-blue-100 text-blue-800' };
+	} else if (lowerMessage.includes('refactor') || lowerMessage.includes('рефакторинг')) {
+		return { text: 'refactor', color: 'bg-indigo-100 text-indigo-800' };
+	} else if (lowerMessage.includes('test') || lowerMessage.includes('тест')) {
+		return { text: 'test', color: 'bg-purple-100 text-purple-800' };
+	} else if (lowerMessage.includes('docs') || lowerMessage.includes('документац')) {
+		return { text: 'docs', color: 'bg-gray-100 text-gray-800' };
+	} else if (lowerMessage.includes('api') || lowerMessage.includes('сервис')) {
+		return { text: 'api-service', color: 'bg-blue-100 text-blue-800' };
+	}
+	
+	return { text: 'commit', color: 'bg-gray-100 text-gray-800' };
+};
+
+// Функция для форматирования хэша коммита
+const formatCommitHash = (hash: string): string => {
+	if (!hash) return 'xxxxxxx';
+	return hash.substring(0, 7);
+};
+
+// Количество коммитов для отображения за раз
+const COMMITS_PER_PAGE = 12;
 
 export const CommitsList: React.FC<CommitsListProps> = ({
 	commits,
@@ -10,6 +47,13 @@ export const CommitsList: React.FC<CommitsListProps> = ({
 	error,
 	onBack,
 }) => {
+	// Состояние для хранения количества отображаемых коммитов
+	const [visibleCommits, setVisibleCommits] = useState(COMMITS_PER_PAGE);
+
+	// Функция для загрузки дополнительных коммитов
+	const loadMoreCommits = () => {
+		setVisibleCommits(prev => prev + COMMITS_PER_PAGE);
+	};
 
 	if (loading) {
 		return (
@@ -37,6 +81,10 @@ export const CommitsList: React.FC<CommitsListProps> = ({
 	const repoName = selectedRepo.repositoryUrl
 		? new URL(selectedRepo.repositoryUrl).pathname.substring(1)
 		: "Репозиторий";
+
+	// Получаем только видимые коммиты
+	const displayedCommits = commits.slice(0, visibleCommits);
+	const hasMoreCommits = commits.length > visibleCommits;
 
 	return (
 		<div>
@@ -86,65 +134,80 @@ export const CommitsList: React.FC<CommitsListProps> = ({
 			</div>
 
 			{commits.length > 0 ? (
-				<div className="grid grid-cols-1 gap-4">
-					{commits.map((commit) => (
-						<div key={commit.id} className="border rounded shadow-sm hover:shadow transition-shadow duration-200 bg-white overflow-hidden">
-							<div className="border-b bg-gray-50 px-4 py-3 flex justify-between items-center">
-								<div className="flex items-center">
-									{commit.authorAvatarUrl ? (
-										<img 
-											src={commit.authorAvatarUrl} 
-											alt={commit.authorName} 
-											className="w-6 h-6 rounded-full mr-2"
-										/>
-									) : (
-										<div className="w-6 h-6 rounded-full bg-gray-300 mr-2 flex items-center justify-center text-xs font-bold text-gray-800">
-											{commit.authorName && commit.authorName.charAt(0).toUpperCase()}
+				<>
+					<div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+						{displayedCommits.map((commit) => {
+							const commitTag = getCommitTag(commit.commitMessage);
+							const commitUrl = selectedRepo.repositoryUrl && commit.commitHash 
+								? `${selectedRepo.repositoryUrl}/commit/${commit.commitHash}` 
+								: null;
+								
+							// Получаем первую строку сообщения коммита для заголовка
+							const title = commit.commitMessage 
+								? commit.commitMessage.split('\n')[0] 
+								: 'Нет описания';
+							
+							return (
+								<a 
+									key={commit.id} 
+									href={commitUrl || '#'}
+									target="_blank" 
+									rel="noopener noreferrer" 
+									className="block"
+								>
+									<div className="border rounded shadow-sm hover:shadow-md transition-all duration-200 bg-white overflow-hidden h-full cursor-pointer hover:border-blue-400">
+										<div className="px-4 py-3 border-b">
+											<div className="flex items-center mb-2">
+												{commit.authorAvatarUrl ? (
+													<img 
+														src={commit.authorAvatarUrl} 
+														alt={commit.authorName || 'Автор'} 
+														className="w-8 h-8 rounded-full mr-3"
+													/>
+												) : (
+													<div className="w-8 h-8 rounded-full bg-gray-200 mr-3 flex items-center justify-center text-sm font-bold text-gray-700">
+														{commit.authorName ? commit.authorName.charAt(0).toUpperCase() : '?'}
+													</div>
+												)}
+												<div className="flex-1">
+													<div className="font-medium text-sm">{commit.authorName || 'Неизвестно'}</div>
+													<div className="text-xs text-gray-500 truncate">{commit.authorEmail || 'Нет email'}</div>
+												</div>
+												<div className={`text-xs px-2 py-1 rounded-full ${commitTag.color}`}>
+													{commitTag.text}
+												</div>
+											</div>
 										</div>
-									)}
-									<div>
-										<span className="font-medium text-sm">{commit.authorName}</span>
-										{commit.authorEmail && (
-											<span className="text-xs text-gray-500 ml-2">{commit.authorEmail}</span>
-										)}
+										
+										<div className="p-4">
+											<h4 className="text-sm font-medium mb-1 line-clamp-2" title={title}>
+												{title}
+											</h4>
+											<div className="mt-4 flex justify-between items-center text-xs text-gray-500">
+												<div>{commit.commitDate ? new Date(commit.commitDate).toLocaleDateString() + ' в ' + new Date(commit.commitDate).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'Дата неизвестна'}</div>
+												<div className="font-mono bg-gray-100 px-2 py-1 rounded">{formatCommitHash(commit.commitHash)}</div>
+											</div>
+										</div>
 									</div>
-								</div>
-								<div className="text-xs text-gray-500">
-									{new Date(commit.commitDate).toLocaleDateString()} в {new Date(commit.commitDate).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-								</div>
-							</div>
-							
-							<div className="p-4">
-								<p className="mb-3 whitespace-pre-line">{commit.commitMessage}</p>
-								<div className="bg-gray-50 p-2 rounded border font-mono text-xs text-gray-700 flex items-center overflow-x-auto">
-									<svg className="h-4 w-4 text-gray-500 mr-2 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-										<path d="M8 12h.01M12 12h.01M16 12h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-									</svg>
-									<span className="flex-shrink-0 mr-2">Комит:</span>
-									<code className="font-mono text-xs">{commit.commitHash}</code>
-								</div>
-							</div>
-							
-							<div className="border-t px-4 py-2 bg-gray-50 flex justify-end">
-								{selectedRepo.repositoryUrl && commit.commitHash && (
-									<a 
-										href={`${selectedRepo.repositoryUrl}/commit/${commit.commitHash}`} 
-										target="_blank" 
-										rel="noopener noreferrer"
-										className="text-xs text-blue-600 hover:underline flex items-center"
-									>
-										<svg className="h-3 w-3 mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-											<path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"></path>
-											<path d="M15 3h6v6"></path>
-											<path d="M10 14L21 3"></path>
-										</svg>
-										Просмотреть на GitHub
-									</a>
-								)}
-							</div>
+								</a>
+							);
+						})}
+					</div>
+					
+					{hasMoreCommits && (
+						<div className="flex justify-center mt-6 mb-6">
+							<ThemedButton
+								onClick={loadMoreCommits}
+								className="py-2 px-4 rounded flex items-center text-sm"
+							>
+								<svg className="h-4 w-4 mr-1" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+									<path d="M19 14l-7 7m0 0l-7-7m7 7V3"></path>
+								</svg>
+								Загрузить еще ({commits.length - visibleCommits})
+							</ThemedButton>
 						</div>
-					))}
-				</div>
+					)}
+				</>
 			) : (
 				<div className="flex flex-col items-center justify-center py-12 bg-gray-50 rounded-lg">
 					<svg className="h-16 w-16 text-gray-400 mb-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1">
@@ -152,6 +215,13 @@ export const CommitsList: React.FC<CommitsListProps> = ({
 					</svg>
 					<p className="text-gray-500 mb-2">Нет коммитов для отображения</p>
 					<p className="text-gray-400 text-sm">Попробуйте синхронизировать репозиторий или выбрать другую ветку</p>
+				</div>
+			)}
+			
+			{/* Отображаем информацию о количестве загруженных коммитов */}
+			{commits.length > 0 && (
+				<div className="text-center text-xs text-gray-500 mt-4">
+					Показано {Math.min(visibleCommits, commits.length)} из {commits.length} коммитов
 				</div>
 			)}
 		</div>

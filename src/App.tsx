@@ -15,6 +15,8 @@ import {AllTasks} from './pages/tasks/AllTasks'
 import {MyTasks} from './pages/tasks/MyTasks'
 import {Team} from './pages/welcome/team/Team'
 import {Welcome} from './pages/welcome/Welcome'
+import {SidebarProvider} from './contexts/SidebarContext'
+import {Settings} from './pages/Settings/Settings'
 import {
 	ProfileSettings
 } from './pages/Settings/components/ProfileSettings/ProfileSettings'
@@ -24,10 +26,6 @@ import {
 import {
 	SecuritySettings
 } from './pages/Settings/components/SecuritySettings/SecuritySettings'
-import {Settings} from './pages/Settings/Settings'
-import {SidebarProvider} from './contexts/SidebarContext'
-import {NonAuthRoute} from './components/routes/NonAuthRoute'
-import UserSettingsPage from './pages/profile/UserSettingsPage'
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 	const { isAuthenticated } = useAuth()
@@ -134,10 +132,15 @@ function App() {
 								path='/settings'
 								element={
 									<ProtectedRoute>
-										<UserSettingsPage />
+										<Settings />
 									</ProtectedRoute>
 								}
-							/>
+							>
+								<Route path="profile" element={<ProfileSettings />} />
+								<Route path="appearance" element={<AppearanceSettings />} />
+								<Route path="security" element={<SecuritySettings />} />
+								<Route index element={<Navigate to="profile" replace />} />
+							</Route>
 
 							{/* Глобальный 404 для всех остальных маршрутов */}
 							<Route path='*' element={<NotFound />} />
