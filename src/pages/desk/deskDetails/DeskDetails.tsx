@@ -125,9 +125,11 @@ export const DeskDetails = () => {
 	}
 
 	// Определяем активные вкладки
-	const isOverviewActive = location.pathname.includes('/overview')
-	// Считаем активной, если путь содержит /board или заканчивается на /desk/ID
-	const isBoardActive = location.pathname.includes('/board') || location.pathname === `/desk/${id}`
+	const isOverviewActive = location.pathname.endsWith('/overview')
+	// Считаем активной доску, если путь НЕ обзор и НЕ гитхаб (по умолчанию доска)
+	const isBoardActive = !isOverviewActive && !location.pathname.endsWith('/github')
+	// Новая проверка для GitHub
+	const isGitHubActive = location.pathname.endsWith('/github')
 
 	// Получаем первую букву названия доски
 	const getFirstLetter = () => {
@@ -179,14 +181,13 @@ export const DeskDetails = () => {
 							Задачи
 						</Link>
 						{/* Новая ссылка на GitHub */}
-						<a 
-							href='https://github.com' 
-							target='_blank' 
-							rel='noopener noreferrer' 
-							className='py-1 px-3 font-medium text-gray-600 hover:text-gray-900'
+						<Link
+							to={`/desk/${id}/github`}
+							className={`py-1 px-3 font-medium ${!isGitHubActive ? 'text-gray-600 hover:text-gray-900' : ''}`}
+							style={isGitHubActive ? { color: 'var(--theme-color)' } : {}}
 						>
 							GitHub
-						</a>
+						</Link>
 					</div>
 				</div>
 			</div>

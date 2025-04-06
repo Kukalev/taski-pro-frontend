@@ -18,5 +18,6 @@ export interface TaskUpdate {
 	statusType?: string;
 	executorUsernames?: string[];
 	removeExecutorUsernames?: string[];
+	taskStack?: string[];
 }
 
