@@ -7,6 +7,7 @@ import {DeskData} from '../../../components/sidebar/types/sidebar.types.ts'
 import {DeskService} from '../../../services/desk/Desk.ts'
 import {UserService} from '../../../services/users/Users'
 import {canEditDesk} from '../../../utils/permissionUtils'
+import { UserOnDesk } from '../../DeskOverview/components/DeskParticipants/types'
 
 export const DeskDetails = () => {
 	const { id } = useParams<{ id: string }>()
@@ -16,62 +17,75 @@ export const DeskDetails = () => {
 	const [error, setError] = useState<string | null>(null)
 	const [updateCounter, setUpdateCounter] = useState(0)
 	const loadingRef = useRef(false) // Для предотвращения двойных вызовов
-	const [deskUsers, setDeskUsers] = useState<any[]>([])
+	const [deskUsers, setDeskUsers] = useState<UserOnDesk[]>([])
 	const [hasEditPermission, setHasEditPermission] = useState(false)
 	
-	const loadDesk = useCallback(async () => {
+	const loadDesk = useCallback(async (forceUserRefresh = false) => {
 		if (!id) return
 
 		// Предотвращаем повторную загрузку, если уже загружаем
-		if (loadingRef.current) {
+		if (loadingRef.current && !forceUserRefresh) {
 			console.log('Загрузка уже выполняется, пропускаем повторный вызов')
 			return
 		}
 
 		try {
-			loadingRef.current = true
-			setLoading(true)
-			console.log(`Загружаем доску ID: ${id}`)
+			if (!forceUserRefresh) {
+				loadingRef.current = true
+				setLoading(true)
+				console.log(`Загружаем доску ID: ${id}`)
+				const deskData = await DeskService.getDeskById(Number(id))
+				console.log('Доска загружена:', deskData)
+				setDesk(deskData)
+				setError(null)
+			}
 
-			const deskData = await DeskService.getDeskById(Number(id))
-			console.log('Доска загружена:', deskData)
+			// Загружаем или перезагружаем пользователей
+			console.log(`[loadDesk] Загружаем пользователей для доски ${id} (force=${forceUserRefresh})`)
+			const users: UserOnDesk[] = await UserService.getUsersOnDesk(Number(id), forceUserRefresh)
+			console.log(`[loadDesk] Пользователи загружены:`, users)
+			setDeskUsers(users)
 
-			setDesk(deskData)
-			setError(null)
-			
-			// Загружаем пользователей для проверки прав
-			try {
-				const users = await UserService.getUsersOnDesk(Number(id))
-				setDeskUsers(users)
-				
-				// Проверяем права пользователя
+			// Проверяем права только если есть пользователи
+			if (users && users.length > 0) {
 				const canEdit = canEditDesk(users)
 				setHasEditPermission(canEdit)
 				console.log(`Права на редактирование доски: ${canEdit ? 'Есть' : 'Нет'}`)
-			} catch (userError) {
-				console.error('Ошибка при загрузке пользователей:', userError)
-				setHasEditPermission(false)
+			} else {
+				setHasEditPermission(false) // Нет прав, если нет пользователей
 			}
 		} catch (err) {
-			console.error('Ошибка при загрузке доски:', err)
-			setError(err instanceof Error ? err.message : 'Не удалось загрузить информацию о доске')
+			console.error('Ошибка при загрузке доски или пользователей:', err)
+			setError(err instanceof Error ? err.message : 'Не удалось загрузить информацию о доске/пользователях')
+			// Сбрасываем пользователей и права при ошибке
+			setDeskUsers([])
+			setHasEditPermission(false)
 		} finally {
-			setLoading(false)
-			loadingRef.current = false
+			// Снимаем общий лоадер только при полной перезагрузке
+			if (!forceUserRefresh) {
+				setLoading(false)
+				loadingRef.current = false
+			}
 		}
-	}, [id]) // Удаляем updateCounter из зависимостей
+	}, [id])
 
 	// Загрузка доски при первом рендере или изменении ID
 	useEffect(() => {
 		loadDesk()
 	}, [loadDesk])
 
-	// Загрузка доски при изменении updateCounter
+	// Загрузка доски при изменении updateCounter (полная перезагрузка)
 	useEffect(() => {
 		if (updateCounter > 0) {
 			loadDesk()
 		}
 	}, [updateCounter, loadDesk])
+
+	// Новая функция для обновления только пользователей
+	const refreshDeskUsers = useCallback(() => {
+		console.log('[refreshDeskUsers] Вызвано обновление только пользователей')
+		loadDesk(true) // Вызываем loadDesk с флагом forceUserRefresh = true
+	}, [loadDesk])
 
 	// Подписка на обновления доски
 	useEffect(() => {
@@ -106,9 +120,9 @@ export const DeskDetails = () => {
 		}
 	}, [desk])
 
-	// Функция для обновления доски, которую можно вызвать из дочерних компонентов
+	// Функция для полной перезагрузки (старый refreshDesk)
 	const refreshDesk = useCallback(() => {
-		console.log('Ручное обновление доски вызвано')
+		console.log('Полное обновление доски вызвано (refreshDesk)')
 		setUpdateCounter(prev => prev + 1)
 	}, [])
 
@@ -194,7 +208,7 @@ export const DeskDetails = () => {
 
 			{/* Основной контент */}
 			<div className='flex-1 overflow-auto'>
-				<Outlet context={{ desk, refreshDesk, hasEditPermission, deskUsers }} />
+				<Outlet context={{ desk, refreshDesk, refreshDeskUsers, hasEditPermission, deskUsers }} />
 			</div>
 		</div>
 	)

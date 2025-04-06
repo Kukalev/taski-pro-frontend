@@ -15,6 +15,7 @@ import DatePicker from '../../components/DatePicker/DatePicker.tsx'
 interface DeskDetailsContext {
   desk: DeskData;
   refreshDesk: () => void;
+  refreshDeskUsers: () => void;
   hasEditPermission: boolean;
   deskUsers: UserOnDesk[];
 }
@@ -30,6 +31,7 @@ const DeskOverviewPage: React.FC<DeskOverviewPageProps> = ({
 }) => {
   const { 
     refreshDesk,
+    refreshDeskUsers,
     hasEditPermission, 
     deskUsers 
   } = useOutletContext<DeskDetailsContext>();
@@ -42,7 +44,19 @@ const DeskOverviewPage: React.FC<DeskOverviewPageProps> = ({
 
   useEffect(() => {
     if (desk && desk.deskFinishDate) {
-      setSelectedDate(desk.deskFinishDate);
+      try {
+        const dateObject = new Date(desk.deskFinishDate);
+        if (!isNaN(dateObject.getTime())) {
+          setSelectedDate(dateObject);
+        } else {
+          setSelectedDate(null);
+        }
+      } catch (e) {
+        console.error("Ошибка при парсинге deskFinishDate:", e);
+        setSelectedDate(null);
+      }
+    } else {
+      setSelectedDate(null);
     }
   }, [desk]);
 
@@ -76,7 +90,6 @@ const DeskOverviewPage: React.FC<DeskOverviewPageProps> = ({
         desk={desk} 
         onDeskUpdate={onDeskUpdate || (() => {})}
         isLoading={isLoading}
-        error={error}
         updateDeskName={updateDeskName}
         onDateClick={handleDateButtonClick}
         selectedDate={selectedDate}
@@ -86,16 +99,15 @@ const DeskOverviewPage: React.FC<DeskOverviewPageProps> = ({
       <div className="max-w-4xl mx-auto px-4 py-6">
         <DeskDescription 
           desk={desk} 
-          onDeskUpdate={onDeskUpdate || (() => {})}
+          onDeskUpdate={(desc) => onDeskUpdate?.({ deskDescription: desc })}
           isLoading={isLoading}
-          updateDeskDescription={updateDeskDescription}
-          hasEditPermission={hasEditPermission}
         />
         
         <DeskParticipants 
           desk={desk} 
-          initialParticipants={deskUsers}
+          deskUsers={deskUsers}
           hasEditPermission={hasEditPermission}
+          refreshDeskUsers={refreshDeskUsers}
         />
       </div>
       

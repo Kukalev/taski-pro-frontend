@@ -22,10 +22,8 @@ const TaskExecutors: React.FC<TaskExecutorProps> = ({
   canEdit = true // По умолчанию разрешено редактирование
 }) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [localDeskUsers, setLocalDeskUsers] = useState<any[]>(deskUsers || []);
   const loadingRef = useRef(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const requestMadeRef = useRef(false);
   
   // Получаем текущих исполнителей задачи с защитой от null
   const executors = task?.executors || [];
@@ -33,46 +31,6 @@ const TaskExecutors: React.FC<TaskExecutorProps> = ({
   // ИЗМЕНЕНО: Проверка, может ли пользователь управлять исполнителями
   // MEMBER не может добавлять/удалять исполнителей, даже если он исполнитель сам
   const actualCanEdit = canEdit && canManageExecutors(deskUsers, task);
-  
-  // Загружаем пользователей только один раз при маунте компонента или изменении deskId
-  useEffect(() => {
-    // Если уже есть пользователи в кэше или пропсах - используем их
-    if (usersCache.has(deskId)) {
-      setLocalDeskUsers(usersCache.get(deskId) || []);
-      return;
-    }
-    
-    if (deskUsers && deskUsers.length > 0) {
-      setLocalDeskUsers(deskUsers);
-      usersCache.set(deskId, deskUsers);
-      return;
-    }
-    
-    // Предотвращаем повторную загрузку
-    if (loadingRef.current || requestMadeRef.current) return;
-    
-    // Загружаем пользователей только если необходимо
-    const loadUsers = async () => {
-      try {
-        loadingRef.current = true;
-        
-        const users = await UserService.getUsersOnDesk(deskId, true);
-        
-        // Сохраняем в кэш и обновляем состояние
-        usersCache.set(deskId, users || []);
-        setLocalDeskUsers(users || []);
-        
-        // Отмечаем, что запрос был выполнен
-        requestMadeRef.current = true;
-      } catch (err) {
-        console.error('Ошибка при загрузке пользователей:', err);
-      } finally {
-        loadingRef.current = false;
-      }
-    };
-    
-    loadUsers();
-  }, [deskId, deskUsers]); // Зависимости: только deskId и deskUsers
   
   // Закрываем dropdown при клике вне компонента
   useEffect(() => {
@@ -117,14 +75,9 @@ const TaskExecutors: React.FC<TaskExecutorProps> = ({
 
   // Определяем цвет обводки в зависимости от роли пользователя
   const getBorderColor = (username: string) => {
-    // Найдем пользователя в списке
-    const user = localDeskUsers.find(u => u.username === username || u.userName === username);
-    
+    const user = deskUsers.find(u => u.username === username || u.userName === username);
     if (!user) return 'border-gray-300';
-    
-    // Проверяем rightType вместо role
     const userRole = user.rightType || user.role;
-    
     switch(userRole) {
       case 'CREATOR':
         return 'border-red-500'; // Красный для CREATOR
@@ -162,6 +115,7 @@ const TaskExecutors: React.FC<TaskExecutorProps> = ({
       <div 
         className={`inline-flex items-center ${actualCanEdit ? 'cursor-pointer' : 'cursor-default'}`} 
         onClick={toggleDropdown}
+        data-interactive-control="true" // Помечаем как интерактивный
       >
         {executors.length > 0 ? (
           // Отображаем только аватарки исполнителей без крестиков
@@ -232,29 +186,32 @@ const TaskExecutors: React.FC<TaskExecutorProps> = ({
 
           {/* Доступные пользователи доски */}
           <div className="p-2 max-h-48 overflow-y-auto">
-            {loadingRef.current ? (
-              <div className="py-1 px-2 text-sm text-gray-500">
-                Загрузка пользователей...
-              </div>
-            ) : localDeskUsers.length === 0 ? (
+            {!deskUsers || deskUsers.length === 0 ? (
               <div className="py-1 px-2 text-sm text-gray-500">
                 Нет доступных пользователей
               </div>
             ) : (
-              localDeskUsers
-                .filter(user => user && user.username && !executors.includes(user.username))
-                .map(user => (
-                  <div 
-                    key={user.username}
-                    className="flex items-center py-1 px-2 hover:bg-gray-100 rounded cursor-pointer"
-                    onClick={(e) => handleAddExecutor(user.username, e)}
-                  >
-                    <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-medium text-gray-700 border border-solid ${getBorderColor(user.username)} bg-white mr-2 shrink-0`}>
-                      {getUserInitials(user.username)}
+              deskUsers
+                .filter(user => {
+                  // Убедимся, что user и username существуют
+                  const username = user?.username || user?.userName;
+                  return username && !executors.includes(username);
+                 })
+                .map(user => {
+                  const username = user.username || user.userName; // Гарантируем наличие username
+                  return (
+                    <div
+                      key={username}
+                      className="flex items-center py-1 px-2 hover:bg-gray-100 rounded cursor-pointer"
+                      onClick={(e) => handleAddExecutor(username, e)}
+                    >
+                      <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-medium text-gray-700 border border-solid ${getBorderColor(username)} bg-white mr-2 shrink-0`}>
+                        {getUserInitials(username)}
+                      </div>
+                      <span className="text-sm truncate" title={username}>{username}</span>
                     </div>
-                    <span className="text-sm truncate" title={user.username}>{user.username}</span>
-                  </div>
-                ))
+                  );
+                })
             )}
           </div>
         </div>
