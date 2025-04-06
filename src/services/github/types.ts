@@ -18,6 +18,7 @@ export interface GitCommitResponseDto {
     commitHash: string;
     authorName: string;
     authorEmail: string;
+    authorAvatarUrl?: string;
     commitDate: string;
     commitMessage: string;
 }

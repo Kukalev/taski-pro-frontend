@@ -13,12 +13,14 @@ export const AddRepositoryModal: React.FC<AddRepositoryModalProps> = ({
 	const [branchName, setBranchName] = useState(''); // По умолчанию пустая строка
 	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
+	const [isPartialSuccess, setIsPartialSuccess] = useState(false);
 
 	const resetForm = () => {
 		setRepositoryUrl('');
 		setBranchName('');
 		setError(null);
 		setIsLoading(false);
+		setIsPartialSuccess(false);
 	};
 
 	const handleClose = () => {
@@ -32,6 +34,7 @@ export const AddRepositoryModal: React.FC<AddRepositoryModalProps> = ({
 
 		setIsLoading(true);
 		setError(null);
+		setIsPartialSuccess(false);
 
 		const repoData: AddGitRepositoryDto = {
 			repositoryUrl,
@@ -46,7 +49,14 @@ export const AddRepositoryModal: React.FC<AddRepositoryModalProps> = ({
 			handleClose(); // Закрываем модалку после успеха
 		} catch (err) {
 			console.error("[AddRepositoryModal] Ошибка добавления:", err);
-			setError(GitHubService.handleError(err)); // Используем обработчик
+			const errorMessage = GitHubService.handleError(err);
+			setError(errorMessage);
+			
+			// Если ошибка касается только синхронизации, но репозиторий добавлен
+			if (errorMessage.includes("Невозможно синхронизировать") || 
+				errorMessage.includes("Сервис недоступен")) {
+				setIsPartialSuccess(true);
+			}
 		} finally {
 			setIsLoading(false);
 		}
@@ -73,8 +83,13 @@ export const AddRepositoryModal: React.FC<AddRepositoryModalProps> = ({
 				<h2 className="text-xl font-semibold mb-4">Добавить GitHub репозиторий</h2>
 
 				{error && (
-					<div className="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded mb-4 text-sm" role="alert">
+					<div className={`${isPartialSuccess ? 'bg-yellow-100 border-yellow-400 text-yellow-700' : 'bg-red-100 border-red-400 text-red-700'} px-4 py-2 rounded mb-4 text-sm`} role="alert">
 						{error}
+						{isPartialSuccess && (
+							<p className="mt-1 font-medium">
+								Однако репозиторий, скорее всего, был добавлен. После закрытия этого окна обновите страницу, чтобы увидеть его в списке. Затем вы сможете повторить синхронизацию.
+							</p>
+						)}
 					</div>
 				)}
 
@@ -118,15 +133,17 @@ export const AddRepositoryModal: React.FC<AddRepositoryModalProps> = ({
 							disabled={isLoading}
 							className="py-2 px-4 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 disabled:opacity-50"
 						>
-							Отмена
+							{isPartialSuccess ? 'Закрыть' : 'Отмена'}
 						</button>
-						<button
-							type="submit"
-							disabled={isLoading || !repositoryUrl}
-							className="py-2 px-4 bg-indigo-600 text-white rounded-md shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
-						>
-							{isLoading ? 'Добавление...' : 'Добавить'}
-						</button>
+						{!isPartialSuccess && (
+							<button
+								type="submit"
+								disabled={isLoading || !repositoryUrl}
+								className="py-2 px-4 bg-indigo-600 text-white rounded-md shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
+							>
+								{isLoading ? 'Добавление...' : 'Добавить'}
+							</button>
+						)}
 					</div>
 				</form>
 			</div>
