@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from 'react'
-import { DeskService } from '../../../services/desk/Desk'
-import { ModalButtons } from './components/ModalButtons'
-import { ModalContent } from './components/ModalContent'
-import { ModalHeader } from './components/ModalHeader'
-import { CreateDeskModalProps } from './types/createDeskModal.types'
-import { validateDeskData } from './utils/modalHelpers'
+import {useEffect, useRef, useState} from 'react'
+import {DeskService} from '../../../services/desk/Desk'
+import {ModalButtons} from './components/ModalButtons'
+import {ModalContent} from './components/ModalContent'
+import {ModalHeader} from './components/ModalHeader'
+import {CreateDeskModalProps} from './types/createDeskModal.types'
+import {validateDeskData} from './utils/modalHelpers'
+import {DeskResponseDto} from '../../../services/desk/types/desk.types.ts'
 
 export const CreateDeskModal = ({ isOpen, onClose, onDeskCreated }: CreateDeskModalProps) => {
 	const [deskName, setDeskName] = useState('')
@@ -43,30 +44,21 @@ export const CreateDeskModal = ({ isOpen, onClose, onDeskCreated }: CreateDeskMo
 		return () => {
 			document.removeEventListener('mousedown', handleOutsideClick)
 		}
-	// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [isOpen]) // Оставляем зависимость только от isOpen, handleInternalClose стабильна
 
-	// Убираем useEffect, который сбрасывал состояние при открытии
-	/*
-	useEffect(() => {
-		if (isOpen) {
-			setDeskName('')
-			setDeskDescription('')
-			setError(null)
-		}
-	}, [isOpen])
-	*/
+
 
 	const handleSubmit = async () => {
 		setIsLoading(true)
 		setError(null)
 
 		try {
-			const deskId = await DeskService.createDesk({
+			const createDesk: DeskResponseDto = await DeskService.createDesk({
 				deskName: deskName.trim(),
 				deskDescription: deskDescription.trim()
 			})
-			const newDesk = await DeskService.getDeskById(Number(deskId))
+			console.log(createDesk, 'СОЗДАНИЕЕЕЕЕЕЕЕЕЕЕЕЕЕ')
+			const newDesk = await DeskService.getDeskById(Number(createDesk.id))
 			if (onDeskCreated) {
 				onDeskCreated(newDesk)
 			}

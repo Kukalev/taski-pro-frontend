@@ -2,11 +2,12 @@ import api from '../../api'
 import {AuthResponse, LoginRequest} from '../types/Auth.types'
 import {saveTokens} from '../utils/TokenStorage.ts'
 
+const BASE_URL = '/api/v1/auth'
 export const login = async (data: LoginRequest, authContextLogin: () => void): Promise<AuthResponse> => {
 	try {
 		console.log(`[LoginApi] Отправка запроса на /auth/login для пользователя: ${data.username}`);
 		console.log(`[LoginApi] Выполнение api.post('/auth/login', ...) для ${data.username}`);
-		const response = await api.post<AuthResponse>('/auth/login', data)
+		const response = await api.post<AuthResponse>(`${BASE_URL}/login`, data)
 		console.log(`[LoginApi] Получен ответ от /auth/login для ${data.username}. Статус: ${response.status}`);
 		console.log(`[LoginApi] Данные ответа:`, response.data);
 

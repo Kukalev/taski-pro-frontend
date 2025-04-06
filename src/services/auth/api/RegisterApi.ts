@@ -2,12 +2,13 @@ import api from '../../api'
 import {AuthResponse, RegisterRequest} from '../types/Auth.types'
 import {login} from './LoginApi'
 
-// ---> Добавляем параметр authContextLogin <---
+
+const BASE_URL = '/api/v1/auth'
 export const register = async (data: RegisterRequest, authContextLogin: () => void): Promise<AuthResponse> => {
 	try {
 		// Регистрация
 		console.log(`[RegisterApi] Отправка запроса на /auth/registration для пользователя: ${data.username}`);
-		await api.post('/auth/registration', data)
+		await api.post(`${BASE_URL}/registration`, data)
 		console.log(`[RegisterApi] Регистрация для ${data.username} УСПЕШНА. Выполняется автоматический вход...`);
 
 		// Автоматический вход после успешной регистрации
