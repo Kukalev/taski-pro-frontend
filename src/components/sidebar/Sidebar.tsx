@@ -13,6 +13,7 @@ import { DESK_UPDATE_EVENT } from '../../pages/DeskOverview/hooks/useDeskActions
 import { UserService } from '../../services/users/Users'
 import { canEditDesk } from '../../utils/permissionUtils'
 import { DeskData } from './types/sidebar.types'
+import { useSidebar } from '../../contexts/SidebarContext'
 
 export const Sidebar = () => {
 	const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
@@ -22,6 +23,7 @@ export const Sidebar = () => {
 	const [isDeleting, setIsDeleting] = useState(false)
 	const [hasEditPermission, setHasEditPermission] = useState(false)
 	const [searchQuery, setSearchQuery] = useState('')
+	const { isCollapsed } = useSidebar()
 
 	const navigate = useNavigate()
 	const location = useLocation()
@@ -175,27 +177,37 @@ export const Sidebar = () => {
 
 	return (
 		<>
-			<div className='w-70 min-w-[300px] bg-gray-50 h-[calc(100vh-3.5rem)] p-4 flex flex-col border-r border-gray-200'>
-				{/* Поиск */}
-				<SidebarSearch searchQuery={searchQuery} onSearchChange={setSearchQuery} />
+			<div 
+				className="h-[calc(100vh-3.5rem)] bg-gray-50 border-r border-gray-200 transition-width duration-1000 ease-in-out flex flex-col"
+				style={{ width: isCollapsed ? '56px' : '300px' }}
+			>
+				<div className="pt-4 px-2" style={{ marginBottom: isCollapsed ? '0.5rem' : '1rem' }}>
+					<SidebarSearch searchQuery={searchQuery} onSearchChange={setSearchQuery} isCollapsed={isCollapsed} />
+				</div>
 
-				{/* Основное меню */}
-				<SidebarMenu location={location} onItemClick={handleItemClick} />
+				<div className="px-2 mb-4">
+					<SidebarMenu location={location} onItemClick={handleItemClick} />
+				</div>
 
-				{/* Компонент с досками */}
-				<SidebarDesks
-					desks={filteredDesks}
-					loading={loading}
-					onDeskClick={handleDeskClick}
-					onAddClick={() => setIsCreateModalOpen(true)}
-					onRename={handleRenameClick}
-					onDelete={handleDeleteClick}
-					searchQuery={searchQuery}
-					originalDesksCount={desks.length}
-				/>
+				<div className="px-2 flex-grow flex flex-col overflow-hidden">
+					<SidebarDesks
+						desks={filteredDesks}
+						loading={loading}
+						onDeskClick={handleDeskClick}
+						onAddClick={() => setIsCreateModalOpen(true)}
+						onRename={handleRenameClick}
+						onDelete={handleDeleteClick}
+						searchQuery={searchQuery}
+						originalDesksCount={desks.length}
+						isCollapsed={isCollapsed}
+					/>
+				</div>
 
-				{/* Счетчик досок - используем desks.length для общего количества */}
-				<SidebarFooter desksCount={desks.length} />
+				<div className="px-2 pb-4">
+					<div style={{ height: isCollapsed ? '0' : 'auto', overflow: 'hidden', opacity: isCollapsed ? 0 : 1, transition: 'all 1000ms ease-in-out' }}>
+						<SidebarFooter desksCount={desks.length} />
+					</div>
+				</div>
 			</div>
 
 			{/* Модальные окна */}

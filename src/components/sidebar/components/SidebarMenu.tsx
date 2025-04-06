@@ -1,13 +1,16 @@
 import { SidebarMenuProps } from '../types/sidebar.types'
 import { MenuItem } from './MenuItem'
+import { useSidebar } from '../../../contexts/SidebarContext'
 
 export const SidebarMenu = ({ location, onItemClick }: SidebarMenuProps) => {
+	const { isCollapsed } = useSidebar()
+	
 	const isAllDesksActive = () => {
 		return location.pathname === '/desk' || location.pathname === '/desk/'
 	}
 
 	return (
-		<nav className='mb-4'>
+		<nav className=''>
 			<ul className='space-y-1'>
 				<li>
 					<MenuItem
@@ -19,7 +22,8 @@ export const SidebarMenu = ({ location, onItemClick }: SidebarMenuProps) => {
 								<path d='M12 4H6C4.89543 4 4 4.89543 4 6V18C4 19.1046 4.89543 20 6 20H18C19.1046 20 20 19.1046 20 18V12M9 15L20 4' />
 							</svg>
 						}
-						label='Мои задачи'
+						label='Задачи'
+						isCollapsed={isCollapsed}
 					/>
 				</li>
 				<li>
@@ -33,6 +37,7 @@ export const SidebarMenu = ({ location, onItemClick }: SidebarMenuProps) => {
 							</svg>
 						}
 						label='Все задачи'
+						isCollapsed={isCollapsed}
 					/>
 				</li>
 				<li>
@@ -46,6 +51,7 @@ export const SidebarMenu = ({ location, onItemClick }: SidebarMenuProps) => {
 							</svg>
 						}
 						label='Все доски'
+						isCollapsed={isCollapsed}
 					/>
 				</li>
 			</ul>

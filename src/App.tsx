@@ -25,6 +25,9 @@ import {
 	SecuritySettings
 } from './pages/Settings/components/SecuritySettings/SecuritySettings'
 import {Settings} from './pages/Settings/Settings'
+import {SidebarProvider} from './contexts/SidebarContext'
+import {NonAuthRoute} from './components/routes/NonAuthRoute'
+import UserSettingsPage from './pages/profile/UserSettingsPage'
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 	const { isAuthenticated } = useAuth()
@@ -48,101 +51,98 @@ function App() {
 		<BrowserRouter>
 			<AuthProvider>
 				<DeskProvider>
-					<Routes>
-						{/* Публичные роуты */}
-						<Route path='/login' element={<LoginPage />} />
-						<Route path='/register' element={<RegisterPage />} />
+					<SidebarProvider>
+						<Routes>
+							{/* Публичные роуты */}
+							<Route path='/login' element={<LoginPage />} />
+							<Route path='/register' element={<RegisterPage />} />
 
-						{/* Защищенные welcome роуты */}
-						<Route
-							path='/welcome'
-							element={
-								<ProtectedRoute>
-									<Welcome />
-								</ProtectedRoute>
-							}
-						/>
-						<Route
-							path='/welcome/team'
-							element={
-								<ProtectedRoute>
-									<Team />
-								</ProtectedRoute>
-							}
-						/>
+							{/* Защищенные welcome роуты */}
+							<Route
+								path='/welcome'
+								element={
+									<ProtectedRoute>
+										<Welcome />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path='/welcome/team'
+								element={
+									<ProtectedRoute>
+										<Team />
+									</ProtectedRoute>
+								}
+							/>
 
-						{/* Корневой маршрут desk */}
-						<Route
-							path='/desk'
-							element={
-								<ProtectedRoute>
-									<DeskLayout>
-										<Desk />
-									</DeskLayout>
-								</ProtectedRoute>
-							}
-						/>
+							{/* Корневой маршрут desk */}
+							<Route
+								path='/desk'
+								element={
+									<ProtectedRoute>
+										<DeskLayout>
+											<Desk />
+										</DeskLayout>
+									</ProtectedRoute>
+								}
+							/>
 
-						{/* Маршруты для конкретной доски по ID */}
-						<Route
-							path='/desk/:id'
-							element={
-								<ProtectedRoute>
-									<DeskLayout>
-										<DeskDetails />
-									</DeskLayout>
-								</ProtectedRoute>
-							}
-						>
-							<Route path="overview" element={<DeskOverview />} />
-							<Route path="board" element={<DeskBoard />} />
-							<Route path="github" element={<GitHubPage />} />
-							<Route index element={<Navigate to="board" replace />} />
-						</Route>
+							{/* Маршруты для конкретной доски по ID */}
+							<Route
+								path='/desk/:id'
+								element={
+									<ProtectedRoute>
+										<DeskLayout>
+											<DeskDetails />
+										</DeskLayout>
+									</ProtectedRoute>
+								}
+							>
+								<Route path="overview" element={<DeskOverview />} />
+								<Route path="board" element={<DeskBoard />} />
+								<Route path="github" element={<GitHubPage />} />
+								<Route index element={<Navigate to="board" replace />} />
+							</Route>
 
-						{/* Специальные подмаршруты desk */}
-						<Route
-							path='/desk/myTasks'
-							element={
-								<ProtectedRoute>
-									<DeskLayout>
-										<MyTasks />
-									</DeskLayout>
-								</ProtectedRoute>
-							}
-						/>
-						<Route
-							path='/desk/allTasks'
-							element={
-								<ProtectedRoute>
-									<DeskLayout>
-										<AllTasks />
-									</DeskLayout>
-								</ProtectedRoute>
-							}
-						/>
+							{/* Специальные подмаршруты desk */}
+							<Route
+								path='/desk/myTasks'
+								element={
+									<ProtectedRoute>
+										<DeskLayout>
+											<MyTasks />
+										</DeskLayout>
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path='/desk/allTasks'
+								element={
+									<ProtectedRoute>
+										<DeskLayout>
+											<AllTasks />
+										</DeskLayout>
+									</ProtectedRoute>
+								}
+							/>
 
-						{/* Редирект с главной теперь через компонент */}
-						<Route path='/' element={<RootRedirect />} />
+							{/* Редирект с главной теперь через компонент */}
+							<Route path='/' element={<RootRedirect />} />
 
-						{/* Маршруты для страницы настроек */}
-						<Route
-							path='/settings'
-							element={
-								<ProtectedRoute>
-									<Settings />
-								</ProtectedRoute>
-							}
-						>
-							<Route path="profile" element={<ProfileSettings />} />
-							<Route path="appearance" element={<AppearanceSettings />} />
-							<Route path="security" element={<SecuritySettings />} />
-							<Route index element={<Navigate to="profile" replace />} />
-						</Route>
+							{/* Маршруты для страницы настроек */}
+							<Route
+								path='/settings'
+								element={
+									<ProtectedRoute>
+										<UserSettingsPage />
+									</ProtectedRoute>
+								}
+							/>
 
-						{/* Глобальный 404 для всех остальных маршрутов */}
-						<Route path='*' element={<NotFound />} />
-					</Routes>
+							{/* Глобальный 404 для всех остальных маршрутов */}
+							<Route path='*' element={<NotFound />} />
+						</Routes>
+					</SidebarProvider>
 				</DeskProvider>
 			</AuthProvider>
 		</BrowserRouter>

@@ -3,7 +3,7 @@ export interface DeskData {
 	deskName: string
 	deskDescription?: string
 	deskCreateDate: Date | string
-	deskFinishDate: Date | string | null
+	deskFinishDate?: Date | string | null
 	userLimit?: number
 	status?: string
 	username?: string
@@ -19,12 +19,14 @@ export interface SidebarDesksProps {
 	onDelete: (id: number) => void
 	searchQuery: string
 	originalDesksCount: number
+	isCollapsed?: boolean
 }
 
 export interface SidebarSearchProps {
 	placeholder?: string
 	searchQuery: string
 	onSearchChange: (query: string) => void
+	isCollapsed?: boolean
 }
 
 export interface SidebarMenuProps {
@@ -42,4 +44,5 @@ export interface MenuItemProps {
 	label: string
 	isActive: boolean
 	onClick: () => void
+	isCollapsed?: boolean
 }

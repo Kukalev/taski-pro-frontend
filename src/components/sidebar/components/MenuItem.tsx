@@ -1,15 +1,27 @@
 import {MenuItemProps} from '../types/sidebar.types'
 
-export const MenuItem = ({  icon, label, isActive, onClick }: MenuItemProps) => {
+export const MenuItem = ({path, icon, label, isActive, onClick, isCollapsed}: MenuItemProps) => {
+	const activeClass = isActive
+		? 'text-blue-600 bg-blue-50 hover:bg-blue-100'
+		: 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+
 	return (
 		<button
-			className={`w-full h-[36px] text-left px-4 py-1 rounded-md flex items-center gap-3 cursor-pointer text-[14px] transition-all duration-200 
-            ${isActive ? 'bg-gray-200' : 'hover:bg-gray-100'}`}
-			onClick={onClick}>
-			{icon}
-			<span
-				className={`transition-all duration-200 leading-none
-                ${isActive ? 'text-gray-900 text-[16px]' : 'text-gray-700 text-[14px]'}`}>
+			type='button'
+			onClick={onClick}
+			className={`w-full flex items-center px-1 py-2 rounded-md text-[13px] font-medium transition-all duration-1000 ease-in-out cursor-pointer ${activeClass}`}
+			data-testid={`sidebar-menu-item-${path.replace(/\//g, '-')}`}
+			title={isCollapsed ? label : ''}
+		>
+			<span className='flex-shrink-0 w-5 h-5 flex items-center justify-center'>
+				{icon}
+			</span>
+			<span className='ml-4 whitespace-nowrap overflow-hidden transition-all duration-1000 ease-in-out' 
+				style={{
+					maxWidth: isCollapsed ? '0' : '200px',
+					opacity: isCollapsed ? '0' : '1'
+				}}
+			>
 				{label}
 			</span>
 		</button>

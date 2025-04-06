@@ -6,7 +6,11 @@ export interface HeaderButtonsProps {
 }
 
 export interface HeaderIconsProps {
-	// Можно добавить props для управления иконками
+	
+}
+
+export interface HeaderLogoProps {
+	onToggleSidebar?: () => void
 }
 
 export interface UserAvatarProps {
@@ -19,4 +23,5 @@ export interface UserAvatarProps {
 export interface IconButtonProps {
 	icon: ReactNode
 	onClick?: () => void
+	className?: string
 }

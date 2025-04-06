@@ -3,12 +3,14 @@ import {HeaderButtons} from './components/HeaderButtons'
 import {HeaderIcons} from './components/HeaderIcons'
 import {HeaderLogo} from './components/HeaderLogo'
 import {UserAvatar} from './components/UserAvatar'
-import { useNavigate } from 'react-router-dom'
+import {useNavigate} from 'react-router-dom'
+import {useSidebar} from '../../contexts/SidebarContext'
 
 export const Header = () => {
 	const username = AuthService.getUsername()
 	const email = localStorage.getItem('email') || 'kukalevna22@mail.ru' // Здесь нужно получить email из хранилища
 	const navigate = useNavigate()
+	const { toggleSidebar } = useSidebar()
 
 	const handleLogout = () => {
 		AuthService.logout()
@@ -29,7 +31,7 @@ export const Header = () => {
 	return (
 		<header className='w-full h-14 bg-white border-b border-gray-200 flex items-center justify-between px-4'>
 			{/* Левая часть с логотипом и названием */}
-			<HeaderLogo />
+			<HeaderLogo onToggleSidebar={toggleSidebar} />
 
 			{/* Правая часть с кнопками и аватаром */}
 			<div className='flex items-center'>

@@ -4,11 +4,12 @@ import {getDeskColor} from '../../../utils/deskColors'
 import {SidebarDesksProps} from '../types/sidebar.types'
 import {canEditDesk} from '../../../utils/permissionUtils'
 import {UserService} from '../../../services/users/Users'
+import { MenuItem } from './MenuItem'
 
 // Кэш для хранения ролей пользователей по доскам
 const userRolesCache = new Map<number, boolean>();
 
-export const SidebarDesks = ({ desks, loading, onDeskClick, onAddClick, onRename, onDelete, searchQuery, originalDesksCount }: SidebarDesksProps) => {
+export const SidebarDesks = ({ desks, loading, onDeskClick, onAddClick, onRename, onDelete, searchQuery, originalDesksCount, isCollapsed }: SidebarDesksProps) => {
 	const location = useLocation()
 	const [activeMenu, setActiveMenu] = useState<number | null>(null)
 	const menuRef = useRef<HTMLDivElement>(null)
@@ -162,16 +163,28 @@ export const SidebarDesks = ({ desks, loading, onDeskClick, onAddClick, onRename
 						<li key={desk.id} className="relative group">
 							<button
 								onClick={() => onDeskClick(desk.id)}
-								className={`w-full h-[32px] text-left px-4 py-1 rounded-md flex items-center gap-1.5 cursor-pointer text-[13px] transition-all duration-200 hover:bg-gray-100 ${location.pathname.includes(`/desk/${desk.id}`) ? 'bg-gray-200 text-gray-900' : 'text-gray-700'}`}
+								className={`w-full text-left rounded-md flex items-center px-1 py-2 cursor-pointer text-[13px] transition-all duration-1000 ease-in-out hover:bg-gray-100 
+									${location.pathname.includes(`/desk/${desk.id}`) ? 'bg-gray-200 text-gray-900' : 'text-gray-700'}`}
 								title={desk.deskName}
 							>
-								<div className={`w-4 h-4 rounded flex items-center justify-center text-[10px] font-medium ${getDeskColor(desk.id)} flex-shrink-0`}>{desk.deskName.charAt(0).toUpperCase()}</div>
-								<span className='truncate flex-grow'>{desk.deskName}</span>
+								<div className={`rounded flex-shrink-0 flex items-center justify-center text-[9px] font-medium ${getDeskColor(desk.id)} w-4 h-4 ml-1 cursor-pointer`}>
+									{desk.deskName.charAt(0).toUpperCase()}
+								</div>
+								<div 
+									className="truncate ml-4 transition-all duration-1000 ease-in-out overflow-hidden"
+									style={{
+										maxWidth: isCollapsed ? '0' : '200px',
+										opacity: isCollapsed ? '0' : '1'
+									}}
+								>
+									{desk.deskName}
+								</div>
 								{deskPermissions[desk.id] && (
 									<div
 										ref={(el) => setButtonRef(desk.id, el)}
 										onClick={(e) => handleMenuToggle(e, desk.id)}
-										className="h-[20px] w-[20px] opacity-0 group-hover:opacity-100 flex items-center justify-center text-gray-500 hover:text-gray-700"
+										className={`h-[20px] w-[20px] ml-auto flex items-center justify-center text-gray-500 hover:text-gray-700 transition-all duration-1000 ease-in-out cursor-pointer
+											${isCollapsed ? 'opacity-0' : 'opacity-0 group-hover:opacity-100'}`}
 										data-interactive-control="true"
 									>
 										<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -229,17 +242,33 @@ export const SidebarDesks = ({ desks, loading, onDeskClick, onAddClick, onRename
 	return (
 		<div className='flex-grow flex flex-col overflow-hidden'>
 			{/* Фиксированный заголовок с кнопкой добавления */}
-			<div className='flex justify-between items-center mb-2 px-4 flex-shrink-0'>
-				<h3 className='text-[14px] font-medium text-gray-600'>Проекты</h3>
-				<button onClick={onAddClick} className='w-5 h-5 rounded-sm bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700 flex items-center justify-center transition-colors' data-interactive-control="true">
-					<svg width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='2'>
-						<path d='M12 5v14M5 12h14' />
-					</svg>
-				</button>
+			<div className='flex items-center mb-2 justify-between'>
+				<div 
+					className="text-[14px] font-medium text-gray-600 transition-all duration-1000 ease-in-out overflow-hidden whitespace-nowrap"
+					style={{
+						maxWidth: isCollapsed ? '40px' : '200px',
+						opacity: 1,
+						height: '1.5rem'
+					}}
+				>
+					{isCollapsed ? 'Пр...' : 'Проекты'}
+				</div>
+                
+                {!isCollapsed && (
+                    <button 
+                        onClick={onAddClick} 
+                        className="rounded bg-gray-100 text-gray-500 hover:bg-gray-200 hover:text-gray-700 flex items-center justify-center w-5 h-5 cursor-pointer" 
+                        data-interactive-control="true"
+                    >
+                        <svg width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='2'>
+                            <path d='M12 5v14M5 12h14' />
+                        </svg>
+                    </button>
+                )}
 			</div>
 
 			{/* Скроллируемая область с контентом */}
-			<div className='overflow-auto flex-grow mb-4'>
+			<div className='overflow-auto flex-grow mb-1'>
 				{renderContent()}
 			</div>
 		</div>
