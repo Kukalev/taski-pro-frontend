@@ -1,9 +1,6 @@
 import React, {useCallback, useEffect, useState} from 'react'
-import { UserService } from '../../../../services/users/Users' // Импортируем UserService для загрузки
 import AddUserModal from '../AddUserModal/AddUserModal'
 import {DeskParticipantsProps, UserOnDesk} from './types'
-import LoadingState from './components/LoadingState'
-import ErrorState from './components/ErrorState'
 import EmptyState from './components/EmptyState'
 import ParticipantsList from './components/ParticipantsList'
 import {
@@ -23,57 +20,26 @@ import {
 import {getUserName} from './utilities'
 import { getTasksByDeskId, updateTask } from '../../../../services/task/Task'
 
-const DeskParticipants: React.FC<DeskParticipantsProps> = ({ desk, deskUsers, hasEditPermission = true, refreshDeskUsers }) => {
+const DeskParticipants: React.FC<DeskParticipantsProps> = ({ desk, deskUsers, hasEditPermission = true, refreshDeskUsers, updateLocalUsers }) => {
   const deskId = desk?.id;
-  console.log(`DeskParticipants RENDER - Desk ID: ${deskId}, Users Count: ${deskUsers?.length}`);
+  console.log(`DeskParticipants RENDER - Desk ID: ${deskId}, Users Count from props: ${deskUsers?.length}`);
 
-  const [participants, setParticipants] = useState<UserOnDesk[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [actionInProgress, setActionInProgress] = useState(false);
-
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserOnDesk | null>(null);
-
-  const loadParticipants = useCallback(async () => {
-    if (!deskId) {
-        setParticipants([]);
-        setIsLoading(false);
-        return;
-    }
-    console.log(`>>> loadParticipants CALLED for desk ID: ${deskId}`);
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const users = await UserService.getUsersOnDesk(deskId, false);
-      const sortedUsers = [...users].sort((a, b) => {
-        if (a.rightType === 'CREATOR' && b.rightType !== 'CREATOR') return -1;
-        if (a.rightType !== 'CREATOR' && b.rightType === 'CREATOR') return 1;
-        return (getUserName(a) || '').localeCompare(getUserName(b) || '');
-      });
-      setParticipants(sortedUsers);
-      console.log("Участники загружены локально:", sortedUsers);
-    } catch (error) {
-      console.error('Ошибка при загрузке участников:', error);
-      setError('Не удалось загрузить участников');
-      setParticipants([]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [deskId]);
+  const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
+  const [localError, setLocalError] = useState<string | null>(null);
 
   useEffect(() => {
-    console.log(`--- useEffect [deskId] TRIGGERED --- Desk ID: ${deskId}`);
-    loadParticipants();
-  }, [loadParticipants]);
+    console.log('[DeskParticipants] ==> Получены НОВЫЕ пропсы deskUsers:', deskUsers);
+    setLocalError(null);
+  }, [deskUsers]);
 
-  const currentUserRole = getUserRoleOnDesk(participants);
+  const currentUserRole = getUserRoleOnDesk(deskUsers || []);
   const hasManagePermission = canManageParticipants(deskUsers || []) && hasEditPermission;
 
   const openDeleteModal = (userId: number) => {
-    const user = participants.find(p => p.id === userId);
+    const user = deskUsers?.find(p => p.id === userId);
     if (user) {
       setSelectedUser(user);
       setDeleteModalOpen(true);
@@ -82,105 +48,94 @@ const DeskParticipants: React.FC<DeskParticipantsProps> = ({ desk, deskUsers, ha
 
   const handleDeleteUser = async (userId: number) => {
     if (!deskId || !selectedUser) return Promise.reject(new Error('Desk ID или selectedUser не определены'));
+
+    const originalUsers = [...deskUsers];
     const deletedUsername = getUserName(selectedUser);
 
+    // 1. Оптимистичное удаление
+    updateLocalUsers(prevUsers => prevUsers.filter(u => u.id !== userId));
+    setDeleteModalOpen(false);
+    setSelectedUser(null);
     setActionInProgress(true);
-    setError(null);
-    console.log(`--- handleDeleteUser STARTED for user ID: ${userId}, username: ${deletedUsername} ---`);
+    setLocalError(null);
 
     try {
+      // 2. Вызов API
       await deleteUserFromDesk(deskId, userId);
-      console.log('--- handleDeleteUser: API call deleteUserFromDesk SUCCESS ---');
-
-      setParticipants(prev => prev.filter(p => p.id !== userId));
-
-      console.log(`--- handleDeleteUser: Fetching tasks for desk ${deskId} to remove executor ${deletedUsername} ---`);
+      // 3. Обновление задач
       const tasks = await getTasksByDeskId(deskId);
-      console.log(`--- handleDeleteUser: Found ${tasks.length} tasks ---`);
       const updatePromises = tasks
         .filter(task => task.executors?.includes(deletedUsername))
-        .map(task => {
-          console.log(`--- handleDeleteUser: Updating task ${task.taskId} to remove executor ${deletedUsername} ---`);
-          return updateTask(deskId, task.taskId, { removeExecutorUsernames: [deletedUsername] })
-            .catch(err => console.error(`Ошибка при удалении исполнителя ${deletedUsername} из задачи ${task.taskId}:`, err));
-        });
+        .map(task => updateTask(deskId, task.taskId, { removeExecutorUsernames: [deletedUsername] }).catch(err => console.error(`Ошибка при удалении исполнителя ${deletedUsername} из задачи ${task.taskId}:`, err)));
       await Promise.all(updatePromises);
-      console.log(`--- handleDeleteUser: Finished updating tasks for executor ${deletedUsername} ---`);
 
-      refreshDeskUsers();
-      console.log('--- handleDeleteUser: Called refreshDeskUsers ---');
-
-      setDeleteModalOpen(false);
-      setSelectedUser(null);
-      console.log('--- handleDeleteUser FINISHED ---');
+      // --- УБИРАЕМ refreshDeskUsers при УСПЕХЕ ---
+      // refreshDeskUsers();
+      console.log('--- handleDeleteUser FINISHED (API OK, UI already updated) ---');
       return Promise.resolve();
+
     } catch (error) {
       console.error('Ошибка при удалении пользователя или обновлении задач:', error);
-      setError('Не удалось удалить пользователя или обновить связанные задачи');
-      console.log('--- handleDeleteUser ERRORED ---');
-      loadParticipants();
-      refreshDeskUsers();
+      setLocalError('Не удалось удалить пользователя');
+      // 5. Откат при ошибке API (оставляем)
+      console.log('--- handleDeleteUser ERRORED - Rolling back ---');
+      updateLocalUsers(() => originalUsers);
+      refreshDeskUsers(); // Обновляем для синхронизации после ошибки
       return Promise.reject(error);
     } finally {
       setActionInProgress(false);
-      setDeleteModalOpen(false);
-      setSelectedUser(null);
     }
   };
 
   const handleUpdateUserRole = async (userId: number, rightType: RightType) => {
     if (!deskId || actionInProgress) return;
-    const originalParticipants = [...participants];
 
-    console.log(`--- handleUpdateUserRole STARTED for user ID: ${userId}, new role: ${rightType} ---`);
+    const originalUsers = [...deskUsers];
+    const userIndex = originalUsers.findIndex(u => u.id === userId);
+    if (userIndex === -1) return; // Пользователь не найден
 
-    setParticipants(prev => prev.map(p => p.id === userId ? { ...p, rightType } : p));
+    // Проверяем, нужно ли вообще обновление
+    if (originalUsers[userIndex].rightType === rightType) {
+        console.log(`Роль пользователя ${userId} уже ${rightType}. Обновление не требуется.`);
+        return;
+    }
 
+    // 1. Оптимистичное обновление
+    updateLocalUsers(prevUsers => prevUsers.map(u => u.id === userId ? { ...u, rightType: rightType } : u ));
     setActionInProgress(true);
-    setError(null);
+    setLocalError(null);
 
     try {
+      // 2. Вызов API
       await updateUserRightsOnDesk(deskId, { userId, rightType });
-      console.log('--- handleUpdateUserRole: API call SUCCESS ---');
-      refreshDeskUsers();
-      console.log('--- handleUpdateUserRole FINISHED ---');
+
+      // --- УБИРАЕМ refreshDeskUsers при УСПЕХЕ ---
+      // refreshDeskUsers();
+      console.log('--- handleUpdateUserRole FINISHED (API OK, UI already updated) ---');
     } catch (error) {
       console.error('Ошибка при обновлении роли пользователя:', error);
-      setError('Не удалось обновить роль пользователя');
-      console.log('--- handleUpdateUserRole: ERRORED - Rolling back UI ---');
-      setParticipants(originalParticipants);
-      refreshDeskUsers();
+      setLocalError('Не удалось обновить роль пользователя');
+      // 4. Откат при ошибке API (оставляем)
+      console.log('--- handleUpdateUserRole ERRORED - Rolling back ---');
+      updateLocalUsers(() => originalUsers);
+      refreshDeskUsers(); // Обновляем для синхронизации после ошибки
     } finally {
       setActionInProgress(false);
     }
   };
 
-  const handleAddSuccess = useCallback((newUser: UserOnDesk) => {
-    console.log('--- handleAddSuccess CALLED ---', newUser);
-    setIsModalOpen(false);
-
-    setParticipants(prevParticipants => {
-        const exists = prevParticipants.some(p => p.id === newUser.id || (p.username || p.userName) === (newUser.username || newUser.userName));
-        if (exists) {
-            console.warn("Попытка добавить существующего пользователя локально, пропускаем UI обновление.");
-            refreshDeskUsers();
-            return prevParticipants;
-        }
-        const updatedList = [...prevParticipants, newUser].sort((a, b) => {
-           if (a.rightType === 'CREATOR' && b.rightType !== 'CREATOR') return -1;
-           if (a.rightType !== 'CREATOR' && b.rightType === 'CREATOR') return 1;
-           return (getUserName(a) || '').localeCompare(getUserName(b) || '');
-        });
-        return updatedList;
-    });
-
-    refreshDeskUsers();
-  }, [refreshDeskUsers]);
+  const handleAddUserSuccess = () => {
+    console.log('[DeskParticipants] Пользователь успешно добавлен на сервер, обновляем список...');
+    refreshDeskUsers(); // Здесь refresh нужен, чтобы получить ID нового юзера
+    setIsAddUserModalOpen(false);
+  };
 
   const handleCloseDeleteModal = () => {
     setDeleteModalOpen(false);
     setSelectedUser(null);
   };
+
+  const hasParticipants = deskUsers && deskUsers.length > 0;
 
   return (
     <div className='w-full mb-6'>
@@ -189,7 +144,7 @@ const DeskParticipants: React.FC<DeskParticipantsProps> = ({ desk, deskUsers, ha
         {hasManagePermission && (
           <button
             className='text-sm bg-gray-50 rounded-full px-4 py-1.5 hover:bg-gray-100 cursor-pointer'
-            onClick={() => setIsModalOpen(true)}
+            onClick={() => setIsAddUserModalOpen(true)}
             disabled={actionInProgress}
           >
             Добавить участников
@@ -197,14 +152,13 @@ const DeskParticipants: React.FC<DeskParticipantsProps> = ({ desk, deskUsers, ha
         )}
       </div>
 
+      {localError && <div className="mb-2 p-2 bg-red-50 text-red-600 rounded-md text-sm">{localError}</div>}
+
       <div className='bg-white rounded-lg p-4'>
-        {isLoading ? (
-          <LoadingState />
-        ) : error ? (
-          <ErrorState error={error} />
-        ) : participants && participants.length > 0 ? (
+        {hasParticipants ? (
           <ParticipantsList
-            participants={participants}
+            key={JSON.stringify(deskUsers.map(u => u.id))}
+            participants={deskUsers}
             onDeleteUser={openDeleteModal}
             onUpdateUserRole={handleUpdateUserRole}
             currentUserRole={currentUserRole}
@@ -216,10 +170,10 @@ const DeskParticipants: React.FC<DeskParticipantsProps> = ({ desk, deskUsers, ha
 
       {deskId && hasManagePermission && (
         <AddUserModal
-          isOpen={isModalOpen}
-          onClose={() => setIsModalOpen(false)}
+          isOpen={isAddUserModalOpen}
+          onClose={() => setIsAddUserModalOpen(false)}
           deskId={deskId}
-          onAddSuccess={handleAddSuccess}
+          onAddSuccess={handleAddUserSuccess}
         />
       )}
       {selectedUser && (

@@ -6,8 +6,9 @@ export interface DeskDescriptionProps {
 		deskDescription?: string;
 		deskFinishDate?: Date | null;
 	};
-	onDescriptionUpdate?: (newDescription: string) => void;
+	onDescriptionSave?: (newDescription: string) => Promise<void> | void;
 	isLoading?: boolean;
+	hasEditPermission?: boolean;
 }
 
 

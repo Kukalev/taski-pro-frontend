@@ -1,106 +1,115 @@
-import React, {useEffect, useState} from 'react'
+import React, { useCallback } from 'react'
 import { useOutletContext } from 'react-router-dom'
 
 import DeskHeader from './components/DeskHeader/DeskHeader'
 import DeskDescription from './components/DeskDescription/DeskDescription'
 import DeskParticipants from './components/DeskParticipants/DeskParticipants'
 
-import {DeskData} from '../../components/sidebar/types/sidebar.types'
+import { DeskData } from '../../contexts/DeskContext'
 import { UserOnDesk } from './components/DeskParticipants/types'
 
-import {useDeskActions} from './hooks/useDeskActions'
-
-import DatePicker from '../../components/DatePicker/DatePicker.tsx'
+import { useDeskActions } from './hooks/useDeskActions'
 
 interface DeskDetailsContext {
-  desk: DeskData;
-  refreshDesk: () => void;
+  desk: DeskData | null;
+  updateLocalDesk: (updatedData: Partial<DeskData>, isOptimistic?: boolean) => void;
   refreshDeskUsers: () => void;
   hasEditPermission: boolean;
   deskUsers: UserOnDesk[];
+  updateLocalUsers: (updater: (prevUsers: UserOnDesk[]) => UserOnDesk[]) => void;
 }
 
-interface DeskOverviewPageProps {
-  desk: DeskData;
-  onDeskUpdate?: (updatedDesk: Partial<DeskData>) => void;
-}
-
-const DeskOverviewPage: React.FC<DeskOverviewPageProps> = ({ 
-  desk, 
-  onDeskUpdate, 
-}) => {
+const DeskOverviewPage: React.FC = () => {
   const { 
-    refreshDesk,
+    desk,
+    updateLocalDesk,
     refreshDeskUsers,
     hasEditPermission, 
-    deskUsers 
+    deskUsers,
+    updateLocalUsers
   } = useOutletContext<DeskDetailsContext>();
 
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [isDatePickerVisible, setIsDatePickerVisible] = useState(false);
-  
-  const { isLoading, error, updateDeskName, updateDeskDescription } = 
-    desk ? useDeskActions(desk, onDeskUpdate) : { isLoading: false, error: null, updateDeskName: async () => {}, updateDeskDescription: async () => {} };
+  const { isLoading, error, updateDeskName, updateDeskDescription, updateDeskDates } = 
+    desk ? useDeskActions(desk) : { isLoading: false, error: null, updateDeskName: async () => { throw new Error('Desk not loaded'); }, updateDeskDescription: async () => { throw new Error('Desk not loaded'); }, updateDeskDates: async () => { throw new Error('Desk not loaded'); } };
 
-  useEffect(() => {
-    if (desk && desk.deskFinishDate) {
-      try {
-        const dateObject = new Date(desk.deskFinishDate);
-        if (!isNaN(dateObject.getTime())) {
-          setSelectedDate(dateObject);
-        } else {
-          setSelectedDate(null);
-        }
-      } catch (e) {
-        console.error("Ошибка при парсинге deskFinishDate:", e);
-        setSelectedDate(null);
-      }
-    } else {
-      setSelectedDate(null);
+  const handleUpdateName = useCallback(async (newName: string) => {
+    if (!desk || newName === desk.deskName) return;
+
+    const originalDesk = { ...desk };
+    const optimisticUpdate = { ...desk, deskName: newName };
+
+    console.log('[DeskOverviewPage] Оптимистичное обновление имени на:', newName);
+    updateLocalDesk(optimisticUpdate, true);
+
+    try {
+      console.log('[DeskOverviewPage] Отправка запроса на сервер для обновления имени...');
+      const updatedDataFromApi = await updateDeskName(newName);
+      console.log('[DeskOverviewPage] Сервер успешно обновил имя. Ответ:', updatedDataFromApi);
+      
+      updateLocalDesk(updatedDataFromApi, false);
+
+    } catch (updateError) {
+      console.error('[DeskOverviewPage] Ошибка при обновлении имени на сервере:', updateError);
+      console.log('[DeskOverviewPage] Откат оптимистичного обновления из-за ошибки.');
+      updateLocalDesk(originalDesk, false);
     }
-  }, [desk]);
+  }, [desk, updateDeskName, updateLocalDesk]);
 
-  const calendarId = `desk-date-${desk?.id || 'main'}`;
+  const handleUpdateDescription = useCallback(async (newDescription: string) => {
+    if (!desk) return;
+    const originalDesk = { ...desk };
+    try {
+      const updatedData = await updateDeskDescription(newDescription);
+      console.log('[DeskOverviewPage] Описание доски успешно обновлено. Response:', updatedData);
+      updateLocalDesk(updatedData);
+    } catch (updateError) {
+      console.error('[DeskOverviewPage] Ошибка при обновлении описания:', updateError);
+      updateLocalDesk(originalDesk);
+    }
+  }, [desk, updateDeskDescription, updateLocalDesk]);
+
+  const handleDateSave = useCallback(async (newFinishDate: Date | null) => {
+    if (!desk) return;
+
+    const originalDesk = { ...desk };
+    const optimisticUpdate = { ...desk, deskFinishDate: newFinishDate };
+
+    console.log(`[DeskOverviewPage] Оптимистичное обновление даты на: ${newFinishDate}`);
+    updateLocalDesk(optimisticUpdate, true);
+
+    try {
+      console.log('[DeskOverviewPage] Отправка запроса на сервер для обновления даты...');
+      const updatedDataFromApi = await updateDeskDates(newFinishDate);
+      console.log('[DeskOverviewPage] Сервер успешно обновил дату. Ответ:', updatedDataFromApi);
+      updateLocalDesk(updatedDataFromApi, false);
+
+    } catch (updateError) {
+      console.error('[DeskOverviewPage] Ошибка при обновлении даты на сервере:', updateError);
+      console.log('[DeskOverviewPage] Откат оптимистичного обновления даты.');
+      updateLocalDesk(originalDesk, false);
+    }
+  }, [desk, updateDeskDates, updateLocalDesk]);
 
   if (!desk) {
-    return <div className="p-6 text-center text-gray-500">Выберите доску для просмотра</div>;
+    return <div className="p-6 text-center text-gray-500">Загрузка обзора доски...</div>;
   }
 
-  const handleDateButtonClick = () => {
-    if (!hasEditPermission) return;
-    setIsDatePickerVisible(!isDatePickerVisible);
-  };
-
-  const handleDateChange = (date: Date | null) => {
-    if (!hasEditPermission) return;
-    setSelectedDate(date);
-    setIsDatePickerVisible(false);
-    if (onDeskUpdate) {
-      onDeskUpdate({ deskFinishDate: date });
-    }
-  };
-
-  const handleCloseDatePicker = () => {
-    setIsDatePickerVisible(false);
-  };
-
   return (
-    <div>
+    <>
       <DeskHeader 
         desk={desk} 
-        onDeskUpdate={onDeskUpdate || (() => {})}
+        onNameSave={handleUpdateName}
+        onDateOrStatusSave={handleDateSave}
         isLoading={isLoading}
-        updateDeskName={updateDeskName}
-        onDateClick={handleDateButtonClick}
-        selectedDate={selectedDate}
         hasEditPermission={hasEditPermission}
       />
       
       <div className="max-w-4xl mx-auto px-4 py-6">
         <DeskDescription 
           desk={desk} 
-          onDeskUpdate={(desc) => onDeskUpdate?.({ deskDescription: desc })}
+          onDescriptionSave={handleUpdateDescription}
           isLoading={isLoading}
+          hasEditPermission={hasEditPermission}
         />
         
         <DeskParticipants 
@@ -108,19 +117,12 @@ const DeskOverviewPage: React.FC<DeskOverviewPageProps> = ({
           deskUsers={deskUsers}
           hasEditPermission={hasEditPermission}
           refreshDeskUsers={refreshDeskUsers}
+          updateLocalUsers={updateLocalUsers}
         />
       </div>
-      
-      {isDatePickerVisible && hasEditPermission && (
-        <DatePicker
-          taskId={calendarId}
-          selectedDate={selectedDate}
-          onDateChange={(taskId, date) => handleDateChange(date)}
-          onClose={handleCloseDatePicker}
-        />
-      )}
-    </div>
+    </>
   );
 };
 
 export default DeskOverviewPage;
+

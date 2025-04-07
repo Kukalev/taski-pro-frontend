@@ -13,7 +13,7 @@ interface ModifiedAddUserModalProps {
 	isOpen: boolean;
 	onClose: () => void;
 	deskId: number;
-	onAddSuccess: (newUser: UserOnDesk) => void;
+	onAddSuccess: () => void;
 }
 
 const AddUserModal: React.FC<ModifiedAddUserModalProps> = ({
@@ -158,30 +158,17 @@ const AddUserModal: React.FC<ModifiedAddUserModalProps> = ({
 
 			console.log('Пользователь успешно добавлен на сервер');
 
-			// Создаем объект для передачи обратно
-			// ВАЖНО: ID здесь будет НЕКОРРЕКТНЫМ (или временным), 
-			// т.к. API его скорее всего не вернул. Используем временный ID.
-			// Можно использовать Date.now() или отрицательное число.
-			const newUserForState: UserOnDesk = {
-				id: Date.now(), // Временный ID для ключа React
-				username: username,
-				userName: selectedUser.userName, 
-				rightType: accessType
-			};
-
-			// Вызываем новый callback
-			onAddSuccess(newUserForState); 
+			// Просто вызываем callback БЕЗ АРГУМЕНТОВ
+			onAddSuccess();
 
 			// Сбрасываем состояние модального окна
 			setSelectedUser(null);
 			setSearchQuery('');
-			setAccessType(RightType.MEMBER); // Сброс на дефолтную роль
-			onClose(); // Закрываем модальное окно
+			setAccessType(RightType.MEMBER);
 
 		} catch (err: unknown) {
 			console.error('Ошибка при добавлении пользователя:', err);
-			setError('Не удалось добавить пользователя. Возможно, он уже добавлен.'); 
-			// Оставляем модальное окно открытым при ошибке
+			setError('Не удалось добавить пользователя. Возможно, он уже добавлен.');
 		} finally {
 			setIsLoading(false);
 		}

@@ -1,17 +1,13 @@
 import React, {useCallback, useEffect, useRef, useState} from 'react'
 import {DeskDescriptionProps} from './types'
-import {DeskService} from '../../../../services/desk/Desk'
-import {DeskUpdateDto} from '../../../../services/desk/types/desk.types'
 import ViewMode from './components/ViewMode'
 import EditMode from './components/EditMode'
-import {UserService} from '../../../../services/users/Users'
-import {canEditDesk} from '../../../../utils/permissionUtils'
 
 const DeskDescription: React.FC<DeskDescriptionProps> = ({
 	desk,
-	onDeskUpdate,
+	onDescriptionSave,
 	isLoading = false,
-	updateDeskDescription
+	hasEditPermission = true,
 }) => {
 	// Используем либо deskDescription, либо description, что найдется
 	const currentDescription = desk.deskDescription || desk.description || '';
@@ -22,7 +18,6 @@ const DeskDescription: React.FC<DeskDescriptionProps> = ({
 	const [editedDescription, setEditedDescription] = useState(currentDescription);
 	const [isSaving, setIsSaving] = useState(false);
 	const [containerHeight, setContainerHeight] = useState<number | null>(null);
-	const [deskUsers, setDeskUsers] = useState<any[]>([]);
 
 	const textareaRef = useRef<HTMLTextAreaElement>(null);
 	const containerRef = useRef<HTMLDivElement>(null);
@@ -50,22 +45,6 @@ const DeskDescription: React.FC<DeskDescriptionProps> = ({
 		}
 	}, [isEditing]);
 
-	// Загрузка пользователей доски для проверки прав
-	useEffect(() => {
-		const loadUsers = async () => {
-			try {
-				if (desk.id) {
-					const users = await UserService.getUsersOnDesk(desk.id);
-					setDeskUsers(users);
-				}
-			} catch (error) {
-				console.error('Ошибка при загрузке пользователей доски:', error);
-			}
-		};
-		
-		loadUsers();
-	}, [desk.id]);
-
 	// Debounced сохранение при вводе
 	const debouncedSave = useCallback((text: string) => {
 		if (saveTimeoutRef.current) {
@@ -75,10 +54,7 @@ const DeskDescription: React.FC<DeskDescriptionProps> = ({
 		saveTimeoutRef.current = setTimeout(() => {
 			handleServerSave(text);
 		}, 1000);
-	}, [desk.id]);
-
-	// Проверка прав на редактирование доски
-	const hasEditPermission = canEditDesk(deskUsers);
+	}, [onDescriptionSave]);
 
 	const handleEdit = () => {
 		if (isLoading || isSaving || !hasEditPermission) return;
@@ -98,33 +74,19 @@ const DeskDescription: React.FC<DeskDescriptionProps> = ({
 
 	// Функция сохранения на сервере
 	const handleServerSave = async (text: string) => {
-		if (!desk.id) return;
 		if (text === currentDescription) return;
 		
 		setIsSaving(true);
 		try {
-			console.log('Сохраняем описание на сервере:', text);
-			
-			// Создаем объект в соответствии с типом, который ожидает API
-			const updateData: DeskUpdateDto = {
-				deskName: desk.deskName,
-				deskDescription: text,
-				deskFinishDate: desk.deskFinishDate 
-					? new Date(desk.deskFinishDate) // Оставляем тип Date
-					: null
-			};
-			
-			await DeskService.updateDesk(Number(desk.id), updateData);
-			
-			// Уведомляем родительский компонент об обновлении
-			if (onDeskUpdate) {
-				onDeskUpdate(text);
+			console.log('Сохраняем описание (через onDescriptionSave):', text);
+			if (onDescriptionSave) {
+				await onDescriptionSave(text);
+				console.log('Описание успешно обновлено (через onDescriptionSave)');
+			} else {
+				console.warn("DeskDescription: onDescriptionSave prop is missing!");
 			}
-			
-			console.log('Описание успешно обновлено на сервере');
 		} catch (error) {
-			console.error('Ошибка при обновлении описания:', error);
-			// При ошибке НЕ сбрасываем локальный текст, оставляем то, что пользователь ввел
+			console.error('Ошибка при обновлении описания (через onDescriptionSave):', error);
 		} finally {
 			setIsSaving(false);
 		}
@@ -143,8 +105,12 @@ const DeskDescription: React.FC<DeskDescriptionProps> = ({
 	const handleKeyDown = (e: React.KeyboardEvent) => {
 		if (e.key === 'Escape') {
 			setIsEditing(false);
+			// Можно сбросить изменения при Escape
+			setDisplayDescription(currentDescription);
+			setEditedDescription(currentDescription);
+			if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
 		} else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-			handleBlur();
+			handleBlur(); // Сохраняем по Ctrl+Enter
 		}
 	};
 

@@ -15,10 +15,11 @@ export interface DeskHeaderProps {
 	onDeskUpdate: (updatedDesk: Partial<DeskData>) => void;
 	isLoading?: boolean;
 	error?: string | null;
-	updateDeskName: (name: string) => Promise<void>;
 	onDateClick?: (date?: Date | null) => void;
 	selectedDate?: Date | null;
 	hasEditPermission?: boolean;
+	onNameSave?: (name: string) => Promise<void> | void;
+	onDateOrStatusSave: (updateData: Date | null /* | { status: DeskStatus } */) => Promise<void> | void;
 }
 
 // Enum для статусов
@@ -51,11 +52,10 @@ export interface DateRangeSelectorProps {
 	deskName?: string;
 	deskDescription?: string;
 	deskCreateDate?: string | Date;
-	deskFinishDate?: string | Date | null;
-	selectedDate?: Date | null;
+	deskFinishDate?: string | Date | null | any; // Допускаем any временно из-за возможной ошибки в state
 	isCalendarOpen: boolean;
 	setIsCalendarOpen: (isOpen: boolean) => void;
-	onDeskUpdate: (updatedDesk: Partial<DeskData>) => void;
+	onDateSave: (date: Date | null) => Promise<void> | void;
 	calendarButtonRef: React.RefObject<HTMLButtonElement | null>;
 	hasEditPermission?: boolean;
 }

@@ -3,9 +3,12 @@ import {format} from 'date-fns'
 import {ru} from 'date-fns/locale'
 import {DateRangeSelectorProps} from '../types'
 import DatePicker from '../../../../../components/DatePicker/DatePicker'
-import {DeskService} from '../../../../../services/desk/Desk'
 
-const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({
+interface ModifiedDateRangeSelectorProps extends Omit<DateRangeSelectorProps, 'onDateSave'> {
+	onDateSave: (date: Date | null) => Promise<void> | void;
+}
+
+const DateRangeSelector: React.FC<ModifiedDateRangeSelectorProps> = ({
 	deskId,
 	deskName,
 	deskDescription,
@@ -14,7 +17,7 @@ const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({
 	selectedDate,
 	isCalendarOpen,
 	setIsCalendarOpen,
-	onDeskUpdate,
+	onDateSave,
 	calendarButtonRef,
 	hasEditPermission = true // По умолчанию права есть
 }) => {
@@ -66,98 +69,59 @@ const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({
 
 	// Функция обновления даты
 	const handleDateChange = async (_taskId: string, date: Date | null) => {
-		// Проверяем права доступа
-		if (!hasEditPermission || !deskId) {
-			console.log('Нет прав на редактирование даты доски');
+		if (!hasEditPermission) {
 			setIsCalendarOpen(false);
 			return;
 		}
 
-		try {
-			// ВАЖНО: Исправляем проблему со смещением даты при конвертации в UTC
-			let normalizedDate = null;
-			if (date) {
-				// Создаем новую дату, установив время на полдень, чтобы избежать проблем с часовыми поясами
-				normalizedDate = new Date(date);
-				normalizedDate.setHours(12, 0, 0, 0);
-				
-				// Также сохраняем год, месяц и день, чтобы перестраховаться
-				const year = normalizedDate.getFullYear();
-				const month = normalizedDate.getMonth();
-				const day = normalizedDate.getDate();
-				
-				// Пересоздаем дату с правильными значениями
-				normalizedDate = new Date(year, month, day, 12, 0, 0, 0);
-				
-				console.log('Выбранная дата:', date);
-				console.log('Нормализованная дата:', normalizedDate);
-				console.log('ISO строка:', normalizedDate.toISOString());
-			}
-
-			// Правильно соответствующий объект DeskUpdateDto
-			const updateData = {
-				deskName: deskName || '',
-				deskDescription: deskDescription || '',
-				deskFinishDate: normalizedDate // используем нормализованную дату
-			};
-
-			console.log('Отправляем данные:', JSON.stringify(updateData));
-
-			// Обновляем доску через сервис
-			const result = await DeskService.updateDesk(Number(deskId), updateData);
-			console.log('Результат обновления:', result);
-
-			// Обновляем локальное состояние с нормализованной датой
-			onDeskUpdate({ deskFinishDate: normalizedDate });
-			console.log('Дата обновлена успешно!');
-		} catch (error: any) {
-			console.error('ОШИБКА ПРИ ОБНОВЛЕНИИ ДАТЫ:', error);
-			
-			// Попробуем вытянуть детальное сообщение ошибки
-			if (error.response) {
-				console.error('Детали ошибки:', error.response.data);
-				console.error('Статус:', error.response.status);
-				console.error('Заголовки:', error.response.headers);
-			}
-
-			// В любом случае обновим стейт с нормализованной датой
-			if (date) {
-				const localDate = new Date(date);
-				localDate.setHours(12, 0, 0, 0);
-				onDeskUpdate({ deskFinishDate: localDate });
-			} else {
-				onDeskUpdate({ deskFinishDate: null });
-			}
+		let normalizedDate = null;
+		if (date) {
+			// Нормализация даты
+			normalizedDate = new Date(date);
+			normalizedDate.setHours(12, 0, 0, 0);
+			const year = normalizedDate.getFullYear();
+			const month = normalizedDate.getMonth();
+			const day = normalizedDate.getDate();
+			normalizedDate = new Date(year, month, day, 12, 0, 0, 0);
 		}
 
-		// Закрываем календарь после попытки обновления
-		setIsCalendarOpen(false);
+		console.log(`[DateRangeSelector] Выбрана дата: ${normalizedDate}, вызываем onDateSave`);
+
+		try {
+			// Передаем ТОЛЬКО дату (Date | null)
+			await onDateSave(normalizedDate);
+			console.log('[DateRangeSelector] onDateSave успешно выполнен.');
+		} catch (error) {
+			console.error('[DateRangeSelector] Ошибка во время вызова onDateSave:', error);
+		} finally {
+			setIsCalendarOpen(false);
+		}
 	};
 
-	// Преобразуем selectedDate или deskFinishDate в объект Date для передачи в DatePicker
-	const getDateObject = (dateValue: Date | string | null | undefined): Date | null => {
+	// Обновляем getDateObject для обработки разных входных данных
+	const getDateObject = (dateValue: any): Date | null => {
 		if (!dateValue) return null;
-		
-		// Если уже объект Date - возвращаем как есть
+		// Если это уже Date, возвращаем
 		if (dateValue instanceof Date) return dateValue;
-		
-		try {
-			// Пробуем преобразовать строку в Date
-			const dateObj = new Date(dateValue);
-			// Проверяем, что дата действительна
-			if (isNaN(dateObj.getTime())) {
-				console.error('Невалидная дата:', dateValue);
-				return null;
-			}
-			return dateObj;
-		} catch (e) {
-			console.error('Ошибка преобразования даты:', e);
-			return null;
+		// Если это объект { deskFinishDate: Date }, извлекаем значение
+		if (typeof dateValue === 'object' && dateValue.deskFinishDate instanceof Date) {
+			console.warn("[DateRangeSelector] Получен объект вместо даты в getDateObject, извлекаем значение.");
+			return dateValue.deskFinishDate;
 		}
+		// Пытаемся распарсить строку
+		if (typeof dateValue === 'string') {
+			try {
+				const dateObj = new Date(dateValue);
+				if (!isNaN(dateObj.getTime())) return dateObj;
+			} catch (e) { /* Игнорируем ошибку парсинга строки */ }
+		}
+		// Если ничего не подошло, логгируем и возвращаем null
+		console.error('Невалидная дата в getDateObject:', dateValue);
+		return null;
 	};
 
-	// Получаем дату для отображения в календаре
-	const currentDate = getDateObject(selectedDate || deskFinishDate);
+	// Получаем дату для DatePicker (deskFinishDate может быть объектом из-за предыдущих ошибок)
+	const currentDateForPicker = getDateObject(deskFinishDate);
 
 	return (
 		<>
@@ -188,11 +152,10 @@ const DateRangeSelector: React.FC<DateRangeSelectorProps> = ({
 				<span className="text-sm font-medium">{getFormattedDateRange()}</span>
 			</button>
 
-			{/* Рендерим DatePicker только если календарь открыт и у пользователя есть права */}
 			{isCalendarOpen && hasEditPermission && (
 				<DatePicker
 					taskId={calendarId}
-					selectedDate={currentDate}
+					selectedDate={currentDateForPicker}
 					onDateChange={handleDateChange}
 					onClose={() => setIsCalendarOpen(false)}
 				/>

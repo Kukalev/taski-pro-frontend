@@ -14,7 +14,9 @@ const DeskHeader: React.FC<DeskHeaderProps> = ({
 	onDeskUpdate,
 	isLoading = false,
 	selectedDate,
-	hasEditPermission = true // По умолчанию права есть
+	hasEditPermission = true, // По умолчанию права есть
+	onNameSave, // Получаем новый проп
+	onDateOrStatusSave, // Принимает Date | null
 }) => {
 	// Получаем функцию updateDesk из контекста
 	const { updateDesk: updateDeskInContext } = useDesks();
@@ -36,8 +38,10 @@ const DeskHeader: React.FC<DeskHeaderProps> = ({
 
 	// Синхронизируем локальное имя с props только при смене доски
 	useEffect(() => {
-		setLocalDeskName(desk.deskName || '');
-	}, [desk.id]);
+		if (!isEditing) {
+			setLocalDeskName(desk.deskName || '');
+		}
+	}, [desk.deskName, isEditing]);
 
 	useEffect(() => {
 		if (desk.status) {
@@ -83,84 +87,29 @@ const DeskHeader: React.FC<DeskHeaderProps> = ({
 		setLocalDeskName(name);
 	};
 
-	// Функция для сохранения имени на сервере и обновления UI компонентов
-	const saveNameToServer = async (name: string) => {
-		// Проверяем права доступа
-		if (!hasEditPermission || !desk.id) return;
-		
-		try {
-			// Сохраняем на сервер
-			await DeskService.updateDesk(Number(desk.id), {
-				deskName: name,
-				// deskDescription: desk.deskDescription || '', // Убедимся, что не отправляем лишнее
-				// deskFinishDate: desk.deskFinishDate
-			});
-			
-			// Обновляем заголовок страницы
-			document.title = name || 'Taski';
-			
-			// Обновляем объект напрямую для сохранности данных (можно убрать, если контекст работает надежно)
-			// desk.deskName = name;
-			
-			// === Обновляем UI через КОНТЕКСТ ===
-			// Убеждаемся, что передаем только поля, определенные в DeskData
-			const updatedDeskData: DeskData = {
-				id: desk.id,
-				deskName: name,
-				deskDescription: desk.deskDescription,
-				deskCreateDate: desk.deskCreateDate || new Date().toISOString(),
-				deskFinishDate: desk.deskFinishDate === undefined ? null : desk.deskFinishDate, // Гарантируем null, если undefined
-				status: desk.status,
-				username: desk.username
-			};
-			updateDeskInContext(updatedDeskData);
-			console.log('Обновлен контекст доски:', updatedDeskData);
-
-			// Обновляем UI через callback (ОПЦИОНАЛЬНО, можно оставить для обратной совместимости или убрать)
-			/*
-			if (typeof onDeskUpdate === 'function') {
-				onDeskUpdate({ 
-					id: desk.id, 
-					deskName: name 
-				});
-			}
-			*/
-			
-			// Дополнительно отправляем событие для обновления сайдбара и хедера (можно убрать, если контекст справляется)
-			/*
-			window.dispatchEvent(new CustomEvent(DESK_UPDATE_EVENT, {
-				detail: {
-					deskId: desk.id,
-					updates: {
-						deskName: name
-					}
-				}
-			}));
-			console.log('Отправлено событие обновления доски:', desk.id, name);
-			*/
-		} catch (error) {
-			console.error('Ошибка при сохранении имени доски:', error);
-		}
-	};
-
 	const handleBlur = () => {
-		if (localDeskName.trim() === '') {
-			// Если поле пустое, возвращаем исходное имя
-			setLocalDeskName(desk.deskName || '');
-		} else if (localDeskName !== desk.deskName) {
-			// Если имя изменилось, сохраняем на сервер и обновляем UI
-			saveNameToServer(localDeskName);
+		if (isEditing) {
+			if (localDeskName.trim() === '') {
+				// Если поле пустое, возвращаем исходное имя (только локально)
+				setLocalDeskName(desk.deskName || '');
+			} else if (localDeskName !== desk.deskName) {
+				// Если имя изменилось и есть обработчик, вызываем его
+				if (onNameSave) {
+					onNameSave(localDeskName); // Вызываем проп, переданный из DeskOverviewPage
+				} else {
+					console.warn('DeskHeader: onNameSave prop is missing!');
+				}
+			}
+			setIsEditing(false);
 		}
-		
-		setIsEditing(false);
 	};
 
 	const handleKeyDown = (e: React.KeyboardEvent) => {
 		if (e.key === 'Enter') {
-			handleBlur();
+			handleBlur(); // Вызываем нашу логику блюра (которая вызовет onNameSave)
 		} else if (e.key === 'Escape') {
 			setIsEditing(false);
-			setLocalDeskName(desk.deskName || '');
+			setLocalDeskName(desk.deskName || ''); // Отмена - возвращаем старое имя локально
 		}
 	};
 
@@ -175,21 +124,23 @@ const DeskHeader: React.FC<DeskHeaderProps> = ({
 	};
 
 	const handleStatusChange = (status: DeskStatus) => {
-		// Проверяем права доступа
 		if (!hasEditPermission) return;
-		
 		setCurrentStatus(status);
 		setStatusMenuOpen(false);
-		
-		if (typeof onDeskUpdate === 'function') {
-			// Передаем Partial<DeskData>, включая опциональный status
-			const updatePayload: Partial<DeskData> = {
-				id: desk.id,
-				status: status // status из DeskStatus enum нужно преобразовать в строку, если требуется
-			};
-			onDeskUpdate(updatePayload);
+		if (typeof onDateOrStatusSave === 'function') {
+			console.warn("Обновление статуса требует доработки с API через onDateOrStatusSave");
+			// Пример: await onDateOrStatusSave({ status: status });
 		}
 	};
+
+	const handleDateUpdate = (update: { deskFinishDate: Date | null }) => {
+		if (!hasEditPermission) return;
+		if (typeof onDeskUpdate === 'function') {
+			onDeskUpdate(update);
+		} else {
+			console.warn("DeskHeader: onDeskUpdate prop is missing for date change!");
+		}
+	}
 
 	return (
 		<div className='bg-white py-8'>
@@ -224,9 +175,10 @@ const DeskHeader: React.FC<DeskHeaderProps> = ({
 						selectedDate={selectedDate}
 						isCalendarOpen={isCalendarOpen}
 						setIsCalendarOpen={setIsCalendarOpen}
-						onDeskUpdate={onDeskUpdate}
+						onDeskUpdate={handleDateUpdate}
 						calendarButtonRef={calendarButtonRef}
 						hasEditPermission={hasEditPermission}
+						onDateSave={onDateOrStatusSave}
 					/>
 					
 					<StatusSelector

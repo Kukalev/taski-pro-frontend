@@ -1,6 +1,6 @@
 import axios from 'axios'
-import {getTokens, saveTokens} from './auth/utils/TokenStorage'
-import { AuthService } from './auth/Auth'
+import {getTokens} from './auth/utils/TokenStorage'
+import {AuthService} from './auth/Auth'
 
 // Создаем экземпляр axios
 const api = axios.create({
@@ -17,47 +17,47 @@ api.interceptors.request.use(config => {
   return config;
 });
 
-// Прямой метод для запроса обновления токена
-const refreshTokenRequest = async () => {
-  const tokens = getTokens();
-
-  if (!tokens?.refreshToken) {
-    console.log("Нет refresh token для обновления.");
-    return null;
-  }
-
-  try {
-    console.log("Попытка обновить токен...");
-    // Отправляем refresh token в ТЕЛЕ запроса
-    const response = await axios.post('/api/auth/refresh_token',
-      { refreshToken: tokens.refreshToken },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      }
-    );
-
-    if (response.data?.accessToken) {
-      console.log("Токен успешно обновлен.");
-      saveTokens({
-        accessToken: response.data.accessToken,
-        refreshToken: response.data.refreshToken,
-        username: tokens?.username || ''
-      });
-      return response.data.accessToken;
-    }
-    console.log("Ответ сервера на обновление токена не содержит accessToken.");
-    return null;
-  } catch (error: any) {
-    console.error('Ошибка при обновлении токена:', error);
-    if (error.response) {
-      console.error('Ошибка обновления токена - Статус:', error.response.status);
-      console.error('Ошибка обновления токена - Данные:', error.response.data);
-    }
-    return null;
-  }
-};
+// // Прямой метод для запроса обновления токена
+// const refreshTokenRequest = async () => {
+//   const tokens = getTokens();
+//
+//   if (!tokens?.refreshToken) {
+//     console.log("Нет refresh token для обновления.");
+//     return null;
+//   }
+//
+//   try {
+//     console.log("Попытка обновить токен...");
+//     // Отправляем refresh token в ТЕЛЕ запроса
+//     const response = await axios.post('/api/auth/refresh_token',
+//       { refreshToken: tokens.refreshToken },
+//       {
+//         headers: {
+//           'Content-Type': 'application/json',
+//         }
+//       }
+//     );
+//
+//     if (response.data?.accessToken) {
+//       console.log("Токен успешно обновлен.");
+//       saveTokens({
+//         accessToken: response.data.accessToken,
+//         refreshToken: response.data.refreshToken,
+//         username: tokens?.username || ''
+//       });
+//       return response.data.accessToken;
+//     }
+//     console.log("Ответ сервера на обновление токена не содержит accessToken.");
+//     return null;
+//   } catch (error: any) {
+//     console.error('Ошибка при обновлении токена:', error);
+//     if (error.response) {
+//       console.error('Ошибка обновления токена - Статус:', error.response.status);
+//       console.error('Ошибка обновления токена - Данные:', error.response.data);
+//     }
+//     return null;
+//   }
+// };
 
 // Флаг и очередь для обработки параллельных запросов при обновлении токена
 let isRefreshing = false;

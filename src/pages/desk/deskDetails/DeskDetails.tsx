@@ -1,9 +1,9 @@
-import {useCallback, useEffect, useRef, useState} from 'react'
+import {useCallback, useEffect, useMemo, useRef, useState} from 'react'
 import {Link, Navigate, Outlet, useLocation, useParams} from 'react-router-dom'
 import {
 	DeskUpdateEvents
 } from '../../../components/modals/renameDeskModal/RenameDeskModal.tsx'
-import {DeskData} from '../../../components/sidebar/types/sidebar.types.ts'
+import {DeskData, useDesks} from '../../../contexts/DeskContext.tsx'
 import {DeskService} from '../../../services/desk/Desk.ts'
 import {UserService} from '../../../services/users/Users'
 import {canEditDesk} from '../../../utils/permissionUtils'
@@ -15,11 +15,13 @@ export const DeskDetails = () => {
 	const [desk, setDesk] = useState<DeskData | null>(null)
 	const [loading, setLoading] = useState(true)
 	const [error, setError] = useState<string | null>(null)
-	const [updateCounter, setUpdateCounter] = useState(0)
 	const loadingRef = useRef(false) // Для предотвращения двойных вызовов
 	const [deskUsers, setDeskUsers] = useState<UserOnDesk[]>([])
 	const [hasEditPermission, setHasEditPermission] = useState(false)
 	
+	// Получаем updateDesk из контекста для обновления сайдбара
+	const { updateDesk: updateDeskInContext } = useDesks()
+
 	const loadDesk = useCallback(async (forceUserRefresh = false) => {
 		if (!id) return
 
@@ -74,38 +76,32 @@ export const DeskDetails = () => {
 		loadDesk()
 	}, [loadDesk])
 
-	// Загрузка доски при изменении updateCounter (полная перезагрузка)
-	useEffect(() => {
-		if (updateCounter > 0) {
-			loadDesk()
-		}
-	}, [updateCounter, loadDesk])
-
 	// Новая функция для обновления только пользователей
 	const refreshDeskUsers = useCallback(() => {
-		console.log('[refreshDeskUsers] Вызвано обновление только пользователей')
-		loadDesk(true) // Вызываем loadDesk с флагом forceUserRefresh = true
+		console.log('[DeskDetails] ==> refreshDeskUsers ВЫЗВАН');
+		loadDesk(true)
+		console.log('[DeskDetails] ==> refreshDeskUsers: loadDesk(true) ЗАВЕРШЕН');
 	}, [loadDesk])
 
-	// Подписка на обновления доски
+	// Добавим useEffect для отслеживания deskUsers
 	useEffect(() => {
-		if (!id) return
+		console.log('[DeskDetails] ==> useEffect[deskUsers]: Состояние deskUsers ОБНОВЛЕНО:', deskUsers);
+	}, [deskUsers]);
 
-		console.log(`Подписываемся на обновления доски ID: ${id}`)
-
-		// Используем наш механизм подписки для обновления доски
-		const unsubscribe = DeskUpdateEvents.subscribe(Number(id), () => {
-			console.log(`Получено событие обновления доски ID: ${id}`)
-			// Увеличиваем счетчик, чтобы вызвать перезагрузку
-			setUpdateCounter(prev => prev + 1)
-		})
-
-		return () => {
-			// Отписываемся при размонтировании компонента
-			console.log(`Отписываемся от обновлений доски ID: ${id}`)
-			unsubscribe()
-		}
-	}, [id])
+	// Подписка на внешние обновления (ВРЕМЕННО ОТКЛЮЧАЕМ ДЛЯ ТЕСТА)
+	// useEffect(() => {
+	// 	if (!id) return;
+	// 	console.log(`Подписываемся на обновления доски ID: ${id} (DeskUpdateEvents)`);
+	// 	const callback = () => { // Define callback separately
+	// 		console.log(`Получено событие обновления доски ID: ${id} (DeskUpdateEvents) - вызываем refreshDesk`);
+	// 		refreshDesk(); // Полная перезагрузка по событию
+	// 	};
+	// 	const unsubscribe = DeskUpdateEvents.subscribe(Number(id), callback);
+	// 	return () => {
+	// 		console.log(`Отписываемся от обновлений доски ID: ${id} (DeskUpdateEvents)`);
+	// 		unsubscribe();
+	// 	};
+	// }, [id, refreshDesk]); // Зависимости тоже комментируем
 
 	// Обновление заголовка страницы при загрузке доски
 	useEffect(() => {
@@ -120,23 +116,82 @@ export const DeskDetails = () => {
 		}
 	}, [desk])
 
-	// Функция для полной перезагрузки (старый refreshDesk)
+	// Старый refreshDesk для полной перезагрузки
 	const refreshDesk = useCallback(() => {
-		console.log('Полное обновление доски вызвано (refreshDesk)')
-		setUpdateCounter(prev => prev + 1)
-	}, [])
+		console.log('Полное обновление доски вызвано (refreshDesk)');
+		loadDesk(); // Просто вызываем loadDesk
+	}, [loadDesk]);
 
-	if (loading && !desk) {
-		return <div className='p-6'>Загрузка доски...</div>
+	// --- Обновляем updateLocalDesk ---
+	const updateLocalDesk = useCallback((updatedData: Partial<DeskData>, isOptimistic: boolean = false) => {
+		// Важно: Partial<DeskData> позволяет передавать только измененные поля
+		console.log(`[DeskDetails] updateLocalDesk вызван. isOptimistic: ${isOptimistic}, Данные:`, updatedData);
+
+		// Обновляем локальное состояние В ЛЮБОМ СЛУЧАЕ (сливаем новые данные с текущими)
+		setDesk(prevDesk => {
+			if (!prevDesk) return updatedData as DeskData; // Если prevDesk null, просто берем новые данные
+			return { ...prevDesk, ...updatedData }; // Сливаем старые и новые
+		});
+
+		// Обновляем заголовок вкладки, если имя изменилось
+		if (updatedData.deskName) {
+			document.title = `${updatedData.deskName} | Taski Pro`;
+			console.log(`[DeskDetails] Заголовок вкладки обновлен на: ${updatedData.deskName}`);
+		}
+
+		// Обновляем контекст ТОЛЬКО если это не оптимистичное обновление
+		// или если мы получили полный объект DeskData (обычно после ответа API)
+		if (!isOptimistic && updatedData && typeof updatedData.id === 'number') {
+			console.log('[DeskDetails] Обновляем DeskContext данными:', updatedData);
+			updateDeskInContext(updatedData as DeskData); // Приводим к DeskData, т.к. проверили id
+		} else {
+			console.log('[DeskDetails] Пропускаем обновление DeskContext (isOptimistic или нет ID).');
+		}
+	}, [updateDeskInContext]); // Зависимость от updateDeskInContext
+
+	// --- НОВАЯ Функция для обновления ТОЛЬКО списка пользователей локально ---
+	const updateLocalUsers = useCallback((updater: (prevUsers: UserOnDesk[]) => UserOnDesk[]) => {
+			console.log('[DeskDetails] updateLocalUsers вызван.');
+			setDeskUsers(updater); // Используем функцию-апдейтер
+	}, []); // Пустой массив зависимостей, т.к. она использует только setDeskUsers
+
+	// --- Мемоизируем значение контекста для Outlet ---
+	const outletContextValue = useMemo(() => ({
+		desk,
+		updateLocalDesk,
+		refreshDeskUsers,
+		hasEditPermission,
+		deskUsers,
+		updateLocalUsers // Добавляем новую функцию в контекст
+	}), [desk, updateLocalDesk, refreshDeskUsers, hasEditPermission, deskUsers, updateLocalUsers]); // Добавляем updateLocalUsers в зависимости
+
+	// --- Проверки перед рендерингом ---
+
+	// 1. Если идет загрузка, показываем лоадер
+	if (loading) {
+		console.log('[DeskDetails Render] State: Loading...');
+		return <div className='p-6'>Загрузка доски...</div>;
 	}
 
-	if (error && !desk) {
-		return <div className='p-6 text-red-500'>Ошибка: {error}</div>
+	// 2. Если есть ошибка (и загрузка завершена), показываем ошибку
+	if (error) {
+		console.log('[DeskDetails Render] State: Error:', error);
+		// Можно показать сообщение об ошибке или перенаправить
+		return <div className='p-6 text-red-500'>Ошибка: {error}</div>;
 	}
 
+	// 3. Если НЕ идет загрузка и НЕТ ошибки, но `desk` все еще null/undefined
+	//    Это нештатная ситуация, но обработаем ее.
 	if (!desk) {
-		return <Navigate to='/desk' replace />
+		console.error('[DeskDetails Render] !!! КРИТИЧЕСКАЯ ОШИБКА: Загрузка завершена, ошибок нет, но данные доски отсутствуют!', desk);
+		// Показываем сообщение или редирект
+		return <div className='p-6 text-red-500'>Критическая ошибка: не удалось получить данные доски.</div>;
+		// Или можно вернуть Navigate, если это предпочтительнее
+		// return <Navigate to='/desk' replace />;
 	}
+
+	// --- Если мы дошли сюда, значит: loading = false, error = null, desk = объект ---
+	// Теперь можно безопасно рендерить основной контент
 
 	// Определяем активные вкладки
 	const isOverviewActive = location.pathname.endsWith('/overview')
@@ -150,6 +205,8 @@ export const DeskDetails = () => {
 		if (!desk || !desk.deskName) return 'Д'
 		return desk.deskName.charAt(0).toUpperCase()
 	}
+
+	console.log('[DeskDetails Render] Готов к рендеру с desk:', JSON.stringify(desk, null, 2));
 
 	return (
 		<div className='w-full h-full overflow-hidden flex flex-col'>
@@ -208,7 +265,8 @@ export const DeskDetails = () => {
 
 			{/* Основной контент */}
 			<div className='flex-1 overflow-auto'>
-				<Outlet context={{ desk, refreshDesk, refreshDeskUsers, hasEditPermission, deskUsers }} />
+				{/* Передаем мемоизированное значение контекста */}
+				<Outlet context={outletContextValue} />
 			</div>
 		</div>
 	)
