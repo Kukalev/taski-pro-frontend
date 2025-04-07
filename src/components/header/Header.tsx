@@ -19,7 +19,7 @@ export const Header = () => {
 	}
 
 	const handleProClick = () => {
-		console.log('Открыть страницу PRO')
+		navigate('/subscriptions');
 	}
 
 	const handleInviteClick = () => {

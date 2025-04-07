@@ -5,25 +5,24 @@ export enum SubscriptionType {
 	ULTRA = 'ULTRA'
 }
 
-// DTO с информацией о доступных подписках
+// DTO с информацией о доступных подписках (обновлено согласно API)
 export interface SubscriptionInfoDto {
-	id: number;
-	subscriptionType: SubscriptionType;
-	description: string;
-	maxDesks: number;
-	maxUsersOnDesk: number;
-	price: number;
+	subscriptionType: SubscriptionType; // 'COMMON', 'PRO', 'ULTRA'
+	deskLimit: number;                // Макс. кол-во досок
+	daysLimit: number;                // Длительность подписки в днях
+	price: number;                    // Цена
 }
 
-// Константы подписок для использования в UI
+// Убираем или комментируем константу SUBSCRIPTION_PLANS, т.к. данные берем с API
+/*
 export const SUBSCRIPTION_PLANS: SubscriptionInfoDto[] = [
 	{
 		id: 1,
 		subscriptionType: SubscriptionType.COMMON,
 		description: 'Базовый тариф для небольших команд',
-		maxDesks: 3,
-		maxUsersOnDesk: 10,
-		price: 0
+		maxDesks: 3, // Теперь deskLimit
+		maxUsersOnDesk: 10, // Этого поля нет
+		price: 0 // Цена в ответе другая
 	},
 	{
 		id: 2,
@@ -42,16 +41,13 @@ export const SUBSCRIPTION_PLANS: SubscriptionInfoDto[] = [
 		price: 35
 	}
 ];
+*/
 
-// DTO с информацией о подписке пользователя
+// DTO с информацией о подписке пользователя (ОБНОВЛЕНО согласно API)
 export interface UserSubscriptionResponseDto {
-	id: number;
-	subscriptionType: SubscriptionType;
-	userSubscriptionStartDate: string; // ISO формат даты
-	userSubscriptionFinishDate: string; // ISO формат даты
-	active: boolean;
-	description: string;
-	maxDesks: number;
-	maxUsersOnDesk: number;
-	price: number;
+	subscriptionType: SubscriptionType; // Тип подписки
+	startDate: string;                // Дата начала (ISO формат)
+	finishDate: string;               // Дата окончания (ISO формат)
+	// Убираем все поля, которых нет в реальном ответе API:
+	// id, active, description, maxDesks, maxUsersOnDesk, price, userSubscriptionStartDate, userSubscriptionFinishDate
 }

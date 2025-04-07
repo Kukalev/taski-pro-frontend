@@ -80,7 +80,7 @@ export const COLOR_VALUES: Record<ThemeColorType, Record<string, string>> = {
 };
 
 // Начальный цвет
-let _mainColor: ThemeColorType = 'gray'; // Поставим teal по умолчанию, как в global.css
+let _mainColor: ThemeColorType = 'red'; // Поставим teal по умолчанию, как в global.css
 
 // Геттер для получения текущего цвета
 export const getMainColor = (): ThemeColorType => _mainColor;

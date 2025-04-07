@@ -26,6 +26,7 @@ import {
 import {
 	SecuritySettings
 } from './pages/Settings/components/SecuritySettings/SecuritySettings'
+import { SubscriptionsPage } from './pages/Subscriptions/SubscriptionsPage'
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 	const { isAuthenticated } = useAuth()
@@ -141,6 +142,18 @@ function App() {
 								<Route path="security" element={<SecuritySettings />} />
 								<Route index element={<Navigate to="profile" replace />} />
 							</Route>
+
+							{/* Маршруты для страницы подписок */}
+							<Route
+								path='/subscriptions'
+								element={
+									<ProtectedRoute>
+										<DeskLayout>
+											<SubscriptionsPage />
+										</DeskLayout>
+									</ProtectedRoute>
+								}
+							/>
 
 							{/* Глобальный 404 для всех остальных маршрутов */}
 							<Route path='*' element={<NotFound />} />
