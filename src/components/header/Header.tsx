@@ -5,10 +5,12 @@ import {HeaderLogo} from './components/HeaderLogo'
 import {UserAvatar} from './components/UserAvatar'
 import {useNavigate} from 'react-router-dom'
 import {useSidebar} from '../../contexts/SidebarContext'
+import { useAuth } from '../../contexts/AuthContext'
 
 export const Header = () => {
-	const username = AuthService.getUsername()
-	const email = localStorage.getItem('email') || 'kukalevna22@mail.ru' // Здесь нужно получить email из хранилища
+	const { currentUser } = useAuth();
+	const username = currentUser?.username || AuthService.getUsername();
+	const email = currentUser?.email || 'no-email@example.com';
 	const navigate = useNavigate()
 	const { toggleSidebar } = useSidebar()
 

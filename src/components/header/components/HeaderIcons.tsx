@@ -1,10 +1,6 @@
-import { useSidebar } from '../../../contexts/SidebarContext'
-import {HeaderIconsProps} from '../types/header.types'
 import {IconButton} from './IconButton'
 
-export const HeaderIcons = ({ onToggleSidebar }: HeaderIconsProps) => {
-	const { isCollapsed, isAnimating } = useSidebar()
-	
+export const HeaderIcons = () => {
 	return (
 		<div className='flex items-center space-x-2 mr-2'>
 			<IconButton

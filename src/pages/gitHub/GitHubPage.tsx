@@ -10,7 +10,9 @@ import {RepositoriesList} from './components/Repositories/Repositories'
 import {CommitsList} from './components/Commits/Commits'
 import {DeskDetailsContext} from './types' // <--- Новый импорт
 // Импортируем модальное окно
-import { AddRepositoryModal } from '../../components/modals/AddRepositoryModal/AddRepositoryModal'
+import {
+	AddRepositoryModal
+} from '../../components/modals/AddRepositoryModal/AddRepositoryModal'
 
 export const GitHubPage = () => {
 	const { desk, hasEditPermission } = useOutletContext<DeskDetailsContext>();
@@ -119,7 +121,6 @@ export const GitHubPage = () => {
 
 	return (
 		<div className="p-6">
-			<h2 className="text-xl font-semibold mb-4">Интеграция с GitHub</h2>
 
 
 			{error && !loadingRepos && !loadingCommits && (
