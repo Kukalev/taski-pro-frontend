@@ -32,12 +32,8 @@ export const ProfileSettings = () => {
 
   const handleProfileUpdate = (updatedProfileData?: UserProfile) => {
     console.log("[ProfileSettings] Профиль успешно обновлен в форме.");
-    if (updatedProfileData) {
-        setUserProfile(updatedProfileData);
-    } else {
-        console.log("[ProfileSettings] Форма не вернула данные, перезапрашиваем профиль...");
-        loadUserProfile();
-    }
+    console.log("[ProfileSettings] Перезагружаем страницу для обновления всех данных...");
+    window.location.reload();
   };
 
   if (isLoading) {
