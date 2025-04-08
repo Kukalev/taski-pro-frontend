@@ -17,7 +17,8 @@ import {MyTasks} from './pages/tasks/MyTasks'
 import {Team} from './pages/welcome/team/Team'
 import {Welcome} from './pages/welcome/Welcome'
 import {SidebarProvider} from './contexts/SidebarContext'
-import {Settings} from './pages/Settings/Settings'
+import { SettingsLayout } from './layouts/SettingsLayout' 
+import { Settings } from './pages/Settings/Settings'
 import {
 	ProfileSettings
 } from './pages/Settings/components/ProfileSettings/ProfileSettings'
@@ -119,18 +120,25 @@ function App() {
 									}
 								/>
 								
-								{/* Маршруты для страницы настроек */}
+								{/* --- Обновленные Маршруты для страницы настроек --- */}
 								<Route
-									path='/settings'
-									element={									
-											<Settings />										
+									path='/settings' // Базовый путь
+									element={
+										// Используем SettingsLayout для всех /settings/*
+										<SettingsLayout> 
+											{/* Компонент Settings просто рендерит Outlet для вложенных роутов */}
+											<Settings /> 
+										</SettingsLayout>
 									}
 								>
+									{/* Вложенные роуты для конкретных вкладок */}
 									<Route path="profile" element={<ProfileSettings />} />
 									<Route path="appearance" element={<AppearanceSettings />} />
 									<Route path="security" element={<SecuritySettings />} />
-									<Route index element={<Navigate to="profile" replace />} />
+									{/* Редирект по умолчанию для /settings */}
+									<Route index element={<Navigate to="profile" replace />} /> 
 								</Route>
+								{/* --- Конец маршрутов настроек --- */}
 
 								{/* Маршруты для страницы подписок */}
 								<Route
