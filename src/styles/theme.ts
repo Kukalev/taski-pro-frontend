@@ -4,6 +4,24 @@ export type ThemeColorType =
   'blue' | 'sky' | 'cyan' | 'teal' | 'emerald' | 
   'green' | 'gray' | 'black';
 
+// --- ДОБАВЛЯЕМ СПИСОК ДОСТУПНЫХ ЦВЕТОВ ---
+export const availableColors: ThemeColorType[] = [
+  'indigo', 'orange', 'red', 'pink', 'fuchsia', 
+  'blue', 'sky', 'cyan', 'teal', 'emerald', 
+  'green', 'gray', 'black'
+];
+// --- КОНЕЦ ДОБАВЛЕНИЯ ---
+
+// --- ДОБАВЛЯЕМ ФУНКЦИЮ isThemeColor ---
+/**
+ * Проверяет, является ли переданная строка допустимым цветом темы.
+ * @param value Строка для проверки.
+ * @returns true, если строка является допустимым ThemeColorType, иначе false.
+ */
+export const isThemeColor = (value: string): value is ThemeColorType => {
+  return availableColors.includes(value as ThemeColorType);
+};
+// --- КОНЕЦ ДОБАВЛЕНИЯ ---
 
 // Настройки цветов для каждой темы (оставляем для градиентов и имен Tailwind)
 export const THEMES = {
@@ -79,21 +97,26 @@ export const COLOR_VALUES: Record<ThemeColorType, Record<string, string>> = {
   black: { '50': '#111827', '400': '#1f2937', '500': '#111827', '600': '#000000' } // Используем темные оттенки для черного
 };
 
-// Начальный цвет
-let _mainColor: ThemeColorType = 'red'; // Поставим teal по умолчанию, как в global.css
+// Оно будет установлено через setMainColor при инициализации AuthContext
+let _mainColor: ThemeColorType | null = null; // Начинаем с null
 
-// Геттер для получения текущего цвета
-export const getMainColor = (): ThemeColorType => _mainColor;
+// Геттер
+export const getMainColor = (): ThemeColorType => _mainColor || 'teal'; // Возвращаем дефолт, если null
 
-// Функция для установки цвета и автоматического применения темы
+// Сеттер
 export const setMainColor = (color: ThemeColorType): void => {
-  if (THEMES[color]) { // Проверяем, что цвет существует
+  // Проверяем валидность цвета ИСПОЛЬЗУЯ isThemeColor
+  if (!isThemeColor(color)) {
+    console.warn(`[theme.ts] Попытка установить невалидный цвет '${color}'. Используется 'teal' по умолчанию.`);
+    color = 'teal'; // Используем дефолт, если цвет невалиден
+  }
+
+  if (color !== _mainColor) { // Применяем только если цвет реально меняется
+    console.log(`[theme.ts] Установка основного цвета: ${color}`);
     _mainColor = color;
-    applyTheme(color);
-  } else {
-    console.warn(`Theme color "${color}" not found. Falling back to default.`);
-    _mainColor = 'teal'; // Возвращаемся к дефолтному, если цвет не найден
-    applyTheme(_mainColor);
+    applyTheme(_mainColor); // Применяем CSS переменные
+    // --- УБИРАЕМ ЗАПИСЬ В LOCALSTORAGE ---
+    // localStorage.setItem('themeColor', _mainColor); // Больше не нужно, т.к. грузим с бэка
   }
 };
 
@@ -103,23 +126,21 @@ export const mainColor = getMainColor();
 // Функция для установки CSS-переменных на основе выбранной темы
 export const applyTheme = (theme: ThemeColorType = getMainColor()) => {
   const root = document.documentElement;
-  const themeName = THEMES[theme] ? theme : 'teal'; 
+  // Получаем цвет из getMainColor, который вернет дефолт, если _mainColor еще null
+  const themeName = theme;
   const themeHexColors = COLOR_VALUES[themeName];
 
   if (!themeHexColors) {
       console.error(`Color values for theme "${themeName}" not found.`);
       return;
   }
-
-  // Основные переменные
-  root.style.setProperty('--theme-color', themeHexColors['500']); 
-  root.style.setProperty('--theme-color-light', themeHexColors['400']); 
-  root.style.setProperty('--theme-color-dark', themeHexColors['600']); 
-  root.style.setProperty('--theme-color-bg', themeHexColors['50']); 
-
-  // Переменные для градиента (используем 400 и 600 оттенки)
-  root.style.setProperty('--theme-gradient-from', themeHexColors['400']); 
-  root.style.setProperty('--theme-gradient-to', themeHexColors['600']);   
+  console.log(`[theme.ts] Применение CSS переменных для темы: ${themeName}`);
+  root.style.setProperty('--theme-color', themeHexColors['500']);
+  root.style.setProperty('--theme-color-light', themeHexColors['400']);
+  root.style.setProperty('--theme-color-dark', themeHexColors['600']);
+  root.style.setProperty('--theme-color-bg', themeHexColors['50']);
+  root.style.setProperty('--theme-gradient-from', themeHexColors['400']);
+  root.style.setProperty('--theme-gradient-to', themeHexColors['600']);
 };
 
 // Функция для получения градиента для компонентов
@@ -128,10 +149,9 @@ export const getGradient = (): string => {
   return THEMES[theme] ? THEMES[theme].gradient : THEMES.teal.gradient;
 };
 
-// Применяем тему при загрузке (можно оставить, если applyTheme вызывается и в useEffect)
-// if (typeof document !== 'undefined') {
-//   applyTheme();
-// }
+// Убираем авто-применение темы при загрузке модуля,
+// так как это будет делать AuthContext
+// if (typeof document !== 'undefined') { ... }
 
 
 

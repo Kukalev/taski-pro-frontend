@@ -1,5 +1,5 @@
 import React from 'react'
-import {BrowserRouter, Navigate, Route, Routes} from 'react-router-dom'
+import {BrowserRouter, Navigate, Route, Routes, Outlet} from 'react-router-dom'
 import {NotFound} from './components/NotFound'
 import {DeskProvider} from './contexts/DeskContext'
 import {AuthProvider, useAuth} from './contexts/AuthContext'
@@ -29,21 +29,33 @@ import {
 } from './pages/Settings/components/SecuritySettings/SecuritySettings'
 import { SubscriptionsPage } from './pages/Subscriptions/SubscriptionsPage'
 
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-	const { isAuthenticated } = useAuth()
-	console.log(`[ProtectedRoute] Проверка авторизации из AuthContext: isAuthenticated = ${isAuthenticated}`);
-	if (!isAuthenticated) {
-		console.log('[ProtectedRoute] Пользователь НЕ авторизован (AuthContext), редирект на /register');
-		return <Navigate to='/register' replace />
+const ProtectedRoute = ({ redirectPath = '/register' }: { redirectPath?: string }) => {
+	const { isAuthenticated, isLoadingAuth } = useAuth()
+
+	if (isLoadingAuth) {
+		console.log('[ProtectedRoute] Ожидание завершения проверки AuthContext (isLoadingAuth)...')
+		return null;
 	}
-	console.log('[ProtectedRoute] Пользователь авторизован (AuthContext), рендеринг дочернего компонента.');
-	return <>{children}</>
+
+	if (!isAuthenticated) {
+		console.log(`[ProtectedRoute] Пользователь НЕ авторизован (isLoadingAuth=${isLoadingAuth}), редирект на ${redirectPath}`)
+		return <Navigate to={redirectPath} replace />
+	}
+
+	console.log(`[ProtectedRoute] Пользователь авторизован (isLoadingAuth=${isLoadingAuth}), рендеринг дочернего компонента (Outlet).`)
+	return <Outlet />
 }
 
 const RootRedirect = () => {
-	const { isAuthenticated } = useAuth();
-	console.log(`[RootRedirect] Проверка авторизации из AuthContext: isAuthenticated = ${isAuthenticated}`);
-	return isAuthenticated ? <Navigate to='/desk' replace /> : <Navigate to='/register' replace />;
+	const { isAuthenticated, isLoadingAuth } = useAuth()
+	console.log(`[RootRedirect] Проверка авторизации из AuthContext: isAuthenticated = ${isAuthenticated}, isLoadingAuth = ${isLoadingAuth}`)
+	
+	if (isLoadingAuth) {
+		console.log('[RootRedirect] Ожидание завершения проверки AuthContext...')
+		return null;
+	}
+
+	return isAuthenticated ? <Navigate to='/desk' replace /> : <Navigate to='/register' replace />
 }
 
 function App() {
@@ -58,104 +70,81 @@ function App() {
 							<Route path='/register' element={<RegisterPage />} />
 							<Route path='/forgot-password' element={<ForgotPasswordPage />} />
 
-							{/* Защищенные welcome роуты */}
-							<Route
-								path='/welcome'
-								element={
-									<ProtectedRoute>
-										<Welcome />
-									</ProtectedRoute>
-								}
-							/>
-							<Route
-								path='/welcome/team'
-								element={
-									<ProtectedRoute>
-										<Team />
-									</ProtectedRoute>
-								}
-							/>
+							{/* Обертка для защищенных роутов */}
+							<Route element={<ProtectedRoute redirectPath="/register" />}>
+								{/* Welcome роуты */}
+								<Route path='/welcome' element={<Welcome />} />
+								<Route path='/welcome/team' element={<Team />} />
 
-							{/* Корневой маршрут desk */}
-							<Route
-								path='/desk'
-								element={
-									<ProtectedRoute>
+								{/* Корневой маршрут desk */}
+								<Route
+									path='/desk'
+									element={
 										<DeskLayout>
 											<Desk />
 										</DeskLayout>
-									</ProtectedRoute>
-								}
-							/>
+									}
+								/>
 
-							{/* Маршруты для конкретной доски по ID */}
-							<Route
-								path='/desk/:id'
-								element={
-									<ProtectedRoute>
+								{/* Маршруты для конкретной доски по ID */}
+								<Route
+									path='/desk/:id'
+									element={
 										<DeskLayout>
 											<DeskDetails />
 										</DeskLayout>
-									</ProtectedRoute>
-								}
-							>
-								<Route path="overview" element={<DeskOverview />} />
-								<Route path="board" element={<DeskBoard />} />
-								<Route path="github" element={<GitHubPage />} />
-								<Route index element={<Navigate to="board" replace />} />
-							</Route>
+									}
+								>
+									<Route path="overview" element={<DeskOverview />} />
+									<Route path="board" element={<DeskBoard />} />
+									<Route path="github" element={<GitHubPage />} />
+									<Route index element={<Navigate to="board" replace />} />
+								</Route>
 
-							{/* Специальные подмаршруты desk */}
-							<Route
-								path='/desk/myTasks'
-								element={
-									<ProtectedRoute>
+								{/* Специальные подмаршруты desk */}
+								<Route
+									path='/desk/myTasks'
+									element={
 										<DeskLayout>
 											<MyTasks />
 										</DeskLayout>
-									</ProtectedRoute>
-								}
-							/>
-							<Route
-								path='/desk/allTasks'
-								element={
-									<ProtectedRoute>
+									}
+								/>
+								<Route
+									path='/desk/allTasks'
+									element={
 										<DeskLayout>
 											<AllTasks />
 										</DeskLayout>
-									</ProtectedRoute>
-								}
-							/>
+									}
+								/>
+								
+								{/* Маршруты для страницы настроек */}
+								<Route
+									path='/settings'
+									element={									
+											<Settings />										
+									}
+								>
+									<Route path="profile" element={<ProfileSettings />} />
+									<Route path="appearance" element={<AppearanceSettings />} />
+									<Route path="security" element={<SecuritySettings />} />
+									<Route index element={<Navigate to="profile" replace />} />
+								</Route>
 
-							{/* Редирект с главной теперь через компонент */}
-							<Route path='/' element={<RootRedirect />} />
-
-							{/* Маршруты для страницы настроек */}
-							<Route
-								path='/settings'
-								element={
-									<ProtectedRoute>
-										<Settings />
-									</ProtectedRoute>
-								}
-							>
-								<Route path="profile" element={<ProfileSettings />} />
-								<Route path="appearance" element={<AppearanceSettings />} />
-								<Route path="security" element={<SecuritySettings />} />
-								<Route index element={<Navigate to="profile" replace />} />
-							</Route>
-
-							{/* Маршруты для страницы подписок */}
-							<Route
-								path='/subscriptions'
-								element={
-									<ProtectedRoute>
+								{/* Маршруты для страницы подписок */}
+								<Route
+									path='/subscriptions'
+									element={
 										<DeskLayout>
 											<SubscriptionsPage />
 										</DeskLayout>
-									</ProtectedRoute>
-								}
-							/>
+									}
+								/>
+							</Route>
+
+							{/* Редирект с главной теперь через компонент */}
+							<Route path='/' element={<RootRedirect />} />
 
 							{/* Глобальный 404 для всех остальных маршрутов */}
 							<Route path='*' element={<NotFound />} />

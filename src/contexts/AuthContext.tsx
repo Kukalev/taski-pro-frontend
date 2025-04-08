@@ -1,5 +1,5 @@
 // src/contexts/AuthContext.tsx
-import {
+import React, {
   createContext,
   ReactNode,
   useCallback,
@@ -9,55 +9,107 @@ import {
   useState
 } from 'react'
 import {AuthService} from '../services/auth/Auth' // Импортируем твой AuthService
-
+import { getColorOnUser } from '../services/colors/api/getColorOnUser'; // Убедись, что путь правильный
+import { setMainColor, ThemeColorType } from '../styles/theme'; // Импортируем функции темы
+import { getTokens } from '../services/auth/utils/TokenStorage'; // Для проверки токена при инициализации
 
 // 5. Обновляем тип контекста
 interface AuthContextType {
   isAuthenticated: boolean;
-  // login больше не принимает данные
-  login: () => void;
+  isLoadingAuth: boolean; // Добавляем флаг загрузки
+  // login теперь будет асинхронным, если нужно дождаться загрузки темы
+  login: () => Promise<void>; // Изменяем сигнатуру login
   logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-
-
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  // --- Оставляем только isAuthenticated ---
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => AuthService.isAuthenticated());
-  
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false); // Начинаем с false
+  const [isLoadingAuth, setIsLoadingAuth] = useState<boolean>(true); // Флаг начальной проверки
 
-  // login просто устанавливает флаг
-  const login = useCallback(() => {
-    console.log('[AuthContext] login: Установка isAuthenticated = true');
+  // Функция загрузки и применения темы
+  const loadAndApplyTheme = useCallback(async () => {
+    console.log('[AuthContext] Загрузка и применение темы пользователя...');
+    const savedColor = await getColorOnUser(); // Эта функция возвращает 'orange' при 401/404
+
+    if (savedColor) {
+       console.log(`[AuthContext] Тема пользователя ${savedColor} загружена и применена.`);
+       setMainColor(savedColor); // Применяем цвет с сервера ИЛИ 'orange' (из getColorOnUser)
+    } else {
+       // Сюда попадем ТОЛЬКО если getColorOnUser вернул null (НЕОЖИДАННАЯ ошибка)
+       console.warn('[AuthContext] getColorOnUser вернул null (неожиданная ошибка). Применение ORANGE по умолчанию.');
+       // Устанавливаем ORANGE как fallback даже для неожиданных ошибок
+       setMainColor('orange'); // <-- ИЗМЕНЕНО С 'teal'
+    }
+  }, []);
+
+  // ИЗМЕНЕННАЯ Начальная проверка аутентификации при монтировании
+  useEffect(() => {
+    const checkInitialAuth = async () => {
+      setIsLoadingAuth(true);
+      const tokensExist = !!getTokens()?.accessToken; 
+      const initialAuthStatus = AuthService.isAuthenticated(); 
+
+      console.log(`[AuthContext Initial Check] Tokens Exist: ${tokensExist}, AuthService reports: ${initialAuthStatus}`);
+
+      if (tokensExist && initialAuthStatus) {
+        console.log('[AuthContext Initial Check] Токены есть, статус ОК. Установка isAuthenticated = true.');
+        setIsAuthenticated(true);
+        console.log('[AuthContext Initial Check] Попытка загрузки темы пользователя при восстановлении сессии...');
+        await loadAndApplyTheme(); // Загружаем тему (или 'orange')
+
+      } else {
+        console.log('[AuthContext Initial Check] Токены не найдены или невалидны. Установка isAuthenticated = false.');
+        setIsAuthenticated(false);
+        // Тему не устанавливаем, пусть будет как есть или как CSS задаст
+        if (tokensExist && !initialAuthStatus) {
+             console.log('[AuthContext Initial Check] Очистка невалидных токенов.');
+             AuthService.logout(); 
+        }
+      }
+      // Устанавливаем isLoadingAuth = false ПОСЛЕ всех проверок и установок состояния
+      setIsLoadingAuth(false); 
+      console.log('[AuthContext Initial Check] Проверка завершена.');
+    };
+    checkInitialAuth();
+  // Зависимости оставляем пустыми, т.к. loadAndApplyTheme используется внутри
+  }, []); 
+
+  // Функция login теперь также загружает тему
+  const login = useCallback(async () => {
+    console.log('[AuthContext] login: Установка isAuthenticated = true и загрузка темы...');
     setIsAuthenticated(true);
-  }, []);
+    await loadAndApplyTheme(); // Загрузит тему или 'orange'
+  }, [loadAndApplyTheme]);
 
-  // logout просто сбрасывает флаг
+  // Функция logout сбрасывает флаг и применяет дефолтную тему
   const logout = useCallback(() => {
-    console.log('[AuthContext] logout: Установка isAuthenticated = false');
+    console.log('[AuthContext] logout: Установка isAuthenticated = false.');
     setIsAuthenticated(false);
-    // Фактический выход (очистка localStorage, редирект) делается через AuthService.logout() извне
+    // Тему не трогаем
   }, []);
 
-  // --- Убираем useEffect для восстановления сессии по данным пользователя ---
-  // useEffect(() => { ... });
-
-  // --- Слушатель storage --- (можно оставить, но он будет реагировать только на 'token')
+  // Слушатель storage (оставляем для синхронизации вкладок)
   useEffect(() => {
     const handleStorageChange = (event: StorageEvent) => {
-       // Слушаем только изменение токена или username
        if (event.key === 'token' || event.key === 'username') {
-         console.log(`[AuthContext] Storage event: Обнаружено изменение ключа '${event.key}'. Проверка статуса аутентификации...`);
+         console.log(`[AuthContext] Storage event: Key '${event.key}' changed. Re-checking auth status.`);
          const currentAuthStatus = AuthService.isAuthenticated();
          if (currentAuthStatus !== isAuthenticated) {
-            console.log(`[AuthContext] Storage event: Синхронизация состояния isAuthenticated на ${currentAuthStatus}`);
+            console.log(`[AuthContext] Storage event: Syncing isAuthenticated to ${currentAuthStatus}`);
             setIsAuthenticated(currentAuthStatus);
-            // Если разлогинились в другой вкладке, делаем редирект и здесь
-            if (!currentAuthStatus && window.location.pathname !== '/login' && window.location.pathname !== '/register') {
-                 console.log('[AuthContext] Storage event: Обнаружен выход в другой вкладке, редирект на /login');
-                 window.location.href = '/login';
+            if (!currentAuthStatus) {
+                // Если разлогинились, применяем дефолтную тему и редиректим
+                setMainColor('teal');
+                if (window.location.pathname !== '/login' && window.location.pathname !== '/register') {
+                    console.log('[AuthContext] Storage event: Logout detected in another tab, redirecting...');
+                    window.location.href = '/login'; // Полный редирект
+                }
+            } else {
+                // Если залогинились в другой вкладке, нужно перезагрузить тему и здесь
+                console.log('[AuthContext] Storage event: Login detected in another tab, reloading theme...');
+                loadAndApplyTheme();
             }
          }
        }
@@ -66,15 +118,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return () => {
        window.removeEventListener('storage', handleStorageChange);
     };
-  }, [isAuthenticated]); // Добавляем зависимость, чтобы сравнивать с актуальным состоянием
+  }, [isAuthenticated, loadAndApplyTheme]); // Добавили loadAndApplyTheme
 
-  // Обновляем значение контекста
+  // Мемоизируем значение контекста
   const value = useMemo(() => ({
-     isAuthenticated, login, logout
-  }), [isAuthenticated, login, logout]);
+     isAuthenticated, isLoadingAuth, login, logout
+  }), [isAuthenticated, isLoadingAuth, login, logout]);
 
-  // --- Убираем проверку isLoading ---
-  // if (isLoading) { ... }
+  // Можно добавить отображение лоадера на весь экран, пока идет начальная проверка
+  // if (isLoadingAuth) {
+  //   return <div>Загрузка аутентификации...</div>; // Или компонент лоадера
+  // }
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
