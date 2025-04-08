@@ -19,3 +19,5 @@ export const getCurrentUser = async (): Promise<UserProfile> => {
         throw error;
     }
 };
+
+

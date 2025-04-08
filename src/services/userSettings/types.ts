@@ -37,10 +37,5 @@ export interface IsValidCodeResponse {
     isValid: boolean; // API возвращает true/false напрямую, обернем для ясности
 }
 
-
-/**
- * Данные, необходимые для удаления аккаунта пользователя.
- */
-export interface DeleteUserPayload {
-	oldPassword: string;
-}
+// Добавим тип для шагов смены email
+export type EmailChangeStep = 'idle' | 'sendingCode' | 'codeSent' | 'verifyingCode' | 'codeVerified' | 'updatingEmail';

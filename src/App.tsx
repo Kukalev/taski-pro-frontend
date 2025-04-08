@@ -6,6 +6,7 @@ import {AuthProvider, useAuth} from './contexts/AuthContext'
 import {DeskLayout} from './layouts/DeskLayout'
 import {LoginPage} from './pages/Auth/LoginPage'
 import {RegisterPage} from './pages/Auth/RegisterPage'
+import {ForgotPasswordPage} from './pages/Auth/ForgotPasswordPage'
 import {Desk} from './pages/desk/Desk'
 import {DeskDetails} from './pages/desk/deskDetails/DeskDetails.tsx'
 import {DeskBoard} from './pages/desk/deskDetails/DeskBoard'
@@ -55,6 +56,7 @@ function App() {
 							{/* Публичные роуты */}
 							<Route path='/login' element={<LoginPage />} />
 							<Route path='/register' element={<RegisterPage />} />
+							<Route path='/forgot-password' element={<ForgotPasswordPage />} />
 
 							{/* Защищенные welcome роуты */}
 							<Route

@@ -1,4 +1,4 @@
-import {api} from '../../apiInstance'
+import api from '../../api'
 
 /**
  * Отправляет код подтверждения на ТЕКУЩУЮ почту пользователя для инициации смены email.
@@ -33,3 +33,5 @@ export const sendCodeForEmailChange = async (): Promise<void> => {
         throw error;
     }
 };
+
+

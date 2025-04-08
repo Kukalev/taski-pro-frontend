@@ -1,4 +1,7 @@
 import {useState} from 'react'
+import {
+  UserSettingsService
+} from '../../../../../services/userSettings/UserSettings'
 
 export const PasswordChange = () => {
   const [oldPassword, setOldPassword] = useState('')
@@ -6,8 +9,9 @@ export const PasswordChange = () => {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
     setSuccess('')
@@ -22,18 +26,26 @@ export const PasswordChange = () => {
       return
     }
     
-    // Тут должен быть запрос на сервер для смены пароля
-    console.log('Отправка запроса на смену пароля')
-    setSuccess('Пароль успешно изменен')
+    setIsLoading(true)
     
-    // Очищаем поля
-    setOldPassword('')
-    setNewPassword('')
-    setConfirmPassword('')
+    try {
+      console.log('Отправка запроса на смену пароля...', oldPassword, newPassword)
+      await UserSettingsService.updateUser({ oldPassword, newPassword })
+      setSuccess('Пароль успешно изменен')
+      
+      setOldPassword('')
+      setNewPassword('')
+      setConfirmPassword('')
+    } catch (err: any) {
+      console.error("Ошибка при смене пароля:", err)
+      setError(err.message || 'Не удалось изменить пароль. Попробуйте позже.')
+    } finally {
+      setIsLoading(false)
+    }
   }
   
   // Стиль для полей ввода
-  const inputStyle = "p-1.5 bg-gray-50 rounded-lg w-full focus:outline-none placeholder-gray-400 hover:bg-gray-100 focus:bg-gray-100"
+  const inputStyle = "p-1.5 bg-gray-50 rounded-lg w-full focus:outline-none placeholder-gray-400 hover:bg-gray-100 focus:bg-gray-100 disabled:opacity-50"
 
   return (
     <form onSubmit={handleSubmit}>
@@ -48,6 +60,7 @@ export const PasswordChange = () => {
           value={oldPassword}
           onChange={(e) => setOldPassword(e.target.value)}
           placeholder="Введите старый пароль"
+          disabled={isLoading}
         />
       </div>
       
@@ -62,6 +75,7 @@ export const PasswordChange = () => {
           value={newPassword}
           onChange={(e) => setNewPassword(e.target.value)}
           placeholder="Введите новый пароль"
+          disabled={isLoading}
         />
       </div>
       
@@ -76,6 +90,7 @@ export const PasswordChange = () => {
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
           placeholder="Введите новый пароль повторно"
+          disabled={isLoading}
         />
       </div>
       
@@ -94,9 +109,10 @@ export const PasswordChange = () => {
       <div className="flex justify-end">
         <button
           type="submit"
-          className="px-6 py-2 bg-gray-100 text-gray-400 rounded-lg hover:bg-gray-200 hover:text-gray-500 focus:outline-none  cursor-pointer transition-colors mr-4"
+          className="px-6 py-2 bg-gray-100 text-gray-400 rounded-lg hover:bg-gray-200 hover:text-gray-500 focus:outline-none cursor-pointer transition-colors mr-4 disabled:opacity-50 disabled:cursor-not-allowed"
+          disabled={isLoading}
         >
-          Изменить пароль
+          {isLoading ? 'Изменение...' : 'Изменить пароль'}
         </button>
       </div>
     </form>

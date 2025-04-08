@@ -1,9 +1,10 @@
-import { getCurrentUser } from './api/GetCurrentUser';
-import { sendCodeForEmailChange } from './api/SendCodeEmail';
-import { forgotPassword } from './api/ForgotPassword';
-import { isValidCode } from './api/IsValidCode';
-import { updateUser } from './api/UpdateUser';
-import { CodeType, UpdateUserData, UserProfile } from './types'; // Реэкспорт типов для удобства
+import {getCurrentUser} from './api/GetCurrentUser'
+import {sendCodeForEmailChange} from './api/SendCodeEmail'
+import {forgotPassword} from './api/ForgotPassword'
+import {isValidCode} from './api/IsValidCode'
+import {updateUser} from './api/UpdateUser'
+import {deleteCurrentUser} from './api/DeleteUser'
+import {CodeType, UpdateUserData, UserProfile} from './types' // Реэкспорт типов для удобства
 
 // Реэкспорт функций API
 export const UserSettingsService = {
@@ -12,6 +13,7 @@ export const UserSettingsService = {
     forgotPassword,
     isValidCode,
     updateUser,
+	deleteCurrentUser
 };
 
 // Реэкспорт типов
@@ -45,3 +47,5 @@ async function changePassword(oldPass: string, newPass: string) {
 }
 
 */
+
+
