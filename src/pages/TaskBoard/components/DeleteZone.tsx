@@ -42,15 +42,19 @@ const DeleteZone: React.FC<ExtendedDeleteZoneProps> = ({
       onDrop(); // Вызываем обработчик из TaskBoardPage
   };
 
+  // Определяем цвет динамически
+  const hoverBorderColor = hovered ? 'var(--theme-color)' : '#D1D5DB'; // Используем CSS переменную
+  const iconColorClass = hovered ? 'text-[var(--theme-color)]' : 'text-gray-400'; // Используем переменную для иконки
+
   return (
     <div 
-      className="fixed bottom-8 left-1/2 transform -translate-x-1/2 h-12 bg-white border-2 border-dashed border-gray-300 
-                flex items-center justify-center z-[9999] rounded-lg px-6"
+      className="fixed bottom-8 left-1/2 transform -translate-x-1/2 h-12 bg-white border-2 border-dashed
+                flex items-center justify-center z-[9999] rounded-lg px-6 transition-colors duration-200" // Убрали transition из style, добавили Tailwind
       style={{
         maxWidth: '300px',
         width: '80%',
-        transition: 'border-color 0.2s',
-        borderColor: hovered ? '#FB923C' : '#D1D5DB'
+        // Применяем динамический цвет рамки
+        borderColor: hoverBorderColor
       }}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
@@ -58,9 +62,7 @@ const DeleteZone: React.FC<ExtendedDeleteZoneProps> = ({
     >
       <div className="flex items-center text-sm">
         <svg 
-          className={`w-5 h-5 mr-2 transition-colors duration-200 ${
-            hovered ? 'text-orange-500' : 'text-gray-400'
-          }`}
+          className={`w-5 h-5 mr-2 transition-colors duration-200 ${iconColorClass}`}
           fill="none" 
           stroke="currentColor" 
           viewBox="0 0 24 24" 

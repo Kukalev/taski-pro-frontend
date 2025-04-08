@@ -50,6 +50,7 @@ const TaskBoardPage: React.FC<TaskBoardPageProps> = ({ deskId, deskUsers }) => {
     setDropTarget,
     setDropZoneHovered,
     handleDragStart,
+    setShowDropZone
   } = useTaskDragAndDrop();
 
   // Добавляем состояния для анимации
@@ -396,38 +397,44 @@ const TaskBoardPage: React.FC<TaskBoardPageProps> = ({ deskId, deskUsers }) => {
     }
   }, [newTaskTexts, handleCreateTask]);
 
-  // Обработка drop на колонку (здесь только обновление статуса)
+  // Обработка drop на колонку
   const handleDropOnColumn = useCallback((targetStatusType: string) => {
-    // Вызывается из TaskColumn.onDrop
+    // Немедленно скрываем зону при любом дропе на колонку
+    console.log('[handleDropOnColumn] Hiding drop zone immediately.');
+    setShowDropZone(false); // <--- ВЫЗЫВАЕМ СРАЗУ
+
     if (!draggedTask || !draggedTask.taskId) {
-      console.error("Drop failed: draggedTask or taskId is missing");
-      return;
+      console.warn("[handleDropOnColumn] Drop failed: draggedTask or taskId is missing");
+      return; // Зона уже скрыта
     }
 
     const taskId = draggedTask.taskId;
+    const currentStatus = draggedTask.statusType;
 
-    // Обновляем только если статус реально изменился
-    if (draggedTask.statusType !== targetStatusType) {
-      console.log(`[TaskBoardPage] Dropped task ${taskId} onto ${targetStatusType}`);
+    if (currentStatus !== targetStatusType) {
+      console.log(`[TaskBoardPage] Dropped task ${taskId} onto ${targetStatusType}. Updating...`);
       updateTaskOptimistically(taskId, { statusType: targetStatusType as StatusType }, draggedTask);
     } else {
       console.log(`[TaskBoardPage] Dropped task ${taskId} onto same status ${targetStatusType}, no update needed.`);
     }
-    // Состояние DND сбросится глобальным обработчиком 'dragend'
-  }, [draggedTask, updateTaskOptimistically]); // Добавили зависимости
+    // Состояние dropTarget сбросится в dragend
+  }, [draggedTask, updateTaskOptimistically, setShowDropZone]); // Добавили setShowDropZone в зависимости
 
   // Обработчик drop на зону удаления
   const handleDeleteZoneDrop = useCallback(() => {
-    // Вызывается из DeleteZone.onDrop
+     // Немедленно скрываем зону при дропе на удаление
+    console.log('[handleDeleteZoneDrop] Hiding drop zone immediately.');
+    setShowDropZone(false); // <--- ВЫЗЫВАЕМ СРАЗУ
+
     if (!draggedTask || !draggedTask.taskId) {
-      console.error("Delete drop failed: draggedTask or taskId is missing");
-      return;
+      console.warn("[handleDeleteZoneDrop] Drop failed: draggedTask or taskId is missing");
+      return; // Зона уже скрыта
     }
-    console.log(`[TaskBoardPage] Dropped task ${draggedTask.taskId} onto delete zone`);
-    setTaskToDelete(draggedTask.taskId); // Устанавливаем ID для модалки
-    setShowDeleteModal(true);           // Показываем модалку
-     // Состояние DND сбросится глобальным обработчиком 'dragend'
-  }, [draggedTask]); // Добавили зависимость
+    console.log(`[TaskBoardPage] Dropped task ${draggedTask.taskId} onto delete zone. Showing modal...`);
+    setTaskToDelete(draggedTask.taskId);
+    setShowDeleteModal(true);
+    // Состояние dropZoneHovered сбросится в dragend
+  }, [draggedTask, setShowDropZone]); // Добавили setShowDropZone в зависимости
 
   // Обработчик обновления задачи из дочерних компонентов
   const handleTaskUpdateFromChild = useCallback((taskId: number, updates: Partial<Task> | { executorUsernames?: string[]; removeExecutorUsernames?: string[] }) => {
@@ -439,6 +446,9 @@ const TaskBoardPage: React.FC<TaskBoardPageProps> = ({ deskId, deskUsers }) => {
       console.error('[handleTaskUpdateFromChild] Задача не найдена:', taskId);
     }
   }, [tasks, updateTaskOptimistically]);
+
+  // Лог для рендера (оставляем для проверки)
+  console.log(`[TaskBoardPage Render] showDropZone state from hook: ${showDropZone}`);
 
   // РЕНДЕРИНГ
   return (
