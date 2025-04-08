@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react'
+import React, {useCallback} from 'react'
 import {FaCheck, FaRegCircle} from 'react-icons/fa'
 import {IoCalendarNumberOutline} from 'react-icons/io5'
 import {StatusType, TaskCardProps} from '../types'
@@ -6,7 +6,7 @@ import {format} from 'date-fns'
 import {ru} from 'date-fns/locale'
 import TaskExecutors from './TaskExecutors'
 import {canEditTask, canEditTaskDate} from '../../../utils/permissionUtils'
-import { Task } from '../../../services/task/types/task.types'
+import {Task} from '../../../services/task/types/task.types'
 
 // Форматирование даты для отображения в карточке
 const formatShortDate = (date: Date | string): string => {
@@ -33,6 +33,42 @@ interface ExtendedTaskCardProps extends Omit<TaskCardProps, 'onDragEnd'> {
   onDragStart: (e: React.DragEvent, task: Task) => void;
   setHoveredCheckCircle: (taskId: number | null) => void;
 }
+
+// --- НАЧАЛО: Вспомогательные функции для приоритета ---
+// (Можно вынести в отдельный файл utils, если используются в других местах)
+
+// Возвращает Tailwind класс цвета фона для индикатора
+const getPriorityIndicatorClass = (priorityType?: string): string => {
+  switch (priorityType) {
+    case 'HIGH':
+      return 'bg-red-500'; // Красный для высокого
+    case 'MEDIUM':
+      return 'bg-yellow-500'; // Желтый/Оранжевый для среднего
+    case 'LOW':
+      return 'bg-green-600'; // Зеленый для низкого
+    case 'FROZEN': // Предполагаем такой ключ для "замороженный"
+      return 'bg-blue-500'; // Синий для замороженного
+    default:
+      return 'hidden'; // Скрываем, если приоритет не задан или неизвестен
+  }
+};
+
+// Возвращает текстовое описание приоритета для title
+const getPriorityTitle = (priorityType?: string): string => {
+  switch (priorityType) {
+    case 'HIGH':
+      return 'Высокий приоритет';
+    case 'MEDIUM':
+      return 'Средний приоритет';
+    case 'LOW':
+      return 'Низкий приоритет';
+    case 'FROZEN':
+      return 'Заморожен';
+    default:
+      return '';
+  }
+};
+// --- КОНЕЦ: Вспомогательные функции для приоритета ---
 
 const TaskCard: React.FC<ExtendedTaskCardProps> = ({
   task,
@@ -99,6 +135,10 @@ const TaskCard: React.FC<ExtendedTaskCardProps> = ({
   // Форматируем полученное значение
   const formattedFinishDate = dateToFormat ? formatShortDate(dateToFormat) : null;
 
+  // Получаем класс и title для индикатора
+  const indicatorClass = getPriorityIndicatorClass(task.priorityType);
+  const priorityTitle = getPriorityTitle(task.priorityType);
+
   return (
     <div
       className="bg-white rounded-lg shadow p-3 mb-2 cursor-pointer hover:shadow-md task-card group relative"
@@ -106,9 +146,16 @@ const TaskCard: React.FC<ExtendedTaskCardProps> = ({
       draggable={canMoveOrCompleteTask}
       onDragStart={(e) => canMoveOrCompleteTask && onDragStart(e, task)}
     >
+      {/* === НАЧАЛО: Индикатор приоритета (Обновлено) === */}
+      <div
+
+        className={`absolute top-0 right-5 h-1 w-6 rounded-b-2xl   shadow-sm ${indicatorClass}`}
+        title={priorityTitle}
+      />
+      {/* === КОНЕЦ: Индикатор приоритета === */}
+
       <div className="mb-2">
-        {/* Применяем стиль line-through для названия завершенной задачи */}
-        <h3 className={`font-medium text-gray-900 ${isCompleted ? 'line-through text-gray-500' : ''}`}>
+        <h3 className={`font-medium text-gray-900 ${indicatorClass !== 'hidden' ? 'mr-4' : ''} ${isCompleted ? 'line-through text-gray-500' : ''}`}>
           {task.taskName}
         </h3>
         {task.taskDescription && (
