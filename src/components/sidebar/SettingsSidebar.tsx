@@ -1,7 +1,7 @@
-import React from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
-import { useSidebar } from '../../contexts/SidebarContext';
-import { MenuItem } from './components/MenuItem'; // Переиспользуем MenuItem
+import React from 'react'
+import {useLocation, useNavigate} from 'react-router-dom'
+import {useSidebar} from '../../contexts/SidebarContext'
+import {MenuItem} from './components/MenuItem' // Переиспользуем MenuItem
 
 // Иконки (можно вынести в отдельный файл или оставить здесь)
 const BackIcon = () => <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>;
@@ -51,13 +51,19 @@ export const SettingsSidebar = () => {
         {!isCollapsed && <span className='ml-2 whitespace-nowrap'>Назад</span>}
       </button>
 
-      {/* Заголовок секции */}
-      {!isCollapsed && (
-         <h2 className="text-[10px] uppercase text-gray-500 font-medium mb-1 px-1">
-           Основные настройки
-         </h2>
-      )}
-       {isCollapsed && <div className="h-3"></div> /* Небольшой отступ сверху в свернутом виде */}
+      {/* Заголовок секции - теперь рендерится всегда, но анимируется */}
+      <h2 
+         className="text-[10px] uppercase text-gray-500 font-medium mb-1 px-1 whitespace-nowrap overflow-hidden transition-all duration-200 ease-in-out" // Добавили whitespace-nowrap, overflow-hidden и transition-*
+         style={{
+           maxWidth: isCollapsed ? '0' : '200px', // Анимируем ширину
+           opacity: isCollapsed ? '0' : '1',      // Анимируем прозрачность
+           marginTop: isCollapsed ? '0.75rem' : '0', // Добавляем отступ сверху, когда свернуто, если нужно
+           // Если текст "Основные настройки" все еще мешает кнопке "Назад" в свернутом состоянии, 
+           // можно добавить height: isCollapsed ? '0' : 'auto' или visibility: isCollapsed ? 'hidden' : 'visible'
+         }}
+      >
+        Основные настройки
+      </h2>
 
       {/* Меню */}
       <nav className="space-y-1">
