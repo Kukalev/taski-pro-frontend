@@ -1,15 +1,12 @@
 // Импортируем все наши API-функции
 import {uploadDeskFile} from './api/uploadDeskFile'
 import {getDeskFiles} from './api/getDeskFiles'
-// Импортируем и функцию удаления, если она есть (или будет)
-// import { deleteDeskFile } from './api/deleteDeskFile';
+import {uploadTaskFile} from './api/uploadTaskFile'
+import {getTaskFiles} from './api/getTaskFiles'
+// Импортируем функцию удаления
+import {deleteDeskFile} from './api/deleteDeskFile'
 
-/**
- * Формирует полный URL для скачивания файла.
- * @param deskId - ID доски.
- * @param filename - Имя файла.
- * @returns Полный URL для скачивания.
- */
+
 const getDownloadUrl = (deskId: number, filename: string): string => {
     // ЗАМЕНИ НА СВОЙ БАЗОВЫЙ URL API, ЕСЛИ НУЖНО
     const API_BASE_URL = 'http://localhost:8080/api';
@@ -19,18 +16,25 @@ const getDownloadUrl = (deskId: number, filename: string): string => {
     return `${API_BASE_URL}${BASE_STORAGE_URL}/desks/${deskId}/documents/${encodedFilename}`;
 };
 
+
 export const FilesService = {
 
-    uploadFile: uploadDeskFile,
+    uploadDeskFile: uploadDeskFile,
 
 
     getFiles: getDeskFiles,
 
-    // /** Удаляет файл с доски (раскомментируй, если есть функция) */
-    // deleteFile: deleteDeskFile,
+    // Добавляем метод удаления
+    deleteDeskFile: deleteDeskFile,
 
     /** Формирует URL для скачивания файла */
     getDownloadUrl: getDownloadUrl,
+
+    /** Загружает файл для задачи */
+    uploadTaskFile: uploadTaskFile,
+
+    /** Получает список файлов (имен?) для задач */
+    getTaskFiles: getTaskFiles,
 
 };
 

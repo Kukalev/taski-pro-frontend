@@ -1,10 +1,10 @@
 import api from '../../api' // Путь к твоему экземпляру axios
-import {UploadFileResponse} from '../types'
+import {UploadDeskFileResponse} from '../types'
 
 const BASE_URL = '/v1/storage'; // Базовый URL контроллера
 
 
-export const uploadDeskFile = async (deskId: number, file: File): Promise<UploadFileResponse | void> => {
+export const uploadDeskFile = async (deskId: number, file: File): Promise<UploadDeskFileResponse> => {
   console.log(`[FilesService] Загрузка файла "${file.name}" для доски ${deskId}`);
   const formData = new FormData();
   formData.append('document', file);

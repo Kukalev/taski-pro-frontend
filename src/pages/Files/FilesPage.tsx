@@ -4,12 +4,13 @@ import {Button} from '../../components/ui/Button'
 import {
     FaDownload,
     FaExclamationTriangle,
+    FaFileAlt,
     FaSpinner,
     FaTrash,
     FaUpload
 } from 'react-icons/fa'
-import {DeskFile, DeskOutletContext} from './types'
-import {FilesService} from '../../services/Files/Files'
+import {DeskFile, FilesService} from '../../services/Files/Files'
+import {DeskOutletContext} from './types'
 
 export const FilesPage: React.FC = () => {
     const { desk, hasEditPermission } = useOutletContext<DeskOutletContext>();
@@ -32,7 +33,7 @@ export const FilesPage: React.FC = () => {
         setError(null);
         try {
             const fetchedFiles = await FilesService.getFiles(numericDeskId);
-            setFiles(fetchedFiles || []);
+            setFiles(fetchedFiles?.map(f => ({ ...f, id: String(f.id) })) || []);
         } catch (err: any) {
             setError('Не удалось загрузить список файлов.');
             console.error("Ошибка загрузки списка файлов:", err);
@@ -54,7 +55,7 @@ export const FilesPage: React.FC = () => {
 
         try {
             console.log(`[FilesPage] Загрузка нового файла "${selectedFile.name}".`);
-            await FilesService.uploadFile(numericDeskId, selectedFile);
+            await FilesService.uploadDeskFile(numericDeskId, selectedFile);
             console.log(`[FilesPage] Новый файл "${selectedFile.name}" успешно загружен.`);
             await loadFiles();
         } catch (err: any) {
@@ -74,12 +75,14 @@ export const FilesPage: React.FC = () => {
         fileInputRef.current?.click();
     };
 
+    // Возвращаем функцию удаления
     const handleDeleteFile = async (filename: string) => {
         if (!numericDeskId || !window.confirm(`Вы уверены, что хотите удалить файл "${filename}"?`)) return;
 
         setError(null);
+        // Можно добавить индикатор загрузки для удаления, если нужно
         try {
-            await FilesService.deleteFile(numericDeskId, filename);
+            await FilesService.deleteDeskFile(numericDeskId, filename);
             setFiles(prevFiles => prevFiles.filter(f => f.filename !== filename));
             console.log(`[FilesPage] Файл ${filename} удален.`);
         } catch (err: any) {
@@ -125,57 +128,86 @@ export const FilesPage: React.FC = () => {
                 </div>
             )}
 
-            {files.length > 0 && (
-                <div className="bg-white border border-gray-200 rounded-md shadow-sm overflow-hidden">
-                    <ul className="divide-y divide-gray-200">
-                        {files.map((file) => {
-                            const downloadUrl = numericDeskId ? FilesService.getDownloadUrl(numericDeskId, file.filename) : '#';
-                            return (
-                                <li key={file.id || file.filename} className="px-4 py-3 flex items-center justify-between hover:bg-gray-50 transition-colors duration-150">
-                                    <div className="flex items-center overflow-hidden mr-4">
-                                        <div className="flex-grow overflow-hidden">
-                                            <a
-                                                href={downloadUrl}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                download={file.filename}
-                                                className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline truncate block"
-                                                title={`Скачать ${file.filename}`}
-                                            >
-                                                {file.filename}
-                                            </a>
-                                            <p className="text-xs text-gray-500 mt-0.5">
-                                                Метаданные недоступны
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <div className="ml-auto flex-shrink-0 flex items-center space-x-4">
-                                        <a
-                                            href={downloadUrl}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            download={file.filename}
-                                            className="text-gray-500 hover:text-blue-600 transition-colors duration-150"
-                                            title="Скачать"
+            {/* === Условный рендеринг списка файлов или сообщения "нет файлов" === */}
+            {/* Этот блок должен быть ВНЕ любого map */}
+            {files.length > 0 ? (
+                // Контейнер сетки: используем grid, задаем колонки для разных размеров экрана и отступы
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 mt-4"> {/* Добавил mt-4 для отступа */} 
+                    {/* Рендерим карточку для каждого файла - ЭТОТ map должен быть здесь */}
+                    {files.map((file) => {
+                        // Генерируем URL для скачивания здесь
+                        const downloadUrl = numericDeskId ? FilesService.getDownloadUrl(numericDeskId, file.filename) : '#';
+
+                        return (
+                            // Карточка файла: стилизуем фон, рамку, тень, паддинги, делаем flex-контейнером
+                            <div
+                                key={file.id || file.filename} // Уникальный ключ для элемента списка
+                                className="bg-white border border-gray-200 rounded-lg shadow-sm p-4 flex flex-col justify-between hover:shadow-md transition-shadow duration-150 group relative"
+                            >
+                                {/* Верхняя часть карточки: иконка и имя файла */}
+                                <div className="flex items-start mb-2 min-h-[40px]"> {/* min-h для выравнивания высоты */}
+                                    {/* Иконка файла */}
+                                    <FaFileAlt className="text-gray-400 mr-3 mt-1 flex-shrink-0" size="1.2em" />
+                                    {/* Имя файла как ссылка для скачивания */}
+                                    <a
+                                        href={downloadUrl}
+                                        target="_blank" // Открыть в новой вкладке
+                                        rel="noopener noreferrer" // Безопасность
+                                        download={file.filename} // Предложить скачать с этим именем
+                                        className="text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline break-words block" // Стили ссылки, перенос слов
+                                        title={file.filename} // Всплывающая подсказка с полным именем
+                                    >
+                                        {file.filename} {/* Отображаем имя файла */}
+                                    </a>
+                                </div>
+                               
+
+                                {/* Нижняя часть карточки: кнопки действий */}
+                                <div className="flex justify-end space-x-3 mt-auto pt-2 border-t border-gray-100"> {/* Прижимаем кнопки вниз (mt-auto), выравниваем вправо */}
+                                    {/* Кнопка/ссылка для скачивания */}
+                                    <a
+                                        href={downloadUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        download={file.filename}
+                                        className="text-gray-400 hover:text-blue-600 transition-colors duration-150"
+                                        title="Скачать"
+                                    >
+                                        <FaDownload size="1.1em"/>
+                                    </a>
+                                    {/* Кнопка Удалить (только если есть права) */}
+                                    {hasEditPermission && (
+                                        <button
+                                            onClick={() => handleDeleteFile(file.filename)} // Вызываем удаление при клике
+                                            disabled={isUploading} // Блокируем во время загрузки другого файла
+                                            className={`text-gray-400 hover:text-red-600 transition-colors duration-150 ${isUploading ? 'cursor-pointer opacity-50' : 'cursor-pointer'}`}
+                                            title="Удалить"
                                         >
-                                            <FaDownload />
-                                        </a>
-                                        {hasEditPermission && (
-                                            <button
-                                                onClick={() => handleDeleteFile(file.filename)}
-                                                disabled={isUploading}
-                                                className={`text-gray-500 hover:text-red-600 transition-colors duration-150 ${isUploading ? 'cursor-not-allowed opacity-50' : ''}`}
-                                                title="Удалить"
-                                            >
-                                                <FaTrash />
-                                            </button>
-                                        )}
-                                    </div>
-                                </li>
-                            );
-                        })}
-                    </ul>
+                                            <FaTrash size="1.1em"/>
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        );
+                    })}
                 </div>
+            ) : (
+                 // Сообщение, если файлов нет (и не идет загрузка, и нет ошибки)
+                !isLoading && !error && (
+                  <div className="text-center py-10 px-4 bg-gray-50 rounded-lg border border-dashed border-gray-300">
+                      <p className="text-gray-500">На этой доске пока нет файлов.</p>
+                      {/* Кнопка загрузки первого файла (если есть права) */}
+                      {hasEditPermission && (
+                        <Button onClick={handleUploadClick} disabled={isUploading} className="mt-4">
+                            {isUploading ? (
+                              <><FaSpinner className="animate-spin mr-2" /> Загрузка...</>
+                            ) : (
+                              <><FaUpload className="mr-2" /> Загрузить первый файл</>
+                            )}
+                        </Button>
+                      )}
+                  </div>
+                )
             )}
         </div>
     );

@@ -14,7 +14,21 @@ export interface DeskFile {
 }
 
 /**
- * Тип ответа от API при загрузке файла.
- * Бэкенд возвращает String/Void, поэтому здесь void.
+ * Тип ответа от API при загрузке файла для доски.
  */
-export type UploadFileResponse = void; 
+export type UploadDeskFileResponse = void; // Бэкенд возвращает String/Void
+
+/**
+ * Тип ответа от API при загрузке файла для задачи.
+ */
+export type UploadTaskFileResponse = void; // Бэкенд возвращает String/Void
+
+/**
+ * Тип ответа для пакетной загрузки документов задач (GET /desks/{deskId}/tasks/batch).
+ * Ключ внешнего Record - ID задачи (в виде строки).
+ * Ключ внутреннего Record - имя файла (filename).
+ * Значение внутреннего Record - вероятно, Base64 Data URI файла (как для аватаров),
+ * но может быть и просто имя файла или другой идентификатор, нужно уточнить по факту ответа API.
+ * Пока ставим string | null для гибкости.
+ */
+export type BatchTaskFilesResponse = Record<string, Record<string, string | null>>; 

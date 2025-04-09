@@ -15,12 +15,12 @@ export interface DeskFile {
  * Тип для контекста, передаваемого через Outlet в DeskDetails
  */
 export interface DeskOutletContext {
-    desk: import('../desk/deskDetails/types').DeskData | null; // Тип доски из DeskDetails
-    updateLocalDesk: (updatedData: Partial<import('../desk/deskDetails/types').DeskData>, isOptimistic?: boolean) => void;
+    desk: import('../../../contexts/DeskContext').DeskData | null;
+    updateLocalDesk: (updatedData: Partial<import('../../../contexts/DeskContext').DeskData>, isOptimistic?: boolean) => void;
     refreshDeskUsers: () => void;
     hasEditPermission: boolean;
-    deskUsers: import('../../services/desk/types/desk.types').UserOnDesk[];
-    updateLocalUsers: (updater: (prevUsers: import('../../services/desk/types/desk.types').UserOnDesk[]) => import('../../services/desk/types/desk.types').UserOnDesk[]) => void;
+    deskUsers: import('../../DeskOverview/components/DeskParticipants/types').UserOnDesk[];
+    updateLocalUsers: (updater: (prevUsers: import('../../DeskOverview/components/DeskParticipants/types').UserOnDesk[]) => import('../../DeskOverview/components/DeskParticipants/types').UserOnDesk[]) => void;
     avatarsMap: Record<string, string | null>;
 }
 

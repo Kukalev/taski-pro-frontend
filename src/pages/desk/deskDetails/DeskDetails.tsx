@@ -331,14 +331,13 @@ export const DeskDetails = () => {
 
 
   // Определяем активные вкладки
-  const isOverviewActive = location.pathname.endsWith("/overview");
-  // Считаем активной доску, если путь НЕ обзор и НЕ гитхаб (по умолчанию доска)
-  const isBoardActive =
-    !isOverviewActive && !location.pathname.endsWith("/github");
-  // Новая проверка для GitHub
-  const isGitHubActive = location.pathname.endsWith("/github");
-  // ---> НОВОЕ: Проверка для вкладки Файлы <---
-  const isFilesActive = location.pathname.endsWith("/files");
+  const isOverviewActive = location.pathname.endsWith(`/desk/${id}/overview`) || location.pathname === `/desk/${id}`;
+  const isGitHubActive = location.pathname.endsWith(`/desk/${id}/github`);
+  const isFilesActive = location.pathname.endsWith(`/desk/${id}/files`);
+
+  // ---> ОБНОВЛЕННАЯ ЛОГИКА ДЛЯ isBoardActive <---
+  // Считаем активной вкладку "Задачи" (`/board`), если НЕ активны "Обзор", "GitHub" и "Файлы"
+  const isBoardActive = !isOverviewActive && !isGitHubActive && !isFilesActive;
 
   // Получаем первую букву названия доски
   const getFirstLetter = () => {
@@ -384,25 +383,30 @@ export const DeskDetails = () => {
           <div className="flex ml-4">
             <Link
               to={`/desk/${id}/overview`}
-              // Убираем text-indigo-300 из активного класса
               className={`py-1 px-3 font-medium ${
                 !isOverviewActive ? "text-gray-600 hover:text-gray-900" : ""
               }`}
-              // Устанавливаем цвет текста через стиль, если активно
               style={isOverviewActive ? { color: "var(--theme-color)" } : {}}
             >
               Обзор
             </Link>
             <Link
               to={`/desk/${id}/board`}
-              // Убираем text-indigo-300 из активного класса
               className={`py-1 px-3 font-medium ${
                 !isBoardActive ? "text-gray-600 hover:text-gray-900" : ""
               }`}
-              // Устанавливаем цвет текста через стиль, если активно
               style={isBoardActive ? { color: "var(--theme-color)" } : {}}
             >
               Задачи
+            </Link>
+            <Link
+              to={`/desk/${id}/files`}
+              className={`py-1 px-3 font-medium ${
+                !isFilesActive ? "text-gray-600 hover:text-gray-900" : ""
+              }`}
+              style={isFilesActive ? { color: "var(--theme-color)" } : {}}
+            >
+              Файлы
             </Link>
             <Link
               to={`/desk/${id}/github`}
@@ -413,23 +417,12 @@ export const DeskDetails = () => {
             >
               GitHub
             </Link>
-            {/* ---> НОВОЕ: Ссылка на Файлы <--- */}
-            <Link
-              to={`/desk/${id}/files`} // Новый путь
-              className={`py-1 px-3 font-medium ${
-                !isFilesActive ? "text-gray-600 hover:text-gray-900" : ""
-              }`}
-              style={isFilesActive ? { color: "var(--theme-color)" } : {}}
-            >
-              Файлы {/* Новая метка */}
-            </Link>
           </div>
         </div>
       </div>
 
       {/* Основной контент */}
       <div className="flex-1 overflow-auto">
-        {/* Передаем мемоизированное значение контекста */}
         <Outlet context={outletContextValue} />
       </div>
     </div>
