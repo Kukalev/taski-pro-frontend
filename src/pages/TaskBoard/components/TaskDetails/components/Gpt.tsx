@@ -1,10 +1,15 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { GptService } from '../../../../../services/Gpt/Gpt';
-import { GptRecommendationResponse, GptRecommendationStatus } from '../../../../../services/Gpt/types';
-import { GptProps } from '../types'; // Импортируем пропсы из основного файла типов
-import { FaBrain, FaSpinner, FaExclamationCircle, FaCheckCircle } from 'react-icons/fa';
+import React, {useCallback, useEffect, useRef, useState} from 'react'
+import {GptService} from '../../../../../services/Gpt/Gpt'
+import {GptRecommendationResponse, GptRecommendationStatus} from '../../../../../services/Gpt/types'
+import {GptProps} from '../types' // Импортируем пропсы из основного файла типов
+import {
+	FaBrain,
+	FaCheckCircle,
+	FaExclamationCircle,
+	FaSpinner
+} from 'react-icons/fa'
 
-const POLLING_INTERVAL = 3000; // Интервал поллинга в миллисекундах (3 секунды)
+const POLLING_INTERVAL = 1500; // Интервал поллинга в миллисекундах (1.5 секунды)
 
 const Gpt: React.FC<GptProps> = ({ deskId, taskId, canRequestAiHelp }) => {
 	const [recommendation, setRecommendation] = useState<GptRecommendationResponse | null>(null);
@@ -91,21 +96,21 @@ const Gpt: React.FC<GptProps> = ({ deskId, taskId, canRequestAiHelp }) => {
 			return <div className="flex items-center text-blue-600"><FaSpinner className="animate-spin mr-2" /> Ожидание ответа AI...</div>;
 		}
 		if (error) {
-			return <div className="flex items-center text-red-600"><FaExclamationCircle className="mr-2" /> {error}</div>;
+			return <div className="flex items-center text-gray-500"><FaExclamationCircle className="mr-2" /> Дополните стек или описание для ответа gpt</div>;
+		}
+		if (recommendation?.status === 'error') {
+			return (
+				<div className="flex items-start text-yellow-600">
+					<FaExclamationCircle className="mr-2 mt-1 flex-shrink-0" />
+					<p className="text-sm">Дополните стек или описание для ответь gpt</p>
+				</div>
+			);
 		}
 		if (recommendation?.status === 'success' && recommendation.text) {
 			return (
 				<div className="flex items-start text-green-700">
 					<FaCheckCircle className="mr-2 mt-1 flex-shrink-0" />
 					<p className="text-sm">{recommendation.text}</p>
-				</div>
-			);
-		}
-		if (recommendation?.status === 'error' && recommendation.text) {
-			return (
-				<div className="flex items-start text-yellow-600">
-					<FaExclamationCircle className="mr-2 mt-1 flex-shrink-0" />
-					<p className="text-sm">{recommendation.text}</p> 
 				</div>
 			);
 		}
