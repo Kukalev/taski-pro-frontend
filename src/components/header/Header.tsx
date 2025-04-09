@@ -5,7 +5,7 @@ import {HeaderLogo} from './components/HeaderLogo'
 import {UserAvatar} from './components/UserAvatar'
 import {useNavigate} from 'react-router-dom'
 import {useSidebar} from '../../contexts/SidebarContext'
-import { useAuth } from '../../contexts/AuthContext'
+import {useAuth} from '../../contexts/AuthContext'
 
 export const Header = () => {
 	const { currentUser } = useAuth();
@@ -19,7 +19,7 @@ export const Header = () => {
 	}
 
 	const handleProClick = () => {
-		navigate('/subscriptions');
+		navigate('/settings/subscriptions');
 	}
 
 	const handleInviteClick = () => {

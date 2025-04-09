@@ -1,9 +1,15 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { SubscriptionService } from '../../services/subscriptions/Subscriptions';
-import { SubscriptionInfoDto, UserSubscriptionResponseDto } from '../../services/subscriptions/types';
-import { ThemedButton } from '../../components/ui/ThemedButton';
-import { CurrentSubscriptionView } from './components/CurrentSubscriptionView';
-import { AllSubscriptionsView } from './components/AllSubscriptionsView';
+import React, {useCallback, useEffect, useState} from 'react'
+import {SubscriptionService} from '../../services/subscriptions/Subscriptions'
+import {
+  SubscriptionInfoDto,
+  UserSubscriptionResponseDto
+} from '../../services/subscriptions/types'
+import {
+  CurrentSubscriptionView
+} from '../Settings/components/Subscriptions/components/CurrentSubscriptionView.tsx'
+import {
+  AllSubscriptionsView
+} from '../Settings/components/Subscriptions/components/AllSubscriptionsView.tsx'
 
 const getSubscriptionCardStyles = (type: SubscriptionType) => {
   switch (type) {

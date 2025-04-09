@@ -91,6 +91,14 @@ export const SettingsSidebar = () => {
           label='Безопасность'
           isCollapsed={isCollapsed}
         />
+        <MenuItem
+          path='/settings/subscriptions'
+          isActive={isActive('subscriptions')}
+          onClick={() => handleItemClick('subscriptions')}
+          icon={<SecurityIcon />}
+          label='Подписки'
+          isCollapsed={isCollapsed}
+        />
       </nav>
       {/* Можно добавить другие элементы сайдбара, если нужно */}
     </div>

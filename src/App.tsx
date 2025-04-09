@@ -1,5 +1,5 @@
 import React from 'react'
-import {BrowserRouter, Navigate, Route, Routes, Outlet} from 'react-router-dom'
+import {BrowserRouter, Navigate, Outlet, Route, Routes} from 'react-router-dom'
 import {NotFound} from './components/NotFound'
 import {DeskProvider} from './contexts/DeskContext'
 import {AuthProvider, useAuth} from './contexts/AuthContext'
@@ -17,8 +17,8 @@ import {MyTasks} from './pages/tasks/MyTasks'
 import {Team} from './pages/welcome/team/Team'
 import {Welcome} from './pages/welcome/Welcome'
 import {SidebarProvider} from './contexts/SidebarContext'
-import { SettingsLayout } from './layouts/SettingsLayout' 
-import { Settings } from './pages/Settings/Settings'
+import {SettingsLayout} from './layouts/SettingsLayout'
+import {Settings} from './pages/Settings/Settings'
 import {
 	ProfileSettings
 } from './pages/Settings/components/ProfileSettings/ProfileSettings'
@@ -28,9 +28,13 @@ import {
 import {
 	SecuritySettings
 } from './pages/Settings/components/SecuritySettings/SecuritySettings'
-import { SubscriptionsPage } from './pages/Subscriptions/SubscriptionsPage'
+
+import {
+	Subscriptions
+} from './pages/Settings/components/Subscriptions/Subscriptions'
 
 const ProtectedRoute = ({ redirectPath = '/register' }: { redirectPath?: string }) => {
+	// ... (код ProtectedRoute без изменений) ...
 	const { isAuthenticated, isLoadingAuth } = useAuth()
 
 	if (isLoadingAuth) {
@@ -45,19 +49,20 @@ const ProtectedRoute = ({ redirectPath = '/register' }: { redirectPath?: string 
 
 	console.log(`[ProtectedRoute] Пользователь авторизован (isLoadingAuth=${isLoadingAuth}), рендеринг дочернего компонента (Outlet).`)
 	return <Outlet />
-}
+};
 
 const RootRedirect = () => {
+	// ... (код RootRedirect без изменений) ...
 	const { isAuthenticated, isLoadingAuth } = useAuth()
 	console.log(`[RootRedirect] Проверка авторизации из AuthContext: isAuthenticated = ${isAuthenticated}, isLoadingAuth = ${isLoadingAuth}`)
-	
+
 	if (isLoadingAuth) {
 		console.log('[RootRedirect] Ожидание завершения проверки AuthContext...')
 		return null;
 	}
 
 	return isAuthenticated ? <Navigate to='/desk' replace /> : <Navigate to='/register' replace />
-}
+};
 
 function App() {
 	return (
@@ -73,11 +78,9 @@ function App() {
 
 							{/* Обертка для защищенных роутов */}
 							<Route element={<ProtectedRoute redirectPath="/register" />}>
-								{/* Welcome роуты */}
+								{/* ... (Welcome, Desk, Desk/:id, MyTasks, AllTasks роуты без изменений) ... */}
 								<Route path='/welcome' element={<Welcome />} />
 								<Route path='/welcome/team' element={<Team />} />
-
-								{/* Корневой маршрут desk */}
 								<Route
 									path='/desk'
 									element={
@@ -86,8 +89,6 @@ function App() {
 										</DeskLayout>
 									}
 								/>
-
-								{/* Маршруты для конкретной доски по ID */}
 								<Route
 									path='/desk/:id'
 									element={
@@ -101,8 +102,6 @@ function App() {
 									<Route path="github" element={<GitHubPage />} />
 									<Route index element={<Navigate to="board" replace />} />
 								</Route>
-
-								{/* Специальные подмаршруты desk */}
 								<Route
 									path='/desk/myTasks'
 									element={
@@ -119,15 +118,13 @@ function App() {
 										</DeskLayout>
 									}
 								/>
-								
-								{/* --- Обновленные Маршруты для страницы настроек --- */}
+
+								{/* --- Маршруты для страницы настроек --- */}
 								<Route
 									path='/settings' // Базовый путь
 									element={
-										// Используем SettingsLayout для всех /settings/*
-										<SettingsLayout> 
-											{/* Компонент Settings просто рендерит Outlet для вложенных роутов */}
-											<Settings /> 
+										<SettingsLayout>
+											<Settings />
 										</SettingsLayout>
 									}
 								>
@@ -135,26 +132,22 @@ function App() {
 									<Route path="profile" element={<ProfileSettings />} />
 									<Route path="appearance" element={<AppearanceSettings />} />
 									<Route path="security" element={<SecuritySettings />} />
+									{/* --- НАЧАЛО ИЗМЕНЕНИЯ: ВОТ ТАК ДОЛЖНО БЫТЬ --- */}
+									<Route path="subscriptions" element={<Subscriptions />} /> {/* Или SubscriptionsPage, если используешь его */}
 									{/* Редирект по умолчанию для /settings */}
-									<Route index element={<Navigate to="profile" replace />} /> 
-								</Route>
+									<Route index element={<Navigate to="profile" replace />} />
+									{/* --- КОНЕЦ ИЗМЕНЕНИЯ --- */}
+								</Route> {/* <-- ЗАКРЫВАЮЩИЙ ТЕГ ДЛЯ /settings */}
 								{/* --- Конец маршрутов настроек --- */}
 
-								{/* Маршруты для страницы подписок */}
-								<Route
-									path='/subscriptions'
-									element={
-										<DeskLayout>
-											<SubscriptionsPage />
-										</DeskLayout>
-									}
-								/>
-							</Route>
+								{/* Старый отдельный роут для подписок УДАЛЕН */}
 
-							{/* Редирект с главной теперь через компонент */}
+							</Route> {/* <-- Закрывающий тег для ProtectedRoute */}
+
+							{/* Редирект с главной */}
 							<Route path='/' element={<RootRedirect />} />
 
-							{/* Глобальный 404 для всех остальных маршрутов */}
+							{/* Глобальный 404 */}
 							<Route path='*' element={<NotFound />} />
 						</Routes>
 					</SidebarProvider>
@@ -164,4 +157,4 @@ function App() {
 	)
 }
 
-export default App
+export default App;

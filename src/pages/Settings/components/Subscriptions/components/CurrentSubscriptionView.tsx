@@ -1,12 +1,12 @@
 import React, {useState} from 'react'
 import {
   UserSubscriptionResponseDto
-} from '../../../services/subscriptions/types'
+} from '../../../../../services/subscriptions/types.ts'
 import {
   SubscriptionService
-} from '../../../services/subscriptions/Subscriptions'
-import {ThemedButton} from '../../../components/ui/ThemedButton'
-import {CancelSubscriptionModal} from './CancelSubscriptionModal'
+} from '../../../../../services/subscriptions/Subscriptions.ts'
+import {ThemedButton} from '../../../../../components/ui/ThemedButton.tsx'
+import {CancelSubscriptionModal} from './CancelSubscriptionModal.tsx'
 
 interface CurrentSubscriptionViewProps {
   subscription: UserSubscriptionResponseDto | null;

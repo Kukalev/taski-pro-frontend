@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { SubscriptionType } from '../../../services/subscriptions/types'; // Импортируем тип
+import React, {useState} from 'react'
+import {SubscriptionType} from '../../../../../services/subscriptions/types.ts' // Импортируем тип
 
 // Интерфейс пропсов для новой модалки
 interface CancelSubscriptionModalProps {

@@ -2,11 +2,11 @@ import React, {useState} from 'react'
 import {
   SubscriptionInfoDto,
   SubscriptionType
-} from '../../../services/subscriptions/types'
+} from '../../../../../services/subscriptions/types.ts'
 import {
   SubscriptionService
-} from '../../../services/subscriptions/Subscriptions'
-import {ThemedButton} from '../../../components/ui/ThemedButton'
+} from '../../../../../services/subscriptions/Subscriptions.ts'
+import {ThemedButton} from '../../../../../components/ui/ThemedButton.tsx'
 
 // Копируем стили из прошлой версии SubscriptionsPage
 const getSubscriptionCardStyles = (type: SubscriptionType) => {
