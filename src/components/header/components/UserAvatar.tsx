@@ -3,10 +3,11 @@ import {UserAvatarProps} from '../types/header.types'
 import {getUserInitials} from '../utils/userUtils'
 import {useNavigate} from 'react-router-dom'
 
-export const UserAvatar = ({ username, email, onLogout, onSettingsClick }: UserAvatarProps) => {
+export const UserAvatar = ({ username, email, avatarUrl, onLogout, onSettingsClick }: UserAvatarProps) => {
 	const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
 	const navigate = useNavigate()
 	const menuRef = useRef<HTMLDivElement>(null);
+	const [imgError, setImgError] = useState(false);
 
 	const handleSettingsClick = () => {
 		setIsUserMenuOpen(false)
@@ -16,6 +17,15 @@ export const UserAvatar = ({ username, email, onLogout, onSettingsClick }: UserA
 			navigate('/settings')
 		}
 	}
+
+	useEffect(() => {
+		setImgError(false);
+	}, [avatarUrl]);
+
+	const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+		console.error('[Header UserAvatar] Ошибка загрузки изображения по URL:', avatarUrl, e);
+		setImgError(true);
+	};
 
 	useEffect(() => {
 		const handleClickOutside = (event: MouseEvent) => {
@@ -33,18 +43,36 @@ export const UserAvatar = ({ username, email, onLogout, onSettingsClick }: UserA
 		};
 	}, [isUserMenuOpen]);
 
+	const renderAvatarContent = () => {
+		if (avatarUrl && !imgError) {
+			return (
+				<img
+					src={avatarUrl}
+					alt={`Аватар ${username}`}
+					className='w-full h-full object-cover'
+					onError={handleImageError}
+				/>
+			);
+		} else {
+			return getUserInitials(username);
+		}
+	};
+
 	return (
 		<div className='relative' ref={menuRef}>
-			<button onClick={() => setIsUserMenuOpen(!isUserMenuOpen)} className='cursor-pointer w-9 h-9 rounded-full bg-gradient-to-r from-pink-500 to-red-500 text-white flex items-center justify-center'>
-				{getUserInitials(username)}
+			<button
+				onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+				className='cursor-pointer w-9 h-9 rounded-full bg-gradient-to-r from-pink-500 to-red-500 text-white flex items-center justify-center overflow-hidden'
+			>
+				{renderAvatarContent()}
 			</button>
 
 			{isUserMenuOpen && (
 				<div className='absolute right-0 mt-2 w-60 bg-white rounded-lg shadow-lg border border-gray-200 z-10'>
 					<div className='p-3 border-b border-gray-100'>
 						<div className='flex items-center'>
-							<div className='w-9 h-9 rounded-full bg-gradient-to-r from-pink-500 to-red-500 text-white flex items-center justify-center mr-3'>
-								{getUserInitials(username)}
+							<div className='w-9 h-9 rounded-full bg-gradient-to-r from-pink-500 to-red-500 text-white flex items-center justify-center mr-3 overflow-hidden'>
+								{renderAvatarContent()}
 							</div>
 							<div>
 								<div className='font-medium text-gray-800'>{username}</div>

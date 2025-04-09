@@ -6,17 +6,23 @@ import React, {
   useContext,
   useEffect,
   useMemo,
-  useState
+  useState,
+  useRef
 } from 'react'
 import {AuthService} from '../services/auth/Auth' // Импортируем твой AuthService
 import { getColorOnUser } from '../services/colors/api/getColorOnUser'; // Убедись, что путь правильный
 import { setMainColor, ThemeColorType } from '../styles/theme'; // Импортируем функции темы
 import { getTokens } from '../services/auth/utils/TokenStorage'; // Для проверки токена при инициализации
+import { UserProfile } from '../services/userSettings/types'; // <<< Импорт типа профиля
+import { UserSettingsService } from '../services/userSettings/UserSettings'; // <<< Импорт сервиса профиля
+import { AvatarService } from '../services/Avatar/Avatar'; // <<< Импорт сервиса аватара
 
 // 5. Обновляем тип контекста
 interface AuthContextType {
   isAuthenticated: boolean;
   isLoadingAuth: boolean; // Добавляем флаг загрузки
+  currentUser: UserProfile | null; // <<< Добавляем пользователя
+  avatarObjectUrl: string | null; // <<< Добавляем URL аватара
   // login теперь будет асинхронным, если нужно дождаться загрузки темы
   login: () => Promise<void>; // Изменяем сигнатуру login
   logout: () => void;
@@ -27,6 +33,21 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false); // Начинаем с false
   const [isLoadingAuth, setIsLoadingAuth] = useState<boolean>(true); // Флаг начальной проверки
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null); // <<< Состояние для пользователя
+  const [avatarObjectUrl, setAvatarObjectUrl] = useState<string | null>(null); // <<< Состояние для URL аватара
+
+  // Ссылка для хранения *предыдущего* URL аватара, который нужно отозвать
+  const previousAvatarUrlRef = useRef<string | null>(null);
+
+  // Функция очистки Object URL
+  const clearAvatarUrl = useCallback(() => {
+      if (previousAvatarUrlRef.current) {
+          console.log("[AuthContext] Отзыв предыдущего Object URL аватара:", previousAvatarUrlRef.current);
+          URL.revokeObjectURL(previousAvatarUrlRef.current);
+          previousAvatarUrlRef.current = null;
+      }
+      setAvatarObjectUrl(null);
+  }, []);
 
   // Функция загрузки и применения темы
   const loadAndApplyTheme = useCallback(async () => {
@@ -44,6 +65,43 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
+  // Функция загрузки профиля и аватара
+  const loadUserData = useCallback(async () => {
+      console.log('[AuthContext] Попытка загрузки данных пользователя (профиль и аватар)...');
+      try {
+          const profile = await UserSettingsService.getCurrentUser();
+          console.log('[AuthContext] Профиль пользователя загружен:', profile);
+          setCurrentUser(profile);
+
+          if (profile?.username) {
+              console.log('[AuthContext] Запрос Blob аватара для', profile.username);
+              const avatarBlob = await AvatarService.fetchUserAvatarBlob(profile.username);
+
+              // Отзываем старый URL перед созданием нового
+              clearAvatarUrl();
+
+              if (avatarBlob) {
+                  const newObjectUrl = URL.createObjectURL(avatarBlob);
+                  setAvatarObjectUrl(newObjectUrl);
+                  previousAvatarUrlRef.current = newObjectUrl; // Сохраняем для будущего отзыва
+                  console.log('[AuthContext] Создан Object URL для аватара:', newObjectUrl);
+              } else {
+                  console.log('[AuthContext] Blob аватара не получен (возможно, 404).');
+              }
+          } else {
+              // Если профиль есть, но нет username, или профиля нет - очищаем аватар
+              clearAvatarUrl();
+              console.log('[AuthContext] Профиль не содержит username, аватар не загружен.');
+          }
+          return profile; // Возвращаем профиль для дальнейшего использования если нужно
+      } catch (error) {
+          console.error('[AuthContext] Ошибка загрузки данных пользователя:', error);
+          setCurrentUser(null);
+          clearAvatarUrl(); // Очищаем аватар при ошибке
+          return null; // Возвращаем null при ошибке
+      }
+  }, [clearAvatarUrl]); // Добавляем clearAvatarUrl в зависимости
+
   // ИЗМЕНЕННАЯ Начальная проверка аутентификации при монтировании
   useEffect(() => {
     const checkInitialAuth = async () => {
@@ -56,13 +114,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (tokensExist && initialAuthStatus) {
         console.log('[AuthContext Initial Check] Токены есть, статус ОК. Установка isAuthenticated = true.');
         setIsAuthenticated(true);
-        console.log('[AuthContext Initial Check] Попытка загрузки темы пользователя при восстановлении сессии...');
-        await loadAndApplyTheme(); // Загружаем тему (или 'orange')
+        console.log('[AuthContext Initial Check] Загрузка данных пользователя и темы...');
+        await loadUserData(); // <<< Загружаем профиль и аватар
+        await loadAndApplyTheme();
 
       } else {
         console.log('[AuthContext Initial Check] Токены не найдены или невалидны. Установка isAuthenticated = false.');
         setIsAuthenticated(false);
-        // Тему не устанавливаем, пусть будет как есть или как CSS задаст
+        setCurrentUser(null); // <<< Сбрасываем пользователя
+        clearAvatarUrl();    // <<< Сбрасываем аватар
         if (tokensExist && !initialAuthStatus) {
              console.log('[AuthContext Initial Check] Очистка невалидных токенов.');
              AuthService.logout(); 
@@ -76,19 +136,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Зависимости оставляем пустыми, т.к. loadAndApplyTheme используется внутри
   }, []); 
 
-  // Функция login теперь также загружает тему
+  // Функция login теперь также загружает данные пользователя
   const login = useCallback(async () => {
-    console.log('[AuthContext] login: Установка isAuthenticated = true и загрузка темы...');
+    console.log('[AuthContext] login: Установка isAuthenticated = true и загрузка данных/темы...');
     setIsAuthenticated(true);
-    await loadAndApplyTheme(); // Загрузит тему или 'orange'
-  }, [loadAndApplyTheme]);
+    await loadUserData(); // <<< Загружаем профиль и аватар
+    await loadAndApplyTheme();
+  }, [loadUserData, loadAndApplyTheme]);
 
-  // Функция logout сбрасывает флаг и применяет дефолтную тему
+  // Функция logout сбрасывает все
   const logout = useCallback(() => {
-    console.log('[AuthContext] logout: Установка isAuthenticated = false.');
+    console.log('[AuthContext] logout: Сброс состояния.');
+    AuthService.logout(); // <<< Вызываем logout из сервиса (он удалит токены)
     setIsAuthenticated(false);
-    // Тему не трогаем
-  }, []);
+    setCurrentUser(null);
+    clearAvatarUrl(); // <<< Очищаем аватар
+    // Можно сбросить тему к дефолтной
+    // setMainColor('teal');
+    // Можно добавить редирект на страницу логина, если это еще не сделано где-то
+    // window.location.href = '/login';
+  }, [clearAvatarUrl]);
 
   // Слушатель storage (оставляем для синхронизации вкладок)
   useEffect(() => {
@@ -122,8 +189,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // Мемоизируем значение контекста
   const value = useMemo(() => ({
-     isAuthenticated, isLoadingAuth, login, logout
-  }), [isAuthenticated, isLoadingAuth, login, logout]);
+     isAuthenticated, isLoadingAuth, currentUser, avatarObjectUrl, login, logout
+  }), [isAuthenticated, isLoadingAuth, currentUser, avatarObjectUrl, login, logout]);
 
   // Можно добавить отображение лоадера на весь экран, пока идет начальная проверка
   // if (isLoadingAuth) {

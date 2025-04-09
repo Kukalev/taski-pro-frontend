@@ -16,6 +16,7 @@ export interface HeaderLogoProps {
 export interface UserAvatarProps {
 	username: string
 	email?: string
+	avatarUrl?: string | null
 	onLogout: () => void
 	onSettingsClick?: () => void
 }

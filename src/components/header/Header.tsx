@@ -8,14 +8,16 @@ import {useSidebar} from '../../contexts/SidebarContext'
 import {useAuth} from '../../contexts/AuthContext'
 
 export const Header = () => {
-	const { currentUser } = useAuth();
-	const username = currentUser?.username || AuthService.getUsername();
-	const email = currentUser?.email || 'no-email@example.com';
+	const { currentUser, avatarObjectUrl, logout } = useAuth();
 	const navigate = useNavigate()
 	const { toggleSidebar } = useSidebar()
 
+	const username = currentUser?.username || 'User';
+	const email = currentUser?.email;
+
 	const handleLogout = () => {
-		AuthService.logout()
+		logout();
+		navigate('/login');
 	}
 
 	const handleProClick = () => {
@@ -47,6 +49,7 @@ export const Header = () => {
 				<UserAvatar 
 					username={username} 
 					email={email}
+					avatarUrl={avatarObjectUrl}
 					onLogout={handleLogout} 
 					onSettingsClick={handleSettingsClick}
 				/>
