@@ -1,8 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import {useCallback, useEffect, useState} from 'react'
 import {UserAvatar} from './components/UserAvatar'
 import {ProfileForm} from './components/ProfileForm'
 import {EmailChangeModal} from './components/EmailChangeModal'
-import {UserSettingsService} from '../../../../services/userSettings/UserSettings'
+import {
+  UserSettingsService
+} from '../../../../services/userSettings/UserSettings'
 import {UserProfile} from '../../../../services/userSettings/types'
 
 export const ProfileSettings = () => {
