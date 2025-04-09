@@ -1,5 +1,4 @@
 import React from 'react'
-import {AuthService} from '../../../../../services/auth/Auth';
 
 interface TaskNameProps {
   taskName: string;

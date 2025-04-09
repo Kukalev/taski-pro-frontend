@@ -5,8 +5,7 @@ interface UpdatePasswordWithoutAuthData {
   newPassword: string;
 }
 
-const BASE_URL = '//v1/profile'; // <<< ИЗМЕНЕНИЕ: Правильный базовый путь контроллера
-
+const BASE_URL = '/v1/profile';
 
 export const updatePasswordWithoutAuth = async (data: UpdatePasswordWithoutAuthData): Promise<void> => {
   try {
@@ -16,16 +15,12 @@ export const updatePasswordWithoutAuth = async (data: UpdatePasswordWithoutAuthD
       newPassword: data.newPassword,
     };
 
-    console.log(`[updatePasswordWithoutAuth] Вызов PUT на update-password-without-auth с телом:`, requestBody);
+    console.log(`[updatePasswordWithoutAuth] Вызов PUT на ${BASE_URL}/update-password-without-auth с телом:`, requestBody);
 
     // Используем PUT и правильный ENDPOINT
     const response = await api.put<void>(`${BASE_URL}/update-password-without-auth`, requestBody);
 
     console.log(`[updatePasswordWithoutAuth] Ответ API: Статус ${response.status}. Пароль успешно обновлен для email: ${data.email}`);
-
-    if (response.status !== 200) {
-       throw new Error(`Unexpected status code: ${response.status}`);
-    }
 
   } catch (error: any) {
     // Логируем ошибку для отладки

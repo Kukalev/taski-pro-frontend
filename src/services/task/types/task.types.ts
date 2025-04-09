@@ -8,6 +8,7 @@ export interface Task {
 	priorityType: string;
 	statusType: string;
 	executors: string[];
+	taskStack?: string | null;
 }
 
 export interface TaskUpdate {
@@ -18,6 +19,13 @@ export interface TaskUpdate {
 	statusType?: string;
 	executorUsernames?: string[];
 	removeExecutorUsernames?: string[];
-	taskStack?: string[];
+	taskStack?: string;
+}
+
+/**
+ * Данные для запроса на обновление стека задачи (эндпоинт /stack).
+ */
+export interface UpdateTaskStackData {
+	taskStack: string;
 }
 

@@ -1,8 +1,14 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { updateTask } from '../../../../../services/task/Task';
-import { AuthService } from '../../../../../services/auth/Auth';
-import { isCurrentUser, canManageExecutors } from '../../../../../utils/permissionUtils';
-import { UserAvatar } from '../../../../../components/header/components/UserAvatar';
+import React, {useEffect, useRef, useState} from 'react'
+import {updateTask} from '../../../../../services/task/Task'
+import {
+  canManageExecutors,
+  isCurrentUser
+} from '../../../../../utils/permissionUtils'
+import {
+  UserAvatar
+} from '../../../../../components/header/components/UserAvatar'
+
+import {FaRegUser} from 'react-icons/fa6'
 
 interface TaskExecutorsProps {
   executors: string[];
@@ -93,7 +99,7 @@ const TaskExecutors: React.FC<TaskExecutorsProps> = ({
   return (
     <div className="flex items-center py-2 border-b border-gray-100 relative" ref={dropdownRef}>
       <div className="w-6 flex justify-center text-gray-400">
-        <UserAvatar username="?" size="sm" className="text-gray-400"/>
+        <FaRegUser className='w-5 h-5'/>
       </div>
       
       <div className="flex items-center ml-4 w-full">

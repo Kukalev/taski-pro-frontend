@@ -1,6 +1,7 @@
 import React, {useEffect, useState, useRef} from 'react'
-import {updateTask} from '../../../../services/task/Task'
-import {StatusType} from '../../types'
+import { TaskService } from '../../../../services/task/Task';
+import { Task as ServiceTask } from '../../../../services/task/types/task.types';
+import { StatusType } from '../../types'
 import DatePicker from '../../../../components/DatePicker/DatePicker'
 import TaskDetailsHeader from './components/TaskDetailsHeader'
 import TaskStatus from './components/TaskStatus'
@@ -8,6 +9,7 @@ import TaskName from './components/TaskName'
 import TaskExecutors from './components/TaskExecutors'
 import TaskDate from './components/TaskDate'
 import TaskPriority from './components/TaskPriority'
+import { TaskStack } from './components/TaskStack'
 import TaskDescription from './components/TaskDescription'
 import '../../styles/animations.ts'
 import {AuthService} from '../../../../services/auth/Auth'
@@ -19,9 +21,9 @@ import {
   canEditTaskPriority, 
   canManageExecutors
 } from '../../../../utils/permissionUtils'
-import { TaskDetailsProps as BaseTaskDetailsProps } from '../../types'
+import { TaskDetailsProps, Task } from './types'
 
-const TaskDetails: React.FC<BaseTaskDetailsProps> = ({
+const TaskDetails: React.FC<TaskDetailsProps> = ({
   task,
   deskId,
   deskUsers,
@@ -41,13 +43,14 @@ const TaskDetails: React.FC<BaseTaskDetailsProps> = ({
   const inputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Определяем различные права пользователя
-  const canMoveOrCompleteTask = canEditTask(deskUsers, task);
-  const canChangeName = canEditTaskName(deskUsers, task);
-  const canChangeDescription = canEditTaskDescription(deskUsers, task);
-  const canChangeDate = canEditTaskDate(deskUsers, task);
-  const canChangePriority = canEditTaskPriority(deskUsers, task);
-  const canChangeExecutors = canManageExecutors(deskUsers, task);
+  const taskForPermissions = task as ServiceTask;
+  const canMoveOrCompleteTask = canEditTask(deskUsers, taskForPermissions);
+  const canChangeName = canEditTaskName(deskUsers, taskForPermissions);
+  const canChangeDescription = canEditTaskDescription(deskUsers, taskForPermissions);
+  const canChangeDate = canEditTaskDate(deskUsers, taskForPermissions);
+  const canChangePriority = canEditTaskPriority(deskUsers, taskForPermissions);
+  const canChangeExecutors = canManageExecutors(deskUsers, taskForPermissions);
+  const canChangeStack = canEditTask(deskUsers, taskForPermissions);
 
   useEffect(() => {
     if (task) {
@@ -67,13 +70,14 @@ const TaskDetails: React.FC<BaseTaskDetailsProps> = ({
     }
   };
 
-  const saveTaskChanges = async (changes: any) => {
+  const saveTaskChanges = async (changes: Partial<ServiceTask>) => {
     if (!task?.taskId) return;
 
     try {
-      const updatedTask = await updateTask(deskId, task.taskId, changes);
-      onTaskUpdate(updatedTask);
-      return updatedTask;
+      const updatedServiceTask = await TaskService.updateTask(deskId, task.taskId, changes);
+      const updatedLocalTask = updatedServiceTask as Task;
+      onTaskUpdate(updatedLocalTask);
+      return updatedLocalTask;
     } catch (error) {
       console.error('Ошибка при обновлении задачи:', error);
       return null;
@@ -103,7 +107,8 @@ const TaskDetails: React.FC<BaseTaskDetailsProps> = ({
   const handleDateChange = async (id: string, date: Date | null) => {
     if (!canChangeDate) return;
     
-    await saveTaskChanges({ taskFinishDate: date });
+    const dateString = date ? date.toISOString() : null;
+    await saveTaskChanges({ taskFinishDate: dateString });
     setShowDatePicker(false);
   };
   
@@ -146,7 +151,7 @@ const TaskDetails: React.FC<BaseTaskDetailsProps> = ({
             canEdit={canChangeName}
           />
 
-          <div className="pt-2">
+          <div className="border-t border-b border-gray-200 py-5 space-y-4">
             <TaskExecutors 
               executors={task?.executors || []}
               deskUsers={deskUsers}
@@ -166,14 +171,6 @@ const TaskDetails: React.FC<BaseTaskDetailsProps> = ({
               onTaskUpdate={onTaskUpdate}
               canEdit={canChangeDate}
             />
-            {showDatePicker && task?.taskId && canChangeDate && (
-              <DatePicker
-                taskId={task.taskId.toString()}
-                selectedDate={task.taskFinishDate ? new Date(task.taskFinishDate) : null}
-                onDateChange={handleDateChange}
-                onClose={() => setShowDatePicker(false)}
-              />
-            )}
             
             <TaskPriority 
               priorityType={task?.priorityType || task?.priority || ''}
@@ -181,6 +178,13 @@ const TaskDetails: React.FC<BaseTaskDetailsProps> = ({
               deskId={deskId}
               onPriorityChange={handlePriorityChange}
               canEdit={canChangePriority}
+            />
+
+            <TaskStack
+              deskId={deskId}
+              task={task}
+              onTaskUpdate={onTaskUpdate}
+              canEdit={canChangeStack}
             />
           </div>
 

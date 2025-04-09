@@ -1,12 +1,14 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link, Outlet, useLocation, useParams } from "react-router-dom";
-import { DeskData, useDesks } from "../../../contexts/DeskContext.tsx";
-import { DeskService } from "../../../services/desk/Desk.ts";
-import { UserService } from "../../../services/users/Users";
-import { canEditDesk } from "../../../utils/permissionUtils";
-import { UserOnDesk } from "../../DeskOverview/components/DeskParticipants/types";
-import { AvatarService } from "../../../services/Avatar/Avatar.ts";
-import { getUserName } from "../../DeskOverview/components/DeskParticipants/utilities.ts";
+import {useCallback, useEffect, useMemo, useRef, useState} from 'react'
+import {Link, Outlet, useLocation, useParams} from 'react-router-dom'
+import {DeskData, useDesks} from '../../../contexts/DeskContext.tsx'
+import {DeskService} from '../../../services/desk/Desk.ts'
+import {UserService} from '../../../services/users/Users'
+import {canEditDesk} from '../../../utils/permissionUtils'
+import {UserOnDesk} from '../../DeskOverview/components/DeskParticipants/types'
+import {AvatarService} from '../../../services/Avatar/Avatar.ts'
+import {
+  getUserName
+} from '../../DeskOverview/components/DeskParticipants/utilities.ts'
 
 export const DeskDetails = () => {
   const { id } = useParams<{ id: string }>();
@@ -311,8 +313,7 @@ export const DeskDetails = () => {
     return <div className="p-6 text-red-500">Ошибка: {error}</div>;
   }
 
-  // 3. Если НЕ идет загрузка и НЕТ ошибки, но `desk` все еще null/undefined
-  //    Это нештатная ситуация, но обработаем ее.
+
   if (!desk) {
     console.error(
       "[DeskDetails Render] !!! КРИТИЧЕСКАЯ ОШИБКА: Загрузка завершена, ошибок нет, но данные доски отсутствуют!",
@@ -324,12 +325,10 @@ export const DeskDetails = () => {
         Критическая ошибка: не удалось получить данные доски.
       </div>
     );
-    // Или можно вернуть Navigate, если это предпочтительнее
-    // return <Navigate to='/desk' replace />;
+
   }
 
-  // --- Если мы дошли сюда, значит: loading = false, error = null, desk = объект ---
-  // Теперь можно безопасно рендерить основной контент
+
 
   // Определяем активные вкладки
   const isOverviewActive = location.pathname.endsWith("/overview");
@@ -338,6 +337,8 @@ export const DeskDetails = () => {
     !isOverviewActive && !location.pathname.endsWith("/github");
   // Новая проверка для GitHub
   const isGitHubActive = location.pathname.endsWith("/github");
+  // ---> НОВОЕ: Проверка для вкладки Файлы <---
+  const isFilesActive = location.pathname.endsWith("/files");
 
   // Получаем первую букву названия доски
   const getFirstLetter = () => {
@@ -403,7 +404,6 @@ export const DeskDetails = () => {
             >
               Задачи
             </Link>
-            {/* Новая ссылка на GitHub */}
             <Link
               to={`/desk/${id}/github`}
               className={`py-1 px-3 font-medium ${
@@ -412,6 +412,16 @@ export const DeskDetails = () => {
               style={isGitHubActive ? { color: "var(--theme-color)" } : {}}
             >
               GitHub
+            </Link>
+            {/* ---> НОВОЕ: Ссылка на Файлы <--- */}
+            <Link
+              to={`/desk/${id}/files`} // Новый путь
+              className={`py-1 px-3 font-medium ${
+                !isFilesActive ? "text-gray-600 hover:text-gray-900" : ""
+              }`}
+              style={isFilesActive ? { color: "var(--theme-color)" } : {}}
+            >
+              Файлы {/* Новая метка */}
             </Link>
           </div>
         </div>
