@@ -16,6 +16,7 @@ import {Task} from '../../services/task/types/task.types'
 import {DeskService} from '../../services/desk/Desk'
 import {createPortal} from 'react-dom'
 import DatePicker from '../../components/DatePicker/DatePicker'
+import { AvatarService } from '../../services/Avatar/Avatar'
 
 // Убираем TaskBoardProps, если deskUsers приходит как проп
 interface TaskBoardPageProps {
@@ -41,6 +42,8 @@ const TaskBoardPage: React.FC<TaskBoardPageProps> = ({ deskId, deskUsers }) => {
   const [isClosingTaskDetails, setIsClosingTaskDetails] = useState(false);
   const taskDetailsRef = useRef<HTMLDivElement>(null);
   const currentDeskIdRef = useRef<number | null>(null);
+  const [avatarsMap, setAvatarsMap] = useState<Record<string, string | null>>({});
+  const previousAvatarsRef = useRef<Record<string, string | null>>({});
 
   const {
     draggedTask,
@@ -450,6 +453,83 @@ const TaskBoardPage: React.FC<TaskBoardPageProps> = ({ deskId, deskUsers }) => {
   // Лог для рендера (оставляем для проверки)
   console.log(`[TaskBoardPage Render] showDropZone state from hook: ${showDropZone}`);
 
+  // --- Логика загрузки и управления аватарками ---
+  const clearAvatarsMap = useCallback(() => {
+      console.log("[TaskBoardPage] Очистка URL аватарок...");
+      Object.values(previousAvatarsRef.current).forEach(url => {
+          if (url) {
+              URL.revokeObjectURL(url);
+          }
+      });
+      previousAvatarsRef.current = {};
+      setAvatarsMap({});
+  }, []);
+
+  useEffect(() => {
+      previousAvatarsRef.current = avatarsMap;
+  }, [avatarsMap]);
+
+  // Функция для преобразования Base64 в Object URL (можно вынести в utils)
+  const createObjectUrlsFromBatchResponse = (batchResponse: Record<string, string | null>): Record<string, string | null> => {
+      const newAvatarsMap: Record<string, string | null> = {};
+      for (const username in batchResponse) {
+          const base64Data = batchResponse[username];
+          let newUrl: string | null = null;
+          if (base64Data && typeof base64Data === 'string' && base64Data.startsWith('data:image')) {
+              try {
+                  const byteCharacters = atob(base64Data.split(',')[1]);
+                  const byteNumbers = new Array(byteCharacters.length);
+                  for (let i = 0; i < byteCharacters.length; i++) {
+                      byteNumbers[i] = byteCharacters.charCodeAt(i);
+                  }
+                  const byteArray = new Uint8Array(byteNumbers);
+                  const mimeType = base64Data.match(/data:(.*);/)?.[1] || 'image/png';
+                  const blob = new Blob([byteArray], { type: mimeType });
+                  newUrl = URL.createObjectURL(blob);
+              } catch (e) {
+                  console.error(`[TaskBoardPage] Ошибка создания Object URL для ${username}:`, e);
+              }
+          } else if (base64Data) {
+               console.warn(`[TaskBoardPage] Некорректный формат Base64 для ${username}`);
+          }
+          newAvatarsMap[username] = newUrl;
+      }
+      return newAvatarsMap;
+  };
+
+  // Загрузка аватарок при изменении deskUsers
+  useEffect(() => {
+      if (deskUsers && deskUsers.length > 0) {
+          const usernamesToFetch = [...new Set(deskUsers
+              .map(u => u.username || u.userName)
+              .filter((name): name is string => !!name))];
+
+          if (usernamesToFetch.length > 0) {
+              console.log('[TaskBoardPage] Запрос аватарок для пользователей доски:', usernamesToFetch);
+              clearAvatarsMap(); // Очищаем старые перед загрузкой новых
+              AvatarService.getAllAvatars(usernamesToFetch)
+                  .then(batchResponse => {
+                      const objectUrlsMap = createObjectUrlsFromBatchResponse(batchResponse);
+                      setAvatarsMap(objectUrlsMap);
+                      console.log('[TaskBoardPage] Загружены и сохранены аватарки (Object URLs).');
+                  })
+                  .catch(error => {
+                      console.error('[TaskBoardPage] Ошибка загрузки аватарок:', error);
+                      clearAvatarsMap(); // Очищаем при ошибке
+                  });
+          } else {
+              clearAvatarsMap(); // Нет имен для запроса
+          }
+      } else {
+          clearAvatarsMap(); // Нет пользователей на доске
+      }
+
+      // Очистка при размонтировании или изменении deskUsers
+      return () => {
+          clearAvatarsMap();
+      }
+  }, [deskUsers, clearAvatarsMap]); // Зависимость от deskUsers и функции очистки
+
   // РЕНДЕРИНГ
   return (
     <div className="flex-1 p-4 overflow-x-auto h-full">
@@ -469,6 +549,7 @@ const TaskBoardPage: React.FC<TaskBoardPageProps> = ({ deskId, deskUsers }) => {
                 tasks={statusTasks}
                 deskId={deskId}
                 deskUsers={deskUsers}
+                avatarsMap={avatarsMap}
                 draggedTask={draggedTask}
                 dropTarget={dropTarget}
                 setDropTarget={setDropTarget}
@@ -524,6 +605,7 @@ const TaskBoardPage: React.FC<TaskBoardPageProps> = ({ deskId, deskUsers }) => {
             task={selectedTask}
             deskId={deskId}
             deskUsers={deskUsers}
+            avatarsMap={avatarsMap}
             onClose={handleCloseTaskDetails}
             onTaskUpdate={(updates) => handleTaskUpdateFromChild(updates.taskId, updates)}
             deskName={deskName}

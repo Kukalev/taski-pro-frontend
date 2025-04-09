@@ -164,21 +164,20 @@ export const ForgotPasswordPage = () => {
         setIsLoading(true);
 
         try {
-            console.log(`[ForgotPasswordPage] Проверка кода: ${code}`);
+            console.log(`[ForgotPasswordPage] Проверка кода: ${code} для email: ${email}`);
             // ---> ПРОВЕРЯЕМ КОД (Шаг 3) <---
-            const isCodeValid = await UserSettingsService.isValidCode(code, CodeType.RESET_PASSWORD); // Используем RESET_PASSWORD
+            const isCodeValid = await UserSettingsService.isValidCode(email, code, CodeType.RESET_PASSWORD);
 
             if (!isCodeValid) {
                 setError('Введен неверный или истекший код подтверждения.');
-                setFieldErrors({...fieldErrors, code: true}); // Подсвечиваем поле кода
+                setFieldErrors({...fieldErrors, code: true});
                 setIsLoading(false);
                 setTimeout(() => setIsMessageVisible(true), 50);
-                return; // Прерываем выполнение
+                return;
             }
 
             // ---> ЕСЛИ КОД ВЕРНЫЙ, УСТАНАВЛИВАЕМ НОВЫЙ ПАРОЛЬ (Шаг 4) <---
             console.log(`[ForgotPasswordPage] Код ${code} верный. Попытка обновления пароля для email ${email}...`);
-            // ВЫЗЫВАЕМ НОВЫЙ СЕРВИС
             await UserSettingsService.updatePasswordWithoutAuth({ email, newPassword });
             console.log(`[ForgotPasswordPage] Пароль для ${email} успешно обновлен.`);
 

@@ -27,13 +27,6 @@ const formatShortDate = (date: Date | string): string => {
   }
 };
 
-interface ExtendedTaskCardProps extends Omit<TaskCardProps, 'onDragEnd'> {
-  onTaskUpdate: (taskId: number, updates: Partial<Task> | { executorUsernames?: string[]; removeExecutorUsernames?: string[] }) => void;
-  canEdit?: boolean;
-  onDragStart: (e: React.DragEvent, task: Task) => void;
-  setHoveredCheckCircle: (taskId: number | null) => void;
-}
-
 // --- НАЧАЛО: Вспомогательные функции для приоритета ---
 // (Можно вынести в отдельный файл utils, если используются в других местах)
 
@@ -70,10 +63,11 @@ const getPriorityTitle = (priorityType?: string): string => {
 };
 // --- КОНЕЦ: Вспомогательные функции для приоритета ---
 
-const TaskCard: React.FC<ExtendedTaskCardProps> = ({
+const TaskCard: React.FC<TaskCardProps> = ({
   task,
   deskUsers,
   deskId,
+  avatarsMap,
   onTaskClick,
   onDragStart,
   onComplete,
@@ -84,7 +78,9 @@ const TaskCard: React.FC<ExtendedTaskCardProps> = ({
   setHoveredCheckCircle,
   setHoveredCalendar,
   onTaskUpdate,
-  canEdit = true
+  canEdit = true,
+  isDatePickerOpen,
+  onDragEnd
 }) => {
   // Определяем, завершена ли задача
   const isCompleted = task.statusType === StatusType.COMPLETED;
@@ -116,10 +112,10 @@ const TaskCard: React.FC<ExtendedTaskCardProps> = ({
   // Она уже будет знать taskId и будет ожидать только updates
   const handleExecutorUpdate = useCallback((updates: { executorUsernames?: string[]; removeExecutorUsernames?: string[] }) => {
     console.log('[TaskCard] Вызван handleExecutorUpdate для задачи:', task?.taskId, 'с изменениями:', updates);
-    if (task?.taskId) {
+    if (task?.taskId && onTaskUpdate) {
       onTaskUpdate(task.taskId, updates);
     } else {
-      console.error("[TaskCard] ID задачи отсутствует в handleExecutorUpdate");
+      console.error("[TaskCard] ID задачи или onTaskUpdate отсутствует в handleExecutorUpdate");
     }
   }, [task, onTaskUpdate]);
 
@@ -148,7 +144,6 @@ const TaskCard: React.FC<ExtendedTaskCardProps> = ({
     >
       {/* === НАЧАЛО: Индикатор приоритета (Обновлено) === */}
       <div
-
         className={`absolute top-0 right-5 h-1 w-6 rounded-b-2xl   shadow-sm ${indicatorClass}`}
         title={priorityTitle}
       />
@@ -172,6 +167,7 @@ const TaskCard: React.FC<ExtendedTaskCardProps> = ({
           task={task} 
           deskUsers={deskUsers} 
           deskId={deskId || 0}
+          avatarsMap={avatarsMap}
           onTaskUpdate={handleExecutorUpdate}
           canEdit={canEditExecutors}
         />

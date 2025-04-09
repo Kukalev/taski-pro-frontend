@@ -17,6 +17,7 @@ interface ExtendedTaskColumnProps extends Omit<TaskColumnProps, 'onDragOver' | '
   setDropTarget: (target: { statusType: string; index: number } | null) => void;
   onDropOnColumn: (statusType: string) => void; // Обработчик drop из TaskBoardPage
   onDragStart: (e: React.DragEvent, task: Task) => void; // Для передачи в TaskCard
+  avatarsMap: Record<string, string | null>; // <--- Принимаем проп
 }
 
 const TaskColumn: React.FC<ExtendedTaskColumnProps> = ({
@@ -47,6 +48,7 @@ const TaskColumn: React.FC<ExtendedTaskColumnProps> = ({
   dropTarget,
   setDropTarget,
   onDropOnColumn, // Обработчик drop из TaskBoardPage
+  avatarsMap, // <--- Получаем проп
 }) => {
   const addInputRef = useRef<HTMLDivElement>(null); // Ref для инпута добавления
 
@@ -168,6 +170,7 @@ const TaskColumn: React.FC<ExtendedTaskColumnProps> = ({
               task={task}
               deskUsers={deskUsers}
               deskId={deskId}
+              avatarsMap={avatarsMap} // <--- Передаем дальше
               onDragStart={onDragStart} // Передаем onDragStart
               onComplete={onTaskComplete}
               onDateClick={onDateClick}

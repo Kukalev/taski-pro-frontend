@@ -15,21 +15,28 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' }
 });
 
-
-const PUBLIC_PATHS = ['/v1/auth/login', '/v1/auth/registration'];
+// --- ОБНОВЛЕННЫЙ СПИСОК ПУБЛИЧНЫХ МАРШРУТОВ ---
+const PUBLIC_PATHS = [
+    '/v1/auth/login',
+    '/v1/auth/registration', // Оставил registration, если он используется
+    // Добавляем маршруты для сброса пароля
+    '/v1/profile/forgot-password',
+    '/v1/profile/is-valid-code',        // <--- Добавлен маршрут проверки кода
+    '/v1/profile/update-password-without-auth' // <--- Добавлен маршрут обновления пароля без авторизации
+];
+// ----------------------------------------------
 
 const GET_USER_COLOR_PATH = '/v1/users/color'; // Определим путь цвета здесь для сравнения
 
 // Добавляем токен к запросам, КРОМЕ ПУБЛИЧНЫХ
 api.interceptors.request.use(config => {
   const tokens = getTokens();
-  // Получаем путь ОТНОСИТЕЛЬНО baseURL
-  const urlPath = config.url; 
+  const urlPath = config.url;
 
-  // Проверяем, что путь НЕ является одним из публичных
-  const isPublic = urlPath && PUBLIC_PATHS.some(publicPath => urlPath.endsWith(publicPath));
+  // Проверяем, начинается ли путь с одного из публичных
+  // Используем startsWith для большей надежности (например, если будут параметры запроса)
+  const isPublic = urlPath && PUBLIC_PATHS.some(publicPath => urlPath.startsWith(publicPath));
 
-  // Добавляем токен, только если он есть И путь НЕ публичный
   if (tokens?.accessToken && !isPublic) {
     console.log(`[Request Interceptor] Добавляем Auth Header для ${urlPath}`);
     config.headers.Authorization = `Bearer ${tokens.accessToken}`;
@@ -42,25 +49,24 @@ api.interceptors.request.use(config => {
 // --- Функция для запроса обновления токена ---
 const refreshTokenRequest = async () => {
   const tokens = getTokens();
-  const refreshTokenPath = '/api/v1/auth/refresh_token'; // Полный путь для прямого вызова
+  const refreshTokenPath = '/api/v1/auth/refresh_token';
 
   if (!tokens?.refreshToken) {
     console.log("[refreshTokenRequest] Нет refresh token для обновления.");
-    throw new Error("Refresh token not found"); 
+    throw new Error("Refresh token not found");
   }
 
   try {
     console.log("[refreshTokenRequest] Попытка обновить токен...");
-    // Отправляем refresh token в ТЕЛЕ запроса 
-    const response = await axios.post(refreshTokenPath, 
+    const response = await axios.post(refreshTokenPath,
       { refreshToken: tokens.refreshToken },
-      { headers: { 'Content-Type': 'application/json' } } // Убедимся, что Content-Type установлен
+      { headers: { 'Content-Type': 'application/json' } }
     );
 
     if (response.data?.accessToken) {
       console.log("[refreshTokenRequest] Токен успешно обновлен сервером.");
       const newAccessToken = response.data.accessToken;
-      const newRefreshToken = response.data.refreshToken; 
+      const newRefreshToken = response.data.refreshToken;
 
       let usernameFromNewToken: string | undefined;
       try {
@@ -69,13 +75,13 @@ const refreshTokenRequest = async () => {
           console.log('[refreshTokenRequest] Username из нового токена:', usernameFromNewToken);
       } catch (decodeError) {
           console.error("[refreshTokenRequest] Ошибка декодирования нового accessToken:", decodeError);
-          usernameFromNewToken = tokens.username; // Используем старый как запасной вариант
+          usernameFromNewToken = tokens.username;
       }
 
       saveTokens({
         accessToken: newAccessToken,
         refreshToken: newRefreshToken || tokens.refreshToken,
-        username: usernameFromNewToken || tokens.username || '' // Добавил старый username как fallback
+        username: usernameFromNewToken || tokens.username || ''
       });
       console.log("[refreshTokenRequest] Новые токены сохранены.");
       return newAccessToken;
@@ -91,8 +97,7 @@ const refreshTokenRequest = async () => {
      } else {
        console.error('Ошибка обновления - Сообщение:', error.message);
      }
-    // Важно! Не вызываем здесь logout, просто пробрасываем ошибку
-    throw error; 
+    throw error;
   }
 };
 
@@ -117,39 +122,31 @@ api.interceptors.response.use(
   async error => {
     const originalRequest = error.config;
     const status = error.response?.status;
-    // Получаем путь ОТНОСИТЕЛЬНО baseURL, как его видит Axios
-    const urlPath = originalRequest.url; 
+    const urlPath = originalRequest.url;
 
-    // Проверяем, является ли URL путем для запроса цвета
     const isGetColorRequest = urlPath === GET_USER_COLOR_PATH;
+    // Используем startsWith, как в request interceptor
+    const isPublicPath = urlPath && PUBLIC_PATHS.some(publicPath => urlPath.startsWith(publicPath));
 
-    // Проверяем, является ли путь публичным (используя ту же логику, что и в request interceptor)
-    const isPublicPath = urlPath && PUBLIC_PATHS.some(publicPath => urlPath.endsWith(publicPath));
-
-    // --- ОТЛАДОЧНЫЕ ЛОГИ ---
     console.log(`[Interceptor Debug] Status: ${status}, URL Path: '${urlPath}', Is GetColor: ${isGetColorRequest}, Is Public: ${isPublicPath}, Is Retry: ${originalRequest._retry}`);
-    // --- КОНЕЦ ОТЛАДОЧНЫХ ЛОГОВ ---
 
-    // --- ИЗМЕНЕННЫЕ УСЛОВИЯ ДЛЯ ОБНОВЛЕНИЯ ---
     const shouldAttemptRefresh =
-        status === 401 &&          // Это 401?
-        !originalRequest._retry && // И не повтор?
-        !isPublicPath &&           // И НЕ публичный путь?
-        !isGetColorRequest;        // И НЕ запрос цвета? <-- ДОБАВЛЕНО УСЛОВИЕ
+        status === 401 &&
+        !originalRequest._retry &&
+        !isPublicPath &&
+        !isGetColorRequest;
 
-    // --- ОТЛАДОЧНЫЙ ЛОГ РЕШЕНИЯ ---
     console.log(`[Interceptor Debug] Should Attempt Refresh: ${shouldAttemptRefresh}`);
-    // --- КОНЕЦ ОТЛАДОЧНОГО ЛОГА ---
 
     if (!shouldAttemptRefresh) {
-      // Если НЕ нужно обновлять (либо не 401, либо повтор, либо публичный, ЛИБО запрос цвета)
-      if (status === 401 && isGetColorRequest) {
+        // Если НЕ нужно обновлять (либо не 401, либо повтор, либо публичный, ЛИБО запрос цвета)
+        if (status === 401 && isGetColorRequest) {
           console.log(`[Interceptor] Ошибка 401 на ${urlPath} (запрос цвета). Обновление токена НЕ ТРЕБУЕТСЯ. Проброс ошибки.`);
-      } else {
+        } else {
           console.log(`[Interceptor] Ошибка ${status} на ${urlPath}. Обновление НЕ требуется по другим причинам. Проброс ошибки.`);
-      }
-      // ПРИМЕЧАНИЕ: Ошибку все равно нужно пробросить, чтобы getColorOnUser мог ее поймать и вернуть 'orange'!
-      return Promise.reject(error); 
+        }
+        // ПРИМЕЧАНИЕ: Ошибку все равно нужно пробросить, чтобы getColorOnUser мог ее поймать и вернуть 'orange'!
+        return Promise.reject(error); 
     }
 
     // --- Если нужно обновлять (401 на ДРУГОМ защищенном пути) ---
@@ -157,15 +154,15 @@ api.interceptors.response.use(
 
     if (isRefreshing) {
        console.log('[Interceptor] Обновление уже идет, добавление в очередь:', originalRequest.url);
-      return new Promise((resolve, reject) => { failedQueue.push({ resolve, reject }); })
-          .then(token => { 
-              console.log('[Interceptor] Очередь обработана (успех), повтор запроса:', originalRequest.url);
-              originalRequest.headers['Authorization'] = 'Bearer ' + token; return api(originalRequest); 
-          })
-          .catch(err => {
-              console.log('[Interceptor] Очередь обработана (ошибка), проброс ошибки для:', originalRequest.url);
-              return Promise.reject(err)
-          });
+       return new Promise((resolve, reject) => { failedQueue.push({ resolve, reject }); })
+           .then(token => {
+               console.log('[Interceptor] Очередь обработана (успех), повтор запроса:', originalRequest.url);
+               originalRequest.headers['Authorization'] = 'Bearer ' + token; return api(originalRequest);
+           })
+           .catch(err => {
+               console.log('[Interceptor] Очередь обработана (ошибка), проброс ошибки для:', originalRequest.url);
+               return Promise.reject(err)
+           });
     }
     originalRequest._retry = true;
     isRefreshing = true;
@@ -173,23 +170,16 @@ api.interceptors.response.use(
       console.log('[Interceptor] Запуск refreshTokenRequest для:', originalRequest.url);
       const newToken = await refreshTokenRequest();
       console.log('[Interceptor] refreshTokenRequest УСПЕШНО завершен, новый токен получен для:', originalRequest.url);
-      // Обновляем токен в дефолтных заголовках И в текущем запросе
-      api.defaults.headers.common['Authorization'] = 'Bearer ' + newToken; 
+      api.defaults.headers.common['Authorization'] = 'Bearer ' + newToken;
       originalRequest.headers['Authorization'] = 'Bearer ' + newToken;
-      // Обрабатываем очередь (успешно)
-      processQueue(null, newToken); 
+      processQueue(null, newToken);
       console.log('[Interceptor] Повторный вызов оригинального запроса после обновления:', originalRequest.url);
-      return api(originalRequest); // Повторяем оригинальный запрос с новым токеном
+      return api(originalRequest);
     } catch (refreshError) {
       console.error("[Interceptor] НЕ УДАЛОСЬ обновить токен:", refreshError);
-      // Обрабатываем очередь (с ошибкой)
-      processQueue(refreshError, null); 
-      
-      // ВАЖНО: НЕ ВЫЗЫВАЕМ LOGOUT ЗДЕСЬ АВТОМАТИЧЕСКИ.
-      // Пусть приложение само решает, что делать при ошибке обновления.
-      // Например, AuthContext может отловить ошибку и вызвать logout.
+      processQueue(refreshError, null);
       console.log('[Interceptor] Проброс ошибки обновления токена дальше...');
-      return Promise.reject(refreshError); // Пробрасываем ошибку обновления
+      return Promise.reject(refreshError);
     } finally {
       console.log('[Interceptor] Завершение операции обновления (finally), isRefreshing = false для:', originalRequest.url);
       isRefreshing = false;

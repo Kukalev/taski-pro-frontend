@@ -19,8 +19,9 @@ import {
 } from '../../../../components/modals/deleteUserModal/DeleteUserModal'
 import {getUserName} from './utilities'
 import { getTasksByDeskId, updateTask } from '../../../../services/task/Task'
+import { UserAvatar } from '../../../../components/header/components/UserAvatar'
 
-const DeskParticipants: React.FC<DeskParticipantsProps> = ({ desk, deskUsers, hasEditPermission = true, refreshDeskUsers, updateLocalUsers }) => {
+const DeskParticipants: React.FC<DeskParticipantsProps> = ({ desk, deskUsers, hasEditPermission = true, refreshDeskUsers, updateLocalUsers, avatarsMap }) => {
   const deskId = desk?.id;
   console.log(`DeskParticipants RENDER - Desk ID: ${deskId}, Users Count from props: ${deskUsers?.length}`);
 
@@ -157,11 +158,11 @@ const DeskParticipants: React.FC<DeskParticipantsProps> = ({ desk, deskUsers, ha
       <div className='bg-white rounded-lg p-4'>
         {hasParticipants ? (
           <ParticipantsList
-            key={JSON.stringify(deskUsers.map(u => u.id))}
             participants={deskUsers}
             onDeleteUser={openDeleteModal}
             onUpdateUserRole={handleUpdateUserRole}
             currentUserRole={currentUserRole}
+            avatarsMap={avatarsMap}
           />
         ) : (
           <EmptyState />

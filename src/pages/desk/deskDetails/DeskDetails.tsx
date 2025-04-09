@@ -8,6 +8,8 @@ import {DeskService} from '../../../services/desk/Desk.ts'
 import {UserService} from '../../../services/users/Users'
 import {canEditDesk} from '../../../utils/permissionUtils'
 import { UserOnDesk } from '../../DeskOverview/components/DeskParticipants/types'
+import { AvatarService } from '../../../services/Avatar/Avatar.ts'
+import { getUserName } from '../../DeskOverview/components/DeskParticipants/utilities.ts'
 
 export const DeskDetails = () => {
 	const { id } = useParams<{ id: string }>()
@@ -18,9 +20,22 @@ export const DeskDetails = () => {
 	const loadingRef = useRef(false) // Для предотвращения двойных вызовов
 	const [deskUsers, setDeskUsers] = useState<UserOnDesk[]>([])
 	const [hasEditPermission, setHasEditPermission] = useState(false)
+	const [avatarsMap, setAvatarsMap] = useState<Record<string, string | null>>({})
+	const previousUrlsRef = useRef<Record<string, string | null>>({})
 	
 	// Получаем updateDesk из контекста для обновления сайдбара
 	const { updateDesk: updateDeskInContext } = useDesks()
+
+	const clearAvatarUrls = useCallback(() => {
+		Object.values(previousUrlsRef.current).forEach(url => {
+			if (url) {
+				console.log("[DeskDetails] Отзыв URL аватара:", url);
+				URL.revokeObjectURL(url);
+			}
+		});
+		previousUrlsRef.current = {};
+		setAvatarsMap({});
+	}, []);
 
 	const loadDesk = useCallback(async (forceUserRefresh = false) => {
 		if (!id) return
@@ -62,6 +77,7 @@ export const DeskDetails = () => {
 			// Сбрасываем пользователей и права при ошибке
 			setDeskUsers([])
 			setHasEditPermission(false)
+			clearAvatarUrls();
 		} finally {
 			// Снимаем общий лоадер только при полной перезагрузке
 			if (!forceUserRefresh) {
@@ -69,12 +85,15 @@ export const DeskDetails = () => {
 				loadingRef.current = false
 			}
 		}
-	}, [id])
+	}, [id, clearAvatarUrls])
 
 	// Загрузка доски при первом рендере или изменении ID
 	useEffect(() => {
 		loadDesk()
-	}, [loadDesk])
+		return () => {
+			clearAvatarUrls();
+		}
+	}, [loadDesk, clearAvatarUrls])
 
 	// Новая функция для обновления только пользователей
 	const refreshDeskUsers = useCallback(() => {
@@ -88,20 +107,65 @@ export const DeskDetails = () => {
 		console.log('[DeskDetails] ==> useEffect[deskUsers]: Состояние deskUsers ОБНОВЛЕНО:', deskUsers);
 	}, [deskUsers]);
 
-	// Подписка на внешние обновления (ВРЕМЕННО ОТКЛЮЧАЕМ ДЛЯ ТЕСТА)
-	// useEffect(() => {
-	// 	if (!id) return;
-	// 	console.log(`Подписываемся на обновления доски ID: ${id} (DeskUpdateEvents)`);
-	// 	const callback = () => { // Define callback separately
-	// 		console.log(`Получено событие обновления доски ID: ${id} (DeskUpdateEvents) - вызываем refreshDesk`);
-	// 		refreshDesk(); // Полная перезагрузка по событию
-	// 	};
-	// 	const unsubscribe = DeskUpdateEvents.subscribe(Number(id), callback);
-	// 	return () => {
-	// 		console.log(`Отписываемся от обновлений доски ID: ${id} (DeskUpdateEvents)`);
-	// 		unsubscribe();
-	// 	};
-	// }, [id, refreshDesk]); // Зависимости тоже комментируем
+	// Загрузка аватарок при изменении deskUsers
+	useEffect(() => {
+		const fetchAvatars = async () => {
+			const userUsernames = [...new Set(deskUsers
+				.map(user => getUserName(user))
+				.filter((username): username is string => !!username && username !== 'Неизвестный пользователь')
+			)];
+
+			if (userUsernames.length === 0) {
+				clearAvatarUrls();
+				return;
+			}
+
+			console.log('[DeskDetails] Запрос аватарок для участников доски:', userUsernames);
+
+			try {
+				const batchResponse = await AvatarService.getAllAvatars(userUsernames);
+				const newAvatarsMap: Record<string, string | null> = {};
+				const currentUrls = { ...previousUrlsRef.current };
+
+				for (const username in batchResponse) {
+					const base64Data = batchResponse[username];
+					let newUrl: string | null = null;
+					if (base64Data) {
+						 try {
+							 const byteString = atob(base64Data.split(',')[1]);
+							 const mimeString = base64Data.split(',')[0].split(':')[1].split(';')[0];
+							 const ab = new ArrayBuffer(byteString.length);
+							 const ia = new Uint8Array(ab);
+							 for (let i = 0; i < byteString.length; i++) { ia[i] = byteString.charCodeAt(i); }
+							 const blob = new Blob([ab], { type: mimeString });
+							 newUrl = URL.createObjectURL(blob);
+						 } catch (e) { console.error(`[DeskDetails] Ошибка создания Blob URL для ${username}:`, e); }
+					}
+
+					if (currentUrls[username] && currentUrls[username] !== newUrl) {
+						URL.revokeObjectURL(currentUrls[username]!);
+					}
+					newAvatarsMap[username] = newUrl;
+				}
+
+				 Object.keys(currentUrls).forEach(username => {
+					 if (!newAvatarsMap.hasOwnProperty(username) && currentUrls[username]) {
+						 URL.revokeObjectURL(currentUrls[username]!);
+					 }
+				 });
+
+				setAvatarsMap(newAvatarsMap);
+				previousUrlsRef.current = newAvatarsMap;
+
+			} catch (error) {
+				console.error('[DeskDetails] Ошибка при загрузке аватарок участников:', error);
+				clearAvatarUrls();
+			}
+		};
+
+		fetchAvatars();
+
+	}, [deskUsers, clearAvatarUrls]);
 
 	// Обновление заголовка страницы при загрузке доски
 	useEffect(() => {
@@ -162,8 +226,9 @@ export const DeskDetails = () => {
 		refreshDeskUsers,
 		hasEditPermission,
 		deskUsers,
-		updateLocalUsers // Добавляем новую функцию в контекст
-	}), [desk, updateLocalDesk, refreshDeskUsers, hasEditPermission, deskUsers, updateLocalUsers]); // Добавляем updateLocalUsers в зависимости
+		updateLocalUsers,
+		avatarsMap
+	}), [desk, updateLocalDesk, refreshDeskUsers, hasEditPermission, deskUsers, updateLocalUsers, avatarsMap]); // Добавляем avatarsMap в зависимости
 
 	// --- Проверки перед рендерингом ---
 
@@ -206,7 +271,7 @@ export const DeskDetails = () => {
 		return desk.deskName.charAt(0).toUpperCase()
 	}
 
-	console.log('[DeskDetails Render] Готов к рендеру с desk:', JSON.stringify(desk, null, 2));
+	console.log('[DeskDetails Render] Готов к рендеру с desk:', desk ? JSON.stringify(desk.id) : null, 'Users:', deskUsers.length, 'Avatars:', Object.keys(avatarsMap).length);
 
 	return (
 		<div className='w-full h-full overflow-hidden flex flex-col'>

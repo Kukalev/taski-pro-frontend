@@ -17,6 +17,7 @@ interface DeskDetailsContext {
   hasEditPermission: boolean;
   deskUsers: UserOnDesk[];
   updateLocalUsers: (updater: (prevUsers: UserOnDesk[]) => UserOnDesk[]) => void;
+  avatarsMap: Record<string, string | null>;
 }
 
 const DeskOverviewPage: React.FC = () => {
@@ -26,7 +27,8 @@ const DeskOverviewPage: React.FC = () => {
     refreshDeskUsers,
     hasEditPermission, 
     deskUsers,
-    updateLocalUsers
+    updateLocalUsers,
+    avatarsMap
   } = useOutletContext<DeskDetailsContext>();
 
   const { isLoading, error, updateDeskName, updateDeskDescription, updateDeskDates } = 
@@ -102,6 +104,7 @@ const DeskOverviewPage: React.FC = () => {
         onDateOrStatusSave={handleDateSave}
         isLoading={isLoading}
         hasEditPermission={hasEditPermission}
+        onDeskUpdate={updateLocalDesk}
       />
       
       <div className="max-w-4xl mx-auto px-4 py-6">
@@ -118,6 +121,7 @@ const DeskOverviewPage: React.FC = () => {
           hasEditPermission={hasEditPermission}
           refreshDeskUsers={refreshDeskUsers}
           updateLocalUsers={updateLocalUsers}
+          avatarsMap={avatarsMap}
         />
       </div>
     </>

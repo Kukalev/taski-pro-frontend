@@ -4,14 +4,16 @@ import { DeskData } from '../../../../contexts/DeskContext'
 import { getDeskColor } from '../../../../utils/deskColors'
 import { AuthService } from '../../../../services/auth/Auth'
 import { isCurrentUser } from '../../../../utils/permissionUtils'
+import { UserAvatar } from '../../../../components/header/components/UserAvatar'
 
 interface DeskRowProps {
 	desk: DeskData
 	onRename?: (deskId: number, initialName: string, initialDescription: string) => void
 	onDelete?: (deskId: number, deskName: string) => void
+	avatarsMap: Record<string, string | null>
 }
 
-export const DeskRow = React.memo(({ desk, onRename, onDelete }: DeskRowProps) => {
+export const DeskRow = React.memo(({ desk, onRename, onDelete, avatarsMap }: DeskRowProps) => {
 	const navigate = useNavigate()
 	const [showMenu, setShowMenu] = useState(false)
 	const menuRef = useRef<HTMLDivElement>(null)
@@ -51,16 +53,6 @@ export const DeskRow = React.memo(({ desk, onRename, onDelete }: DeskRowProps) =
 		
 		if (startDate === "-") return "-";
 		return endDate ? `${startDate} - ${endDate}` : startDate;
-	}
-	
-	// Определяем инициалы
-	const getInitials = (name: string | null) => {
-		if (!name) return '?';
-		const parts = name.trim().split(' ');
-		if (parts.length >= 2) {
-			return (parts[0][0] + parts[1][0]).toUpperCase();
-		}
-		return name.substring(0, 2).toUpperCase();
 	}
 	
 	const handleDeskClick = () => {
@@ -107,6 +99,9 @@ export const DeskRow = React.memo(({ desk, onRename, onDelete }: DeskRowProps) =
 		}
 		setShowMenu(false)
 	}
+	
+	// Получаем URL аватара для владельца
+	const ownerAvatarUrl = ownerUsername ? avatarsMap[ownerUsername] : null;
 	
 	return (
 		<tr className='border-b border-gray-100 hover:bg-gray-50 cursor-pointer group' onClick={handleDeskClick}>
@@ -172,10 +167,12 @@ export const DeskRow = React.memo(({ desk, onRename, onDelete }: DeskRowProps) =
 			<td className='py-3 px-4'>
 				{ownerUsername ? (
 					<div className='flex items-center'>
-						<span className='text-xs mr-2 bg-gray-200 text-gray-600 rounded-full w-6 h-6 flex items-center justify-center font-medium shrink-0'>
-							{getInitials(ownerUsername)}
-						</span>
-						<span className='text-gray-700 truncate' title={ownerUsername}>{ownerUsername}</span>
+						<UserAvatar
+							username={ownerUsername}
+							avatarUrl={ownerAvatarUrl}
+							size="sm"
+						/>
+						<span className='text-gray-700 truncate ml-2' title={ownerUsername}>{ownerUsername}</span>
 						{currentUsername && isCurrentUser(ownerUsername) && <span className="ml-1 text-gray-400 text-xs">(Вы)</span>}
 					</div>
 				) : (

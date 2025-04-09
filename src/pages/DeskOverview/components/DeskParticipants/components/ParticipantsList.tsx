@@ -6,7 +6,8 @@ const ParticipantsList: React.FC<ParticipantsListProps> = ({
   participants, 
   onDeleteUser, 
   onUpdateUserRole,
-  currentUserRole
+  currentUserRole,
+  avatarsMap
 }) => {
   return (
     <div className='space-y-3'>
@@ -17,6 +18,7 @@ const ParticipantsList: React.FC<ParticipantsListProps> = ({
           onDeleteUser={onDeleteUser}
           onUpdateUserRole={onUpdateUserRole}
           currentUserRole={currentUserRole}
+          avatarsMap={avatarsMap}
         />
       ))}
     </div>

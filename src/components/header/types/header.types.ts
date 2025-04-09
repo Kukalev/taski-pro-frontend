@@ -17,8 +17,9 @@ export interface UserAvatarProps {
 	username: string
 	email?: string
 	avatarUrl?: string | null
-	onLogout: () => void
+	onLogout?: () => void
 	onSettingsClick?: () => void
+	size?: 'xs' | 'sm' | 'md' | 'lg'
 }
 
 export interface IconButtonProps {

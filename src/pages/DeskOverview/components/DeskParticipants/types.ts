@@ -20,6 +20,8 @@ export interface DeskParticipantsProps {
   deskUsers: UserOnDesk[]; // Получаем актуальный список для проверки прав и начального рендера
   hasEditPermission?: boolean;
   refreshDeskUsers: () => void; // <--- Меняем refreshDesk на refreshDeskUsers
+  updateLocalUsers: (updater: (prevUsers: UserOnDesk[]) => UserOnDesk[]) => void; // <<< Добавляем updateLocalUsers
+  avatarsMap: Record<string, string | null>; // <<< Добавляем avatarsMap
 }
 
 export interface ParticipantsListProps {
@@ -27,6 +29,7 @@ export interface ParticipantsListProps {
   onDeleteUser: (userId: number) => void;
   onUpdateUserRole: (userId: number, rightType: RightType) => void;
   currentUserRole: string;
+  avatarsMap: Record<string, string | null>; // <<< Добавляем avatarsMap
 }
 
 export interface ParticipantItemProps {
@@ -34,6 +37,7 @@ export interface ParticipantItemProps {
   onDeleteUser: (userId: number) => void;
   onUpdateUserRole: (userId: number, rightType: RightType) => void;
   currentUserRole: string;
+  avatarsMap: Record<string, string | null>; // <<< Добавляем avatarsMap
 }
 
 // RoleMenuProps больше не используется, удаляем или оставляем если нужно

@@ -1,29 +1,42 @@
 import React from 'react'
-import {UsersListProps, UserResponseDto} from '../types'
+import {UsersListProps} from '../types'
+import {UserAvatar} from '../../../../../components/header/components/UserAvatar'
 
-const UsersList: React.FC<UsersListProps> = ({ filteredUsers, handleSelectUser, getUserInitials }) => {
+const UsersList: React.FC<UsersListProps> = ({filteredUsers, handleSelectUser, avatarsMap}) => {
+	if (filteredUsers.length === 0) {
+		return null;
+	}
+
+	const safeAvatarsMap = avatarsMap || {};
+
 	return (
-		<>
-			{filteredUsers.length > 0 && (
-				<div className="mt-1 border border-gray-200 rounded-md max-h-60 overflow-y-auto shadow-lg bg-white z-10">
-					{filteredUsers.map((user) => (
-						<div
-							key={user.id || user.username}
-							className="p-2 hover:bg-orange-50 cursor-pointer flex items-center border-b border-gray-100 last:border-0"
-							onClick={() => handleSelectUser(user)}
-						>
-							<div className="w-8 h-8 bg-orange-200 rounded-full flex items-center justify-center text-orange-600 mr-2">
-								{getUserInitials(user)}
-							</div>
-							<div className="flex-grow">
-								<div className="font-medium">{user.username || user.userName}</div>
-								{user.email && <div className="text-xs text-gray-500">{user.email}</div>}
+		<div className="max-h-40 overflow-y-auto border border-gray-200 rounded-md mt-2">
+			{filteredUsers.map((user) => {
+				const username = user.username || user.userName || 'N/A';
+				const email = user.email || '';
+				const avatarUrl = safeAvatarsMap[username] || null;
+
+				return (
+					<div
+						key={user.id}
+						className="flex items-center justify-between p-2 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0"
+						onClick={() => handleSelectUser(user)}
+					>
+						<div className="flex items-center overflow-hidden">
+							<UserAvatar
+								username={username}
+								avatarUrl={avatarUrl}
+								size="sm"
+							/>
+							<div className="ml-3 overflow-hidden">
+								<span className="block font-medium text-sm truncate">{username}</span>
+								{email && <span className="block text-xs text-gray-500 truncate">{email}</span>}
 							</div>
 						</div>
-					))}
-				</div>
-			)}
-		</>
+					</div>
+				);
+			})}
+		</div>
 	);
 };
 

@@ -19,32 +19,13 @@ import {
   canEditTaskPriority, 
   canManageExecutors
 } from '../../../../utils/permissionUtils'
+import { TaskDetailsProps as BaseTaskDetailsProps } from '../../types'
 
-interface TaskDetailsProps {
-  task: {
-    taskId: number;
-    taskName: string;
-    taskDescription: string;
-    statusType: StatusType;
-    taskFinishDate?: string | Date | null;
-    executors?: string[];
-    priority?: string;
-    priorityType?: string;
-    [key: string]: any;
-  };
-  deskId: number;
-  deskUsers: any[];
-  deskName?: string;
-  onClose: () => void;
-  onTaskUpdate: (updatedTask: any) => void;
-  isClosing?: boolean;
-  onAnimationEnd?: () => void;
-}
-
-const TaskDetails: React.FC<TaskDetailsProps> = ({
+const TaskDetails: React.FC<BaseTaskDetailsProps> = ({
   task,
   deskId,
   deskUsers,
+  avatarsMap,
   deskName = "Тестовая доска",
   onClose,
   onTaskUpdate,
@@ -171,6 +152,7 @@ const TaskDetails: React.FC<TaskDetailsProps> = ({
               deskUsers={deskUsers}
               taskId={task?.taskId}
               deskId={deskId}
+              avatarsMap={avatarsMap}
               onTaskUpdate={onTaskUpdate}
               canEdit={canChangeExecutors}
             />

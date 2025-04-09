@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import {
 	CreateDeskModal
 } from '../../../components/modals/createDeskModal/CreateDeskModal'
@@ -14,6 +14,7 @@ import {DeskService} from '../../../services/desk/Desk'
 import {DeskTable} from './components/DeskTable'
 import {SearchPanel} from './components/SearchPanel'
 import { DeskData } from '../../../contexts/DeskContext'
+import { AvatarService } from '../../../services/Avatar/Avatar'
 
 export const AllDesks = () => {
 	const [isCreateModalOpen, setIsCreateModalOpen] = useState(false)
@@ -24,20 +25,121 @@ export const AllDesks = () => {
 	const [selectedDeskDescription, setSelectedDeskDescription] = useState<string>('')
 	const [isDeleting, setIsDeleting] = useState(false)
 	const [searchQuery, setSearchQuery] = useState('')
+	const [avatarsMap, setAvatarsMap] = useState<Record<string, string | null>>({})
+	const previousUrlsRef = useRef<Record<string, string | null>>({})
 
 	// Получаем данные и функции из контекста
 	const { desks, loading, addDesk, loadDesks, removeDesk, updateDesk: updateDeskInContext } = useDesks()
 
-	// ---> Удаляем useEffect, который проверял sessionStorage <-----
-	// useEffect(() => {
-	// 	// Проверяем флаг 'setupComplete'
-	// 	const setupComplete = sessionStorage.getItem('setupComplete');
-	// 	if (setupComplete === 'true') {
-	// 		console.log('[AllDesks] Обнаружен флаг setupComplete, вызываем loadDesks()');
-	// 		loadDesks(); // Вызываем загрузку досок из контекста
-	// 		sessionStorage.removeItem('setupComplete'); // Удаляем флаг, чтобы не вызывать повторно
-	// 	}
-	// }, [loadDesks]);
+	// Фильтрация досок
+	const filteredDesks = useMemo(() => desks.filter(desk =>
+		desk.deskName.toLowerCase().includes(searchQuery.toLowerCase())
+	), [desks, searchQuery])
+
+	// --- Загрузка аватарок для видимых владельцев ---
+	useEffect(() => {
+		const fetchAvatars = async () => {
+			// Получаем уникальные username владельцев из *отфильтрованных* досок
+			const ownerUsernames = [...new Set(filteredDesks
+				.map(desk => desk.username) // Используем поле username
+				.filter((username): username is string => !!username) // Оставляем только существующие строки
+			)];
+
+			if (ownerUsernames.length === 0) {
+				 // Если владельцев нет, очищаем старые URL (если были)
+				 Object.values(previousUrlsRef.current).forEach(url => {
+					 if (url) URL.revokeObjectURL(url);
+				 });
+				 setAvatarsMap({});
+				 previousUrlsRef.current = {};
+				 return; // Выходим, если нет username для запроса
+			}
+
+			console.log('[AllDesks] Запрос аватарок для владельцев:', ownerUsernames);
+
+			try {
+				const batchResponse = await AvatarService.getAllAvatars(ownerUsernames);
+				const newAvatarsMap: Record<string, string | null> = {};
+				const currentUrls = { ...previousUrlsRef.current }; // Копируем текущие для сравнения
+
+				// Создаем Blob URL и очищаем старые
+				for (const username in batchResponse) {
+					const base64Data = batchResponse[username];
+					let newUrl: string | null = null;
+
+					if (base64Data) {
+						 // Важно: getAllAvatars возвращает base64 строку, не Blob напрямую
+						 // Нужно создать Blob из base64
+						 try {
+							 const byteString = atob(base64Data.split(',')[1]);
+							 const mimeString = base64Data.split(',')[0].split(':')[1].split(';')[0];
+							 const ab = new ArrayBuffer(byteString.length);
+							 const ia = new Uint8Array(ab);
+							 for (let i = 0; i < byteString.length; i++) {
+								 ia[i] = byteString.charCodeAt(i);
+							 }
+							 const blob = new Blob([ab], { type: mimeString });
+							 newUrl = URL.createObjectURL(blob);
+							 console.log(`[AllDesks] Создан Blob URL для ${username}: ${newUrl}`);
+						 } catch (e) {
+							  console.error(`[AllDesks] Ошибка создания Blob URL для ${username}:`, e);
+							 newUrl = null; // Ошибка -> нет URL
+						 }
+					}
+
+					// Отзываем *старый* URL для этого юзера, если он был и не совпадает с новым
+					if (currentUrls[username] && currentUrls[username] !== newUrl) {
+						console.log(`[AllDesks] Отзыв старого URL для ${username}: ${currentUrls[username]}`);
+						URL.revokeObjectURL(currentUrls[username]!);
+					}
+					newAvatarsMap[username] = newUrl;
+				}
+
+				// Отзываем URL для юзеров, которых больше нет в списке видимых
+				 Object.keys(currentUrls).forEach(username => {
+					 if (!newAvatarsMap.hasOwnProperty(username) && currentUrls[username]) {
+						 console.log(`[AllDesks] Отзыв URL для невидимого юзера ${username}: ${currentUrls[username]}`);
+						 URL.revokeObjectURL(currentUrls[username]!);
+					 }
+				 });
+
+				setAvatarsMap(newAvatarsMap);
+				previousUrlsRef.current = newAvatarsMap; // Сохраняем текущие как "предыдущие" для следующего раза
+
+			} catch (error) {
+				console.error('[AllDesks] Ошибка при загрузке аватарок:', error);
+				// Очищаем аватарки при ошибке
+				Object.values(previousUrlsRef.current).forEach(url => {
+					if (url) URL.revokeObjectURL(url);
+				});
+				setAvatarsMap({});
+				previousUrlsRef.current = {};
+			}
+		};
+
+		if (filteredDesks.length > 0) {
+			 fetchAvatars();
+		} else {
+			 // Если нет видимых досок, очищаем карту аватарок и отзываем старые URL
+			 Object.values(previousUrlsRef.current).forEach(url => {
+				 if (url) URL.revokeObjectURL(url);
+			 });
+			 setAvatarsMap({});
+			 previousUrlsRef.current = {};
+		}
+
+		// Функция очистки при размонтировании
+		return () => {
+			console.log('[AllDesks] Размонтирование, очистка всех Object URL...');
+			Object.values(previousUrlsRef.current).forEach(url => {
+				if (url) {
+					URL.revokeObjectURL(url);
+				}
+			});
+			previousUrlsRef.current = {};
+		};
+
+	}, [filteredDesks]); // Перезапускаем эффект при изменении отфильтрованного списка
 
 	const handleDeskCreated = useCallback(async (newDesk: DeskData) => {
 		console.log('[AllDesks] Новая доска создана, обновляем список...')
@@ -84,10 +186,6 @@ export const AllDesks = () => {
 		}
 	}, [removeDesk, loadDesks])
 
-	const filteredDesks = desks.filter(desk => 
-		desk.deskName.toLowerCase().includes(searchQuery.toLowerCase())
-	)
-
 	return (
 		<div className='w-full h-screen flex flex-col overflow-hidden '>
 			<div className='w-full pb-4'>
@@ -103,6 +201,7 @@ export const AllDesks = () => {
 				loading={loading} 
 				onRename={handleRenameRequest}
 				onDelete={handleDeleteRequest}
+				avatarsMap={avatarsMap}
 			/>
 
 			{/* Модальные окна */}

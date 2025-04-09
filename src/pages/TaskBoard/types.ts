@@ -47,12 +47,19 @@ export interface TaskColumnProps {
   onDragEnd: (e: React.DragEvent) => void;
   onDateChange: (taskId: number, date: Date | null) => void;
   onTaskClick?: (task: Task) => void;
+  deskUsers: any[];
+  avatarsMap: Record<string, string | null>;
+  onTaskUpdate: (taskId: number, updates: Partial<Task> | { executorUsernames?: string[]; removeExecutorUsernames?: string[] }) => void;
+  setAddingInColumn: (statusId: number | null) => void;
+  setDropTarget: (target: { statusType: string; index: number } | null) => void;
+  onDropOnColumn: (statusType: string) => void;
 }
 
 export interface TaskCardProps {
   task: Task;
   deskUsers: any[];
   deskId?: number;
+  avatarsMap: Record<string, string | null>;
   onDragStart: (e: React.DragEvent, task: Task) => void;
   onDragEnd: (e: React.DragEvent) => void;
   onComplete: (taskId: number) => void;
@@ -64,14 +71,16 @@ export interface TaskCardProps {
   setHoveredCheckCircle: (taskId: number | null) => void;
   setHoveredCalendar: (taskId: number | null) => void;
   onTaskClick?: (task: Task) => void;
-  onTaskUpdate?: (updatedTask: Task) => void;
+  onTaskUpdate?: (taskId: number, updates: Partial<Task> | { executorUsernames?: string[]; removeExecutorUsernames?: string[] }) => void;
 }
 
 export interface TaskExecutorProps {
   task: Task;
   deskUsers: any[];
   deskId: number;
-  onTaskUpdate: (updatedTask: Task) => void;
+  avatarsMap: Record<string, string | null>;
+  onTaskUpdate: (updates: { executorUsernames?: string[]; removeExecutorUsernames?: string[] }) => void;
+  canEdit?: boolean;
 }
 
 export interface TaskInputProps {
@@ -102,4 +111,13 @@ export interface TaskDatePickerProps {
   selectedDate: Date | null;
   onDateChange: (taskId: number, date: Date | null) => void;
   onClose: () => void;
+}
+
+export interface TaskDetailsProps {
+  deskUsers: any[];
+  avatarsMap: Record<string, string | null>;
+  onClose: () => void;
+  onTaskUpdate: (updatedTask: any) => void;
+  isClosing?: boolean;
+  onAnimationEnd?: () => void;
 }

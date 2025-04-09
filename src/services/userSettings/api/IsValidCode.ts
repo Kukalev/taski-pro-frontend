@@ -1,27 +1,39 @@
 import api from '../../api'
 import {CodeType} from '../types'
 
-/**
- * Проверяет валидность кода подтверждения.
- * @param {string} code - Код для проверки.
- * @param {CodeType} type - Тип кода (CONFIRM_MAIL, RESET_PASSWORD, RESET_MAIL).
- * @returns {Promise<boolean>} True, если код валиден, иначе false.
- */
 
-const BASE_URL = '/v1/profile';
+interface IsValidCodeData {
+    email: string;
+    code: string;
+    type: CodeType;
+}
 
-export const isValidCode = async (code: string, type: CodeType): Promise<boolean> => {
-    if (!code || !type) {
-        console.error('[IsValidCode] Код или тип не предоставлены.');
-        return false;
+const BASE_URL = '/v1/profile'; // Базовый URL остается
+
+
+export const isValidCode = async (data: IsValidCodeData): Promise<boolean> => {
+    if (!data || !data.email || !data.code || !data.type) {
+        console.error('[IsValidCode] Не все данные предоставлены в объекте:', data);
+        // Можно либо вернуть false, либо выбросить ошибку
+        throw new Error('Неполные данные для проверки кода.');
     }
-    const endpoint = `${BASE_URL}/is-valid-code/${code}/${type}`;
+
+
+
+
     try {
-        const response = await api.get<boolean>(endpoint);
-        console.log(`[IsValidCode] Ответ API для кода ${code} (${type}):`, response.data);
-        return response.data;
+        console.log('[IsValidCode] Вызван с данными:', data); // Лог как в createDesk
+        // Обновляем лог, чтобы показать использование объекта config
+        console.log(`[IsValidCode] Отправка GET запроса на ${BASE_URL}/is-valid-code с объектом config:`, { data });
+
+        // Используем api.get, передавая объект config с полем data
+        const response = await api.get<boolean>(`${BASE_URL}/is-valid-code`, { data: data });
+
+        console.log('[IsValidCode] Ответ от сервера:', response.data); // Лог как в createDesk
+        return response.data; // Возвращаем boolean результат
+
     } catch (error) {
-        console.error(`[IsValidCode] Ошибка при проверке кода ${code} (${type}):`, error);
-        return false;
+        console.error('[IsValidCode] Ошибка при проверке кода:', error); // Лог как в createDesk
+        throw error; // Пробрасываем ошибку дальше, как в createDesk
     }
-};
+}

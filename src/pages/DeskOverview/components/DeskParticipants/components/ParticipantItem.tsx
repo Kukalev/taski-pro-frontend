@@ -3,19 +3,20 @@ import {ParticipantItemProps} from '../types'
 import {
   getRoleBadgeClass,
   getRoleDisplayName,
-  getUserInitials,
   getUserName
 } from '../utilities'
 import {GrEdit} from 'react-icons/gr'
 import {FaTimes} from 'react-icons/fa'
 import {RightType} from '../../../../../services/users/api/UpdateUserFromDesk'
 import {isCurrentUser} from '../../../../../utils/permissionUtils'
+import { UserAvatar } from '../../../../../components/header/components/UserAvatar'
 
 const ParticipantItem: React.FC<ParticipantItemProps> = ({ 
   user, 
   onDeleteUser, 
   onUpdateUserRole, 
-  currentUserRole 
+  currentUserRole,
+  avatarsMap
 }) => {
   const [showRoleMenu, setShowRoleMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -60,15 +61,20 @@ const ParticipantItem: React.FC<ParticipantItemProps> = ({
     }
     return 'bg-green-100 text-green-800'; // MEMBER
   };
-  
+
+  const participantUsername = getUserName(user);
+  const avatarUrl = avatarsMap[participantUsername] || null;
+
   return (
     <div className='flex items-center justify-between p-2 hover:bg-gray-50 rounded'>
       <div className='flex items-center'>
-        <div className='w-10 h-10 bg-purple-200 rounded-full flex items-center justify-center text-purple-600 mr-3'>
-          {getUserInitials(user)}
-        </div>
-        <div className='font-medium'>
-          {getUserName(user)}
+        <UserAvatar
+            username={participantUsername}
+            avatarUrl={avatarUrl}
+            size="sm"
+        />
+        <div className='font-medium ml-3'>
+          {participantUsername}
           {isCurrentUserItem && <span className="ml-1 text-gray-400 text-xs">(Вы)</span>}
         </div>
       </div>

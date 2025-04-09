@@ -1,57 +1,54 @@
 import React from 'react'
-import {SelectedUserPreviewProps} from '../types'
+import { SelectedUserPreviewProps } from '../types'
+import { RightType } from '../../../../../services/users/api/UpdateUserFromDesk'
+import { UserAvatar } from '../../../../../components/header/components/UserAvatar'
 
-const SelectedUserPreview: React.FC<SelectedUserPreviewProps> = ({ 
-	selectedUser, 
-	handleCancelUserSelection, 
-	accessType, 
-	setAccessType, 
-	getUserInitials 
+const SelectedUserPreview: React.FC<SelectedUserPreviewProps> = ({
+	selectedUser,
+	handleCancelUserSelection,
+	accessType,
+	setAccessType,
+	avatarUrl
 }) => {
+	const username = selectedUser.username || selectedUser.userName || 'N/A'
+	const email = selectedUser.email || ''
+
 	return (
-		<div className="mb-6">
-			<label className="block text-sm font-medium text-gray-700 mb-2">
-				Выбранный пользователь
-			</label>
-			<div className="p-3 bg-orange-50 rounded-md flex items-center mb-4">
-				<div className="w-10 h-10 bg-orange-200 rounded-full flex items-center justify-center text-orange-600 mr-3">
-					{getUserInitials(selectedUser)}
-				</div>
-				<div className="flex-grow">
-					<div className="font-medium">{selectedUser.username || selectedUser.userName}</div>
-					{selectedUser.email && <div className="text-sm text-gray-500">{selectedUser.email}</div>}
+		<div className="space-y-4">
+			<div className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-md">
+				<div className="flex items-center">
+					<UserAvatar
+						username={username}
+						avatarUrl={avatarUrl}
+						size="sm"
+					/>
+					<div className="ml-3">
+						<div className="font-medium text-gray-800">{username}</div>
+						{email && <div className="text-xs text-gray-500">{email}</div>}
+					</div>
 				</div>
 				<button
 					onClick={handleCancelUserSelection}
-					className="text-gray-400 hover:text-gray-600 p-1"
+					className="text-gray-400 hover:text-red-500 p-1 rounded-full text-xs"
+					title="Отменить выбор"
 				>
-					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-						<path d="M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-						<path d="M6 6L18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-					</svg>
+					✕
 				</button>
 			</div>
-
-			<label className="block text-sm font-medium text-gray-700 mb-1">
-				Тип доступа
-			</label>
-			<select
-				className="w-full p-2 rounded-md bg-gray-50 focus:outline-none cursor-pointer"
-				style={{
-					border: '1px solid var(--theme-color)',
-					'--tw-ring-color': 'var(--theme-color)',
-					'--tw-ring-offset-shadow': 'var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color)',
-					'--tw-ring-shadow': 'var(--tw-ring-inset) 0 0 0 calc(1px + var(--tw-ring-offset-width)) var(--tw-ring-color)',
-					boxShadow: 'var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000)'
-				} as React.CSSProperties}
-				value={accessType}
-				onChange={(e) => setAccessType(e.target.value)}
-			>
-				<option className='cursor-pointer' value="MEMBER">Участник</option>
-				<option className='cursor-pointer' value="CONTRIBUTOR">Редактор</option>
-			</select>
+			<div>
+				<label htmlFor="accessType" className="block text-sm font-medium text-gray-700 mb-1">Права доступа:</label>
+				<select
+					id="accessType"
+					value={accessType}
+					onChange={(e) => setAccessType(e.target.value)}
+					className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
+				>
+					<option value={RightType.MEMBER}>Чтение</option>
+					<option value={RightType.CONTRIBUTOR}>Редактирование</option>
+				</select>
+			</div>
 		</div>
-	);
-};
+	)
+}
 
-export default SelectedUserPreview;
+export default SelectedUserPreview

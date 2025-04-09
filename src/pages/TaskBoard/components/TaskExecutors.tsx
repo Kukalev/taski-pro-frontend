@@ -1,25 +1,23 @@
 import React, {useEffect, useRef, useState, useCallback} from 'react'
-import {PiUserCircleThin} from 'react-icons/pi'
+import { PiUserCircleThin } from 'react-icons/pi' // <--- Убедимся, что иконка импортирована
 import {UserService} from '../../../services/users/Users'
 import {canEditTask, canManageExecutors, getUserRoleOnDesk, UserRightType, isCurrentUser} from '../../../utils/permissionUtils'
+import { TaskExecutorProps } from '../types' // Используем импортированный тип
+import { UserAvatar } from '../../../components/header/components/UserAvatar' // <--- Импортируем UserAvatar
 
 // Кэш для пользователей, чтобы не загружать их много раз
 const usersCache = new Map<number, any[]>();
 
-interface TaskExecutorProps {
-  task: any;
-  deskUsers: any[];
-  deskId: number;
-  onTaskUpdate: (updates: { executorUsernames?: string[]; removeExecutorUsernames?: string[] }) => void;
-  canEdit?: boolean; // Проп для проверки прав редактирования
-}
+// Убираем локальный интерфейс, используем импортированный TaskExecutorProps
+// interface TaskExecutorProps { ... }
 
-const TaskExecutors: React.FC<TaskExecutorProps> = ({ 
-  task, 
-  deskUsers, 
-  deskId, 
+const TaskExecutors: React.FC<TaskExecutorProps> = ({ // Используем импортированный TaskExecutorProps
+  task,
+  deskUsers,
+  deskId,
+  avatarsMap, // <--- Получаем проп
   onTaskUpdate,
-  canEdit = true // По умолчанию разрешено редактирование
+  canEdit = true
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const loadingRef = useRef(false);
@@ -68,28 +66,6 @@ const TaskExecutors: React.FC<TaskExecutorProps> = ({
     onTaskUpdate({ removeExecutorUsernames: [username] });
   }, [actualCanEdit, onTaskUpdate]);
 
-  // Получить инициалы пользователя для аватарки
-  const getUserInitials = (username: string) => {
-    return username.substring(0, 1).toUpperCase();
-  };
-
-  // Определяем цвет обводки в зависимости от роли пользователя
-  const getBorderColor = (username: string) => {
-    const user = deskUsers.find(u => u.username === username || u.userName === username);
-    if (!user) return 'border-gray-300';
-    const userRole = user.rightType || user.role;
-    switch(userRole) {
-      case 'CREATOR':
-        return 'border-red-500'; // Красный для CREATOR
-      case 'MEMBER':
-        return 'border-green-500'; // Зеленый для MEMBER
-      case 'CONTRIBUTOR':
-        return 'border-yellow-400'; // Желтый для CONTRIBUTOR
-    }
-    
-    return 'border-gray-300'; // Дефолтный цвет, если роль не определена
-  };
-
   // Функция для открытия/закрытия выпадающего списка
   const toggleDropdown = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -100,6 +76,23 @@ const TaskExecutors: React.FC<TaskExecutorProps> = ({
     setIsOpen(!isOpen);
   };
   
+  // Определяем цвет обводки в зависимости от роли пользователя
+  const getBorderColor = (username: string) => {
+    const user = deskUsers.find(u => u.username === username || u.userName === username);
+    if (!user) return 'border-gray-300'; // Серый по умолчанию
+    const userRole = user.rightType || user.role;
+    switch(userRole) {
+      case 'CREATOR': return 'border-red-500';
+      case 'MEMBER': return 'border-green-500';
+      case 'CONTRIBUTOR': return 'border-yellow-400';
+      default: return 'border-gray-300';
+    }
+  };
+
+  // Определяем примерную высоту UserAvatar xs + border (1px * 2)
+  // Допустим, xs = 20px, итого 22px. Возьмем min-h-6 (24px) для запаса.
+  const avatarDisplayHeightClass = "min-h-6"; // Tailwind class for min-height: 1.5rem (24px)
+
   // Если задача не определена, возвращаем просто иконку
   if (!task) {
     return (
@@ -111,33 +104,31 @@ const TaskExecutors: React.FC<TaskExecutorProps> = ({
 
   return (
     <div className="relative" ref={dropdownRef}>
-      {/* Фиксированная ширина контейнера для исполнителей */}
-      <div 
-        className={`inline-flex items-center ${actualCanEdit ? 'cursor-pointer' : 'cursor-default'}`} 
+      {/* Контейнер для исполнителей */}
+      <div
+        className={`inline-flex items-center ${avatarDisplayHeightClass} ${actualCanEdit ? 'cursor-pointer' : 'cursor-default'}`}
         onClick={toggleDropdown}
-        data-interactive-control="true" // Помечаем как интерактивный
+        data-interactive-control="true"
       >
         {executors.length > 0 ? (
-          // Отображаем только аватарки исполнителей без крестиков
-          <div className="flex -space-x-1">
-            {executors.map((executor, index) => (
+          <div className="flex -space-x-2">
+            {executors.map((executorUsername: string) => (
               <div
-                key={executor}
-                className="relative"
-                title={executor}
+                key={executorUsername}
+                className={`relative border rounded-full ${getBorderColor(executorUsername)} flex items-center justify-center`}
+                title={executorUsername}
               >
-                <div
-                  className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-medium text-gray-700 border border-solid ${getBorderColor(executor)} bg-white`}
-                >
-                  {getUserInitials(executor)}
-                </div>
+                <UserAvatar
+                    username={executorUsername}
+                    avatarUrl={avatarsMap[executorUsername] || null}
+                    size="xs"
+                />
               </div>
             ))}
           </div>
         ) : (
-          // Если исполнителей нет, показываем только иконку пользователя
           <div className={`flex items-center text-gray-400 ${!actualCanEdit && 'opacity-50'}`}>
-            <PiUserCircleThin size={20} />
+             <PiUserCircleThin size={20} />
           </div>
         )}
       </div>
@@ -145,7 +136,7 @@ const TaskExecutors: React.FC<TaskExecutorProps> = ({
       {/* Выпадающий список исполнителей - только если пользователь может редактировать */}
       {isOpen && actualCanEdit && (
         <div
-          className="absolute z-10 mt-1 w-44 bg-white rounded-md shadow-lg border border-gray-200"
+          className="absolute z-10 mt-1 w-48 bg-white rounded-md shadow-lg border border-gray-200"
           onClick={(e) => e.stopPropagation()}
         >
           <div className="p-2 text-sm text-gray-700 border-b border-gray-200">
@@ -160,18 +151,22 @@ const TaskExecutors: React.FC<TaskExecutorProps> = ({
               </div>
             ) : (
               <div className="flex flex-col gap-1">
-                {executors.map((executor: string) => (
-                  <div key={executor} className="flex items-center justify-between px-2 py-1">
-                    <div className="flex items-center">
-                      <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-medium text-gray-700 border border-solid ${getBorderColor(executor)} bg-white mr-2 shrink-0`}>
-                        {getUserInitials(executor)}
+                {executors.map((executorUsername: string) => (
+                  <div key={executorUsername} className="flex items-center justify-between px-2 py-1">
+                    <div className="flex items-center overflow-hidden mr-1">
+                      <div className={`border-2 rounded-full ${getBorderColor(executorUsername)} mr-2 shrink-0`}>
+                        <UserAvatar
+                            username={executorUsername}
+                            avatarUrl={avatarsMap[executorUsername] || null}
+                            size="xs"
+                        />
                       </div>
-                      <span className="text-sm truncate" title={executor}>{executor}</span>
-                      {isCurrentUser(executor) && <span className="ml-1 text-gray-400 text-xs">(Вы)</span>}
+                      <span className="text-sm truncate" title={executorUsername}>{executorUsername}</span>
+                      {isCurrentUser(executorUsername) && <span className="ml-1 text-gray-400 text-xs">(Вы)</span>}
                     </div>
                     <button 
-                      className="ml-2 text-gray-400 hover:text-red-500 cursor-pointer p-1"
-                      onClick={(e) => handleRemoveExecutor(executor, e)}
+                      className="ml-1 text-gray-400 hover:text-red-500 cursor-pointer p-1 shrink-0"
+                      onClick={(e) => handleRemoveExecutor(executorUsername, e)}
                     >
                       <span className="text-sm font-bold">×</span>
                     </button>
@@ -205,8 +200,12 @@ const TaskExecutors: React.FC<TaskExecutorProps> = ({
                       className="flex items-center py-1 px-2 hover:bg-gray-100 rounded cursor-pointer"
                       onClick={(e) => handleAddExecutor(username, e)}
                     >
-                      <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-medium text-gray-700 border border-solid ${getBorderColor(username)} bg-white mr-2 shrink-0`}>
-                        {getUserInitials(username)}
+                      <div className={`border-2 rounded-full ${getBorderColor(username)} mr-2 shrink-0`}>
+                        <UserAvatar
+                            username={username}
+                            avatarUrl={avatarsMap[username] || null}
+                            size="xs"
+                        />
                       </div>
                       <span className="text-sm truncate" title={username}>{username}</span>
                     </div>

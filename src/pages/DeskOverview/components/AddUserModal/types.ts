@@ -1,3 +1,6 @@
+import { RightType } from '../../../../services/users/api/UpdateUserFromDesk';
+import { UserResponseDto } from './types'; // Предполагаемый импорт из файла types.ts в этой же папке
+
 export interface AddUserModalProps {
 	isOpen: boolean;
 	onClose: () => void;
@@ -24,14 +27,16 @@ export interface UsersListProps {
 	filteredUsers: UserResponseDto[];
 	handleSelectUser: (user: UserResponseDto) => void;
 	getUserInitials: (user: UserResponseDto) => string;
+	avatarsMap: Record<string, string | null>;
 }
 
 export interface SelectedUserPreviewProps {
 	selectedUser: UserResponseDto;
 	handleCancelUserSelection: () => void;
-	accessType: string;
+	accessType: RightType;
 	setAccessType: (value: string) => void;
 	getUserInitials: (user: UserResponseDto) => string;
+	avatarUrl: string | null;
 }
 
 export interface ModalFooterProps {

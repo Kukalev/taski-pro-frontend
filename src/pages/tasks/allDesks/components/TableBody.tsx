@@ -6,9 +6,10 @@ interface TableBodyProps {
 	loading: boolean
 	onRename?: (deskId: number, initialName: string, initialDescription: string) => void
 	onDelete?: (deskId: number, deskName: string) => void
+    avatarsMap: Record<string, string | null>;
 }
 
-export const TableBody = ({ desks, loading, onRename, onDelete }: TableBodyProps) => {
+export const TableBody = ({ desks, loading, onRename, onDelete, avatarsMap }: TableBodyProps) => {
 	if (loading) {
 		return (
 			<tbody>
@@ -36,7 +37,7 @@ export const TableBody = ({ desks, loading, onRename, onDelete }: TableBodyProps
 	return (
 		<tbody>
 			{desks.map(desk => (
-				<DeskRow key={desk.id} desk={desk} onRename={onRename} onDelete={onDelete} />
+				<DeskRow key={desk.id} desk={desk} onRename={onRename} onDelete={onDelete} avatarsMap={avatarsMap} />
 			))}
 		</tbody>
 	)

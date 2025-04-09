@@ -1,23 +1,25 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { PiUserCircleThin } from 'react-icons/pi';
 import { updateTask } from '../../../../../services/task/Task';
 import { AuthService } from '../../../../../services/auth/Auth';
 import { isCurrentUser, canManageExecutors } from '../../../../../utils/permissionUtils';
+import { UserAvatar } from '../../../../../components/header/components/UserAvatar';
 
 interface TaskExecutorsProps {
   executors: string[];
   deskUsers: any[];
   taskId: number;
   deskId: number;
+  avatarsMap: Record<string, string | null>;
   onTaskUpdate: (task: any) => void;
   canEdit?: boolean;
 }
 
 const TaskExecutors: React.FC<TaskExecutorsProps> = ({ 
-  executors, 
+  executors = [], 
   deskUsers, 
   taskId, 
   deskId, 
+  avatarsMap,
   onTaskUpdate,
   canEdit = true
 }) => {
@@ -75,34 +77,23 @@ const TaskExecutors: React.FC<TaskExecutorsProps> = ({
     }
   };
   
-  // Получаем первую букву имени пользователя
-  const getUserInitial = (username: string) => {
-    return username.charAt(0).toUpperCase();
-  };
-  
-  // Определяем цвет для аватарки на основе роли
-  const getAvatarColor = (username: string) => {
+  // Функция цвета рамки (убедись, что она здесь есть)
+  const getAvatarBorderColor = (username: string) => {
     const user = deskUsers.find(u => u.username === username || u.userName === username);
     if (!user) return 'border-gray-300';
-    
     const role = user.rightType || user.role || '';
-    
     switch(role) {
-      case 'CREATOR':
-        return 'border-red-500';
-      case 'MEMBER':
-        return 'border-green-500';
-      case 'CONTRIBUTOR':
-        return 'border-yellow-400';
-      default:
-        return 'border-gray-300';
+      case 'CREATOR': return 'border-red-500';
+      case 'MEMBER': return 'border-green-500';
+      case 'CONTRIBUTOR': return 'border-yellow-400';
+      default: return 'border-gray-300';
     }
   };
   
   return (
     <div className="flex items-center py-2 border-b border-gray-100 relative" ref={dropdownRef}>
       <div className="w-6 flex justify-center text-gray-400">
-        <PiUserCircleThin size={22} />
+        <UserAvatar username="?" size="sm" className="text-gray-400"/>
       </div>
       
       <div className="flex items-center ml-4 w-full">
@@ -112,14 +103,19 @@ const TaskExecutors: React.FC<TaskExecutorsProps> = ({
           className={`flex items-center ${actualCanEdit ? 'cursor-pointer' : 'cursor-default'}`} 
           onClick={() => actualCanEdit && setIsDropdownOpen(!isDropdownOpen)}
         >
-          {executors && executors.length > 0 ? (
+          {executors.length > 0 ? (
             <div className="flex -space-x-2">
               {executors.map(username => (
-                <div 
+                <div
                   key={username}
-                  className={`w-6 h-6 rounded-full border flex items-center justify-center font-medium ${getAvatarColor(username)} bg-white text-gray-800`}
+                  title={username}
+                  className={`border-2 rounded-full ${getAvatarBorderColor(username)}`}
                 >
-                  {getUserInitial(username)}
+                  <UserAvatar
+                    username={username}
+                    avatarUrl={avatarsMap[username] || null}
+                    size="xs"
+                  />
                 </div>
               ))}
             </div>
@@ -129,7 +125,7 @@ const TaskExecutors: React.FC<TaskExecutorsProps> = ({
         </div>
       </div>
       
-      {isDropdownOpen && (
+      {isDropdownOpen && actualCanEdit && (
         <div className="absolute top-full left-0 mt-1 bg-white rounded-md shadow-md z-10 w-56 border border-gray-200">
           <div className="px-3 py-2 border-b border-gray-100 text-gray-600 font-medium">
             Исполнители:
@@ -144,53 +140,57 @@ const TaskExecutors: React.FC<TaskExecutorsProps> = ({
             ) : (
               executors.map(username => (
                 <div key={username} className="flex items-center justify-between py-1 px-2">
-                  <div className="flex items-center">
-                    <div className={`w-6 h-6 rounded-full border flex items-center justify-center font-medium mr-2 ${getAvatarColor(username)} bg-white text-gray-800`}>
-                      {getUserInitial(username)}
+                  <div className="flex items-center overflow-hidden mr-1">
+                    <div className={`border-2 rounded-full ${getAvatarBorderColor(username)} mr-2 shrink-0`}>
+                      <UserAvatar
+                        username={username}
+                        avatarUrl={avatarsMap[username] || null}
+                        size="xs"
+                      />
                     </div>
-                    <span>{username} {isCurrentUser(username) && <span className="text-gray-400 text-xs">(Вы)</span>}</span>
+                    <span className="text-sm truncate" title={username}>{username} {isCurrentUser(username) && <span className="text-gray-400 text-xs">(Вы)</span>}</span>
                   </div>
-                  {actualCanEdit && (
-                    <span 
-                      className="text-gray-400 hover:text-gray-600 cursor-pointer text-xl"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleRemoveExecutor(username);
-                      }}
-                    >
-                      ×
-                    </span>
-                  )}
+                  <span 
+                    className="ml-1 text-gray-400 hover:text-red-500 cursor-pointer text-xl shrink-0"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleRemoveExecutor(username);
+                    }}
+                  >
+                    ×
+                  </span>
                 </div>
               ))
             )}
           </div>
           
           {/* Список доступных пользователей */}
-          {actualCanEdit && (
-            <div className="border-t border-gray-100 p-2">
-              {deskUsers
-                .filter(user => {
-                  const username = user.username || user.userName;
-                  return !executors.includes(username);
-                })
-                .map(user => {
-                  const username = user.username || user.userName;
-                  return (
-                    <div 
-                      key={username}
-                      className="flex items-center py-2 px-2 hover:bg-gray-50 rounded cursor-pointer"
-                      onClick={() => handleAddExecutor(username)}
-                    >
-                      <div className={`w-6 h-6 rounded-full border flex items-center justify-center font-medium mr-2 ${getAvatarColor(username)} bg-white text-gray-800`}>
-                        {getUserInitial(username)}
-                      </div>
-                      <span>{username}</span>
+          <div className="border-t border-gray-100 p-2">
+            {deskUsers
+              .filter(user => {
+                const username = user.username || user.userName;
+                return username && !executors.includes(username);
+              })
+              .map(user => {
+                const username = user.username || user.userName;
+                return (
+                  <div 
+                    key={username}
+                    className="flex items-center py-2 px-2 hover:bg-gray-50 rounded cursor-pointer"
+                    onClick={() => handleAddExecutor(username)}
+                  >
+                    <div className={`border-2 rounded-full ${getAvatarBorderColor(username)} mr-2 shrink-0`}>
+                      <UserAvatar
+                        username={username}
+                        avatarUrl={avatarsMap[username] || null}
+                        size="xs"
+                      />
                     </div>
-                  );
-                })}
-            </div>
-          )}
+                    <span className="text-sm truncate" title={username}>{username}</span>
+                  </div>
+                );
+              })}
+          </div>
         </div>
       )}
     </div>
