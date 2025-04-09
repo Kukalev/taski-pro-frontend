@@ -1,4 +1,4 @@
-import React, {useEffect, useState, useRef} from 'react'
+import React, {useEffect, useState, useRef, useCallback} from 'react'
 import { TaskService } from '../../../../services/task/Task';
 import { Task as ServiceTask } from '../../../../services/task/types/task.types';
 import { StatusType } from '../../types'
@@ -23,21 +23,23 @@ import {
   canEditTaskPriority, 
   canManageExecutors,
 } from '../../../../utils/permissionUtils'
-import { TaskDetailsProps, Task } from './types'
+import { TaskDetailsProps, Task as LocalTask } from './types'
+import { addHours } from 'date-fns';
 
 const TaskDetails: React.FC<TaskDetailsProps> = ({
-  task,
+  task: initialTask,
   deskId,
   deskUsers,
   avatarsMap,
   deskName = "Тестовая доска",
   onClose,
-  onTaskUpdate,
+  onTaskUpdate: onTaskUpdateProp,
   isClosing = false,
   onAnimationEnd
 }) => {
-  const [taskName, setTaskName] = useState(task?.taskName || '');
-  const [taskDescription, setTaskDescription] = useState(task?.taskDescription || '');
+  const [currentTask, setCurrentTask] = useState<LocalTask>(initialTask);
+  const [taskName, setTaskName] = useState(initialTask?.taskName || '');
+  const [taskDescription, setTaskDescription] = useState(initialTask?.taskDescription || '');
   const [isEditingName, setIsEditingName] = useState(false);
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -45,7 +47,7 @@ const TaskDetails: React.FC<TaskDetailsProps> = ({
   const inputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const taskForPermissions = task as ServiceTask;
+  const taskForPermissions = currentTask as ServiceTask;
   const canMoveOrCompleteTask = canEditTask(deskUsers, taskForPermissions);
   const canChangeName = canEditTaskName(deskUsers, taskForPermissions);
   const canChangeDescription = canEditTaskDescription(deskUsers, taskForPermissions);
@@ -57,11 +59,12 @@ const TaskDetails: React.FC<TaskDetailsProps> = ({
   const canManageFiles = canEditTask(deskUsers, taskForPermissions);
 
   useEffect(() => {
-    if (task) {
-      setTaskName(task.taskName || '');
-      setTaskDescription(task.taskDescription || '');
-    }
-  }, [task]);
+    setCurrentTask(initialTask);
+    setTaskName(initialTask.taskName || '');
+    setTaskDescription(initialTask.taskDescription || '');
+    setIsEditingName(false);
+    setIsEditingDescription(false);
+  }, [initialTask]);
 
   const handleClose = (e?: React.MouseEvent) => {
     if (e) {
@@ -74,47 +77,111 @@ const TaskDetails: React.FC<TaskDetailsProps> = ({
     }
   };
 
-  const saveTaskChanges = async (changes: Partial<ServiceTask>) => {
-    if (!task?.taskId) return;
+  const saveTaskChanges = useCallback(async (
+      changes: Partial<ServiceTask> | { executorUsernames?: string[]; removeExecutorUsernames?: string[] }
+    ) => {
+    if (!currentTask?.taskId) return null;
+
+    const previousTaskState = currentTask;
+
+    let updatedTaskPreview: LocalTask;
+    if ('executorUsernames' in changes && changes.executorUsernames) {
+        const currentExecutors = currentTask.executors || [];
+        const newExecutors = [...new Set([...currentExecutors, ...changes.executorUsernames])];
+        updatedTaskPreview = { ...currentTask, executors: newExecutors };
+    } else if ('removeExecutorUsernames' in changes && changes.removeExecutorUsernames) {
+        const currentExecutors = currentTask.executors || [];
+        updatedTaskPreview = { ...currentTask, executors: currentExecutors.filter(u => !changes.removeExecutorUsernames!.includes(u)) };
+    } else {
+        updatedTaskPreview = { ...currentTask, ...(changes as Partial<LocalTask>) };
+    }
+
+    console.log('[TaskDetails] Оптимистично обновляем локальное состояние:', updatedTaskPreview);
+    setCurrentTask(updatedTaskPreview);
+
+    console.log('[TaskDetails] Вызываем onTaskUpdateProp (TaskBoardPage) с ОПТИМИСТИЧНЫМ состоянием');
+    onTaskUpdateProp(updatedTaskPreview);
 
     try {
-      const updatedServiceTask = await TaskService.updateTask(deskId, task.taskId, changes);
-      const updatedLocalTask = updatedServiceTask as Task;
-      onTaskUpdate(updatedLocalTask);
-      return updatedLocalTask;
-    } catch (error) {
-      console.error('Ошибка при обновлении задачи:', error);
+      console.log('[TaskDetails] Отправляем API запрос:', changes);
+      const updatedServiceTask = await TaskService.updateTask(deskId, currentTask.taskId, changes);
+      const finalUpdatedTask = updatedServiceTask as LocalTask;
+      console.log('[TaskDetails] API успешно ответил:', finalUpdatedTask);
+
+      if (JSON.stringify(finalUpdatedTask) !== JSON.stringify(updatedTaskPreview)) {
+          console.warn('[TaskDetails] Ответ API отличается от оптимистичного предсказания. Обновляем состояние финальными данными.');
+          setCurrentTask(finalUpdatedTask);
+          onTaskUpdateProp(finalUpdatedTask);
+      } else {
+           setCurrentTask(finalUpdatedTask);
+      }
+
+      return finalUpdatedTask;
+
+    } catch (error: any) {
+      console.error('[TaskDetails] Ошибка при обновлении задачи через API:', error);
+
+      console.log('[TaskDetails] Откатываем изменения из-за ошибки API. Предыдущее состояние:', previousTaskState);
+      setCurrentTask(previousTaskState);
+      onTaskUpdateProp(previousTaskState);
+
+      const action = 'executorUsernames' in changes ? 'добавить' : ('removeExecutorUsernames' in changes ? 'удалить' : 'обновить');
+      const target = 'executorUsernames' in changes ? changes.executorUsernames.join(', ') : ('removeExecutorUsernames' in changes ? changes.removeExecutorUsernames.join(', ') : '');
+      if (error.response?.status === 401) {
+         alert(`Ошибка авторизации при попытке ${action} исполнителей. Пожалуйста, войдите снова.`);
+      } else {
+        alert(`Не удалось ${action} ${target ? `"${target}"` : ''} для задачи "${previousTaskState.taskName}". Изменения отменены.`);
+      }
       return null;
     }
-  };
+  }, [currentTask, deskId, onTaskUpdateProp]);
 
   const handleSaveName = async () => {
     if (!canChangeName) return;
-    await saveTaskChanges({ taskName });
-    setIsEditingName(false);
+    const result = await saveTaskChanges({ taskName });
+    if (result) setIsEditingName(false);
   };
 
   const handleSaveDescription = async () => {
     if (!canChangeDescription) return;
-    await saveTaskChanges({ taskDescription });
-    setIsEditingDescription(false);
+    const result = await saveTaskChanges({ taskDescription });
+    if (result) setIsEditingDescription(false);
   };
 
   const handleCompleteTask = async () => {
     if (!canMoveOrCompleteTask) return;
     
-    const newStatus = task.statusType === StatusType.COMPLETED
+    const newStatus = currentTask.statusType === StatusType.COMPLETED
       ? StatusType.BACKLOG : StatusType.COMPLETED;
     await saveTaskChanges({ statusType: newStatus });
   };
 
-  const handleDateChange = async (id: string, date: Date | null) => {
-    if (!canChangeDate) return;
-    
-    const dateString = date ? date.toISOString() : null;
-    await saveTaskChanges({ taskFinishDate: dateString });
-    setShowDatePicker(false);
-  };
+  const handleDateChange = useCallback((newDate: Date | null) => {
+    if (!currentTask || !canEditTaskDate(deskUsers, currentTask)) {
+      // console.log("Нет прав на изменение даты или нет текущей задачи");
+      return;
+    }
+
+    let dateToSend: Date | null = null;
+
+    if (newDate instanceof Date && !isNaN(newDate.getTime())) {
+      // --- НАЧАЛО: Коррекция часового пояса ---
+      // Добавляем 3 часа к выбранной дате, чтобы компенсировать UTC-смещение
+      // Это гарантирует, что при конвертации в UTC сохранится правильный день
+      const adjustedDate = addHours(newDate, 3);
+      dateToSend = adjustedDate;
+      // --- КОНЕЦ: Коррекция часового пояса ---
+       console.log(`[TaskDetails] Исходная дата: ${newDate.toISOString()}, Скорректированная (+3ч): ${dateToSend?.toISOString()}`);
+    } else {
+       console.log(`[TaskDetails] Дата сброшена`);
+       dateToSend = null; // Если дата невалидна или null, отправляем null
+    }
+
+
+    // Вызываем saveTaskChanges с возможно скорректированной датой
+    saveTaskChanges({ taskFinishDate: dateToSend });
+
+  }, [currentTask, deskUsers, saveTaskChanges]); // Добавили saveTaskChanges в зависимости useCallback
   
   const handlePriorityChange = async (priority: string) => {
     if (!canChangePriority) return;
@@ -122,7 +189,14 @@ const TaskDetails: React.FC<TaskDetailsProps> = ({
     await saveTaskChanges({ priorityType: priority });
   };
 
-  const isCompleted = task?.statusType === StatusType.COMPLETED;
+  const handleExecutorChanges = useCallback((
+      updates: { executorUsernames?: string[]; removeExecutorUsernames?: string[] }
+    ) => {
+     console.log('[TaskDetails] Получен запрос на изменение исполнителей из TaskExecutors (Details):', updates);
+     saveTaskChanges(updates);
+  }, [saveTaskChanges]);
+
+  const isCompleted = currentTask?.statusType === StatusType.COMPLETED;
 
   return (
     <div 
@@ -132,7 +206,7 @@ const TaskDetails: React.FC<TaskDetailsProps> = ({
       onAnimationEnd={onAnimationEnd}
     >
       <TaskDetailsHeader 
-        taskNumber={task?.taskId || 0} 
+        taskNumber={currentTask?.taskId || 0} 
         onClose={handleClose}
       />
 
@@ -157,28 +231,28 @@ const TaskDetails: React.FC<TaskDetailsProps> = ({
 
           <div className="border-t border-b border-gray-200 py-5 space-y-4">
             <TaskExecutors 
-              executors={task?.executors || []}
+              executors={currentTask?.executors || []}
               deskUsers={deskUsers}
-              taskId={task?.taskId}
+              taskId={currentTask?.taskId}
               deskId={deskId}
               avatarsMap={avatarsMap}
-              onTaskUpdate={onTaskUpdate}
+              onTaskUpdate={handleExecutorChanges}
               canEdit={canChangeExecutors}
             />
             
             <TaskDate 
-              taskCreateDate={task.taskCreateDate}
-              taskFinishDate={task.taskFinishDate as string | null}
-              taskId={task.taskId}
+              taskCreateDate={currentTask.taskCreateDate}
+              taskFinishDate={currentTask.taskFinishDate as string | null}
+              taskId={currentTask.taskId}
               deskId={deskId}
               deskUsers={deskUsers}
-              onTaskUpdate={onTaskUpdate}
-              canEdit={canChangeDate}
+              onDateChange={handleDateChange}
+              canEdit={canEditTaskDate(deskUsers, currentTask)}
             />
             
             <TaskPriority 
-              priorityType={task?.priorityType || task?.priority || ''}
-              taskId={task.taskId}
+              priorityType={currentTask?.priorityType || currentTask?.priority || ''}
+              taskId={currentTask.taskId}
               deskId={deskId}
               onPriorityChange={handlePriorityChange}
               canEdit={canChangePriority}
@@ -186,14 +260,13 @@ const TaskDetails: React.FC<TaskDetailsProps> = ({
 
             <TaskStack
               deskId={deskId}
-              task={task}
-              onTaskUpdate={onTaskUpdate}
+              task={currentTask}
               canEdit={canChangeStack}
             />
 
             <Gpt 
               deskId={deskId} 
-              taskId={task.taskId} 
+              taskId={currentTask.taskId} 
               canRequestAiHelp={canRequestAiHelp} 
             />
 
@@ -211,7 +284,7 @@ const TaskDetails: React.FC<TaskDetailsProps> = ({
 
           <TaskFiles 
             deskId={deskId}
-            taskId={task.taskId}
+            taskId={currentTask.taskId}
             canEdit={canManageFiles}
           />
 

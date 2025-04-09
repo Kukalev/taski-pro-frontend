@@ -2,7 +2,6 @@ import React, { useRef, useEffect } from 'react'
 import { TaskColumnProps, StatusType, Task } from '../types'
 import TaskCard from './TaskCard'
 import TaskInput from './TaskInput'
-import TaskDatePicker from './TaskDatePicker'
 import { canCreateTasks, getUserRoleOnDesk } from '../../../utils/permissionUtils'
 
 // Обновляем интерфейс пропсов, если он не в ../types
@@ -32,14 +31,11 @@ const TaskColumn: React.FC<ExtendedTaskColumnProps> = ({
   isAddingInColumn,
   hoveredCheckCircle,
   hoveredCalendar,
-  datePickerTaskId,
-  selectedDates,
   onTaskComplete,
   onDateClick,
   setHoveredCheckCircle,
   setHoveredCalendar,
   onDragStart, // Принимаем onDragStart
-  onDateChange,
   onTaskClick,
   onTaskUpdate, // Принимаем как проп
   setAddingInColumn, // Принимаем как проп
@@ -174,7 +170,6 @@ const TaskColumn: React.FC<ExtendedTaskColumnProps> = ({
               onDragStart={onDragStart} // Передаем onDragStart
               onComplete={onTaskComplete}
               onDateClick={onDateClick}
-              selectedDate={selectedDates[task.taskId!] || null}
               hoveredCheckCircle={hoveredCheckCircle}
               hoveredCalendar={hoveredCalendar}
               setHoveredCheckCircle={setHoveredCheckCircle}

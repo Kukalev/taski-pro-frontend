@@ -72,7 +72,6 @@ const TaskCard: React.FC<TaskCardProps> = ({
   onDragStart,
   onComplete,
   onDateClick,
-  selectedDate,
   hoveredCheckCircle,
   hoveredCalendar,
   setHoveredCheckCircle,
@@ -108,39 +107,23 @@ const TaskCard: React.FC<TaskCardProps> = ({
     }
   };
 
-  // Создаем обертку для onTaskUpdate, которая будет передана в TaskExecutors
-  // Она уже будет знать taskId и будет ожидать только updates
-  const handleExecutorUpdate = useCallback(
-    (updates: {
-      executorUsernames?: string[];
-      removeExecutorUsernames?: string[];
-    }) => {
-      console.log(
-        "[TaskCard] Вызван handleExecutorUpdate для задачи:",
-        task?.taskId,
-        "с изменениями:",
-        updates
-      );
-      if (task?.taskId && onTaskUpdate) {
-        onTaskUpdate(task.taskId, updates);
-      } else {
-        console.error(
-          "[TaskCard] ID задачи или onTaskUpdate отсутствует в handleExecutorUpdate"
-        );
-      }
-    },
-    [task, onTaskUpdate]
-  );
+  // ОБНОВЛЕННЫЙ КОЛЛБЭК: получает намерение от TaskExecutors и передает его ВМЕСТЕ С taskId в TaskBoardPage
+  const handleExecutorUpdate = useCallback((updates: { executorUsernames?: string[]; removeExecutorUsernames?: string[] }) => {
+    if (task?.taskId && onTaskUpdate) {
+      console.log(`[TaskCard] Передача запроса на обновление исполнителей для задачи ${task.taskId} родителю с изменениями:`, updates);
+      // Вызываем коллбэк из TaskBoardPage, передавая ID задачи и запрошенные изменения
+      onTaskUpdate(task.taskId, updates);
+    } else {
+      console.error("[TaskCard] ID задачи или onTaskUpdate отсутствует в handleExecutorUpdate");
+    }
+  }, [task, onTaskUpdate]);
 
   // Определяем права на редактирование для передачи в TaskExecutors
   // Можно использовать переданный canEdit или вычислить здесь, если нужно
   const canEditExecutors = canEdit; // && canManageExecutors(deskUsers, task); // Проверка прав уже есть внутри TaskExecutors
 
   // Определяем дату для форматирования. Приоритет у свежевыбранного объекта Date.
-  const dateToFormat: Date | string | null =
-    selectedDate instanceof Date
-      ? selectedDate // Используем объект Date напрямую
-      : task.taskFinishDate; // Иначе берем строку из данных задачи
+  const dateToFormat: Date | string | null = task.taskFinishDate;
 
   // Форматируем полученное значение
   const formattedFinishDate = dateToFormat
@@ -157,6 +140,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
       onClick={handleCardClick}
       draggable={canMoveOrCompleteTask}
       onDragStart={(e) => canMoveOrCompleteTask && onDragStart(e, task)}
+      onDragEnd={onDragEnd}
     >
       {/* === НАЧАЛО: Индикатор приоритета (Обновлено) === */}
       <div
@@ -202,23 +186,19 @@ const TaskCard: React.FC<TaskCardProps> = ({
 
         {/* Правая часть - дата и чекбокс */}
         <div className="flex items-center space-x-2">
-          {/* Календарь - только для CREATOR и CONTRIBUTOR */}
+          {/* Календарь */}
           <div
-            className={`${
-              canChangeDate ? "cursor-pointer" : "cursor-default"
-            } ${
-              formattedFinishDate
-                ? "opacity-100"
-                : "opacity-0 group-hover:opacity-100"
+            className={`${canChangeDate ? "cursor-pointer" : "cursor-default"} ${
+              formattedFinishDate ? "opacity-100" : "opacity-0 group-hover:opacity-100"
             } transition-opacity duration-200`}
             data-task-id={task.taskId}
-            onMouseEnter={() =>
-              canChangeDate && setHoveredCalendar(task.taskId!)
-            }
+            onMouseEnter={() => canChangeDate && setHoveredCalendar(task.taskId!)}
             onMouseLeave={() => canChangeDate && setHoveredCalendar(null)}
             onClick={(e) => {
               e.stopPropagation();
-              if (canChangeDate) onDateClick(task.taskId!);
+              if (canChangeDate && onDateClick) {
+                onDateClick(task.taskId!, e);
+              }
             }}
             data-interactive-control="true"
           >

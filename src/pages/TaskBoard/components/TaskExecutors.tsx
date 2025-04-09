@@ -44,26 +44,21 @@ const TaskExecutors: React.FC<TaskExecutorProps> = ({ // Используем и
     };
   }, []);
 
-  // Добавляем исполнителя
+  // Добавляем исполнителя - ПРОСТО вызываем коллбэк, передавая намерение
   const handleAddExecutor = useCallback((username: string, e: React.MouseEvent) => {
-    console.log('[TaskExecutors] Попытка добавить:', username);
-    e.stopPropagation();
-    if (!actualCanEdit) {
-      console.log('[TaskExecutors] Нет прав на добавление.');
-      return;
-    }
-    onTaskUpdate({ executorUsernames: [username] });
+    e.stopPropagation(); // Останавливаем всплытие
+    if (!actualCanEdit || !onTaskUpdate) return;
+    console.log('[TaskExecutors Card] Запрос на добавление:', username);
+    onTaskUpdate({ executorUsernames: [username] }); // Передаем только { executorUsernames: [...] }
+    setIsOpen(false);
   }, [actualCanEdit, onTaskUpdate]);
 
-  // Удаляем исполнителя
+  // Удаляем исполнителя - ПРОСТО вызываем коллбэк, передавая намерение
   const handleRemoveExecutor = useCallback((username: string, e: React.MouseEvent) => {
-    console.log('[TaskExecutors] Попытка удалить:', username);
-    e.stopPropagation();
-    if (!actualCanEdit) {
-      console.log('[TaskExecutors] Нет прав на удаление.');
-      return;
-    }
-    onTaskUpdate({ removeExecutorUsernames: [username] });
+    e.stopPropagation(); // Останавливаем всплытие
+    if (!actualCanEdit || !onTaskUpdate) return;
+    console.log('[TaskExecutors Card] Запрос на удаление:', username);
+    onTaskUpdate({ removeExecutorUsernames: [username] }); // Передаем только { removeExecutorUsernames: [...] }
   }, [actualCanEdit, onTaskUpdate]);
 
   // Функция для открытия/закрытия выпадающего списка
@@ -136,12 +131,10 @@ const TaskExecutors: React.FC<TaskExecutorProps> = ({ // Используем и
       {/* Выпадающий список исполнителей - только если пользователь может редактировать */}
       {isOpen && actualCanEdit && (
         <div
-          className="absolute z-10 mt-1 w-48 bg-white rounded-md shadow-lg border border-gray-200"
+          className="absolute z-10 mt-1 w-48 bg-white rounded-md shadow-lg border border-gray-200 max-h-60 overflow-y-auto"
           onClick={(e) => e.stopPropagation()}
         >
-          <div className="p-2 text-sm text-gray-700 border-b border-gray-200">
-            Исполнители:
-          </div>
+          <div className="p-2 text-sm text-gray-700 border-b border-gray-200 sticky top-0 bg-white">Исполнители:</div>
           
           {/* Список исполнителей с крестиками для удаления */}
           <div className="p-2">
@@ -180,38 +173,35 @@ const TaskExecutors: React.FC<TaskExecutorProps> = ({ // Используем и
           <div className="border-t border-gray-200 my-1"></div>
 
           {/* Доступные пользователи доски */}
-          <div className="p-2 max-h-48 overflow-y-auto">
-            {!deskUsers || deskUsers.length === 0 ? (
-              <div className="py-1 px-2 text-sm text-gray-500">
-                Нет доступных пользователей
-              </div>
-            ) : (
-              deskUsers
-                .filter(user => {
-                  // Убедимся, что user и username существуют
-                  const username = user?.username || user?.userName;
-                  return username && !executors.includes(username);
-                 })
-                .map(user => {
-                  const username = user.username || user.userName; // Гарантируем наличие username
-                  return (
-                    <div
-                      key={username}
-                      className="flex items-center py-1 px-2 hover:bg-gray-100 rounded cursor-pointer"
-                      onClick={(e) => handleAddExecutor(username, e)}
-                    >
-                      <div className={`border-2 rounded-full ${getBorderColor(username)} mr-2 shrink-0`}>
-                        <UserAvatar
-                            username={username}
-                            avatarUrl={avatarsMap[username] || null}
-                            size="xs"
-                        />
-                      </div>
-                      <span className="text-sm truncate" title={username}>{username}</span>
+          <div className="p-2">
+            {deskUsers
+              .filter(user => {
+                // Убедимся, что user и username существуют
+                const username = user?.username || user?.userName;
+                return username && !executors.includes(username);
+               })
+              .map(user => {
+                const username = user.username || user.userName; // Гарантируем наличие username
+                return (
+                  <div
+                    key={username}
+                    className="flex items-center py-1 px-2 hover:bg-gray-100 rounded cursor-pointer"
+                    onClick={(e) => handleAddExecutor(username, e)}
+                  >
+                    <div className={`border-2 rounded-full ${getBorderColor(username)} mr-2 shrink-0`}>
+                      <UserAvatar
+                          username={username}
+                          avatarUrl={avatarsMap[username] || null}
+                          size="xs"
+                      />
                     </div>
-                  );
-                })
-            )}
+                    <span className="text-sm truncate" title={username}>{username}</span>
+                  </div>
+                );
+              })}
+             {deskUsers.filter(user => { const username = user.username || user.userName; return username && !executors.includes(username); }).length === 0 && (
+                 <div className="py-1 px-2 text-gray-400 text-sm">Нет доступных пользователей</div>
+             )}
           </div>
         </div>
       )}

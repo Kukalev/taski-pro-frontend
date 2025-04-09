@@ -1,5 +1,5 @@
-import React, {useEffect, useRef, useState} from 'react'
-import {updateTask} from '../../../../../services/task/Task'
+import React, {useEffect, useRef, useState, useCallback} from 'react'
+import { Task } from '../../../../../services/task/types/task.types';
 import {
   canManageExecutors,
   isCurrentUser
@@ -7,16 +7,17 @@ import {
 import {
   UserAvatar
 } from '../../../../../components/header/components/UserAvatar'
-
 import {FaRegUser} from 'react-icons/fa6'
+import { UserOnDesk } from '../../../../../pages/DeskOverview/components/DeskParticipants/types';
+import { BatchAvatarResponse } from '../../../../../services/Avatar/type';
 
 interface TaskExecutorsProps {
   executors: string[];
-  deskUsers: any[];
+  deskUsers: UserOnDesk[];
   taskId: number;
   deskId: number;
-  avatarsMap: Record<string, string | null>;
-  onTaskUpdate: (task: any) => void;
+  avatarsMap: BatchAvatarResponse;
+  onTaskUpdate: (updates: { executorUsernames?: string[]; removeExecutorUsernames?: string[] }) => void;
   canEdit?: boolean;
 }
 
@@ -50,38 +51,19 @@ const TaskExecutors: React.FC<TaskExecutorsProps> = ({
   }, []);
   
   // Добавление исполнителя
-  const handleAddExecutor = async (username: string) => {
-    if (!actualCanEdit) return;
-    
-    try {
-      const updatedTask = await updateTask(deskId, taskId, {
-        executorUsernames: [username]
-      });
-      
-      if (updatedTask) {
-        onTaskUpdate(updatedTask);
-      }
-    } catch (error) {
-      console.error('Ошибка при добавлении исполнителя:', error);
-    }
-  };
+  const handleAddExecutor = useCallback((username: string) => {
+    if (!actualCanEdit || !onTaskUpdate) return;
+    console.log('[TaskExecutors Details] Запрос на добавление:', username);
+    onTaskUpdate({ executorUsernames: [username] });
+    setIsDropdownOpen(false);
+  }, [actualCanEdit, onTaskUpdate]);
   
   // Удаление исполнителя
-  const handleRemoveExecutor = async (username: string) => {
-    if (!actualCanEdit) return;
-    
-    try {
-      const updatedTask = await updateTask(deskId, taskId, {
-        removeExecutorUsernames: [username]
-      });
-      
-      if (updatedTask) {
-        onTaskUpdate(updatedTask);
-      }
-    } catch (error) {
-      console.error('Ошибка при удалении исполнителя:', error);
-    }
-  };
+  const handleRemoveExecutor = useCallback((username: string) => {
+    if (!actualCanEdit || !onTaskUpdate) return;
+    console.log('[TaskExecutors Details] Запрос на удаление:', username);
+    onTaskUpdate({ removeExecutorUsernames: [username] });
+  }, [actualCanEdit, onTaskUpdate]);
   
   // Функция цвета рамки (убедись, что она здесь есть)
   const getAvatarBorderColor = (username: string) => {
@@ -132,10 +114,8 @@ const TaskExecutors: React.FC<TaskExecutorsProps> = ({
       </div>
       
       {isDropdownOpen && actualCanEdit && (
-        <div className="absolute top-full left-0 mt-1 bg-white rounded-md shadow-md z-10 w-56 border border-gray-200">
-          <div className="px-3 py-2 border-b border-gray-100 text-gray-600 font-medium">
-            Исполнители:
-          </div>
+        <div className="absolute top-full left-0 mt-1 bg-white rounded-md shadow-md z-10 w-56 border border-gray-200 max-h-60 overflow-y-auto">
+          <div className="px-3 py-2 border-b border-gray-100 text-gray-600 font-medium sticky top-0 bg-white">Исполнители:</div>
           
           {/* Список текущих исполнителей */}
           <div className="p-2">

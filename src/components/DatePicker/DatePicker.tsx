@@ -17,6 +17,15 @@ import CalendarGrid from './components/CalendarGrid.tsx'
 import CalendarFooter from './components/CalendarFooter.tsx'
 import { ru } from 'date-fns/locale'
 
+// Убедимся, что интерфейс ожидает taskId как строку
+interface TaskDatePickerProps {
+  taskId: string; // <-- Тип string
+  selectedDate: Date | null;
+  onDateChange: (taskId: string, date: Date | null) => void;
+  onClose: () => void;
+  // anchorEl?: HTMLElement; // Можно добавить, если хочешь использовать для позиционирования
+}
+
 const DatePicker: React.FC<TaskDatePickerProps> = ({
   taskId,
   selectedDate,
@@ -98,13 +107,20 @@ const DatePicker: React.FC<TaskDatePickerProps> = ({
   };
   
   const handleSelectDate = (date: Date, e: React.MouseEvent) => {
-    e.stopPropagation(); // Останавливаем всплытие
-    // Проверяем, что выбранная дата не раньше сегодняшней
-    if (isBefore(date, today) && !isToday(date)) {
-      return; // Не позволяем выбирать даты ранее сегодняшней
-    }
-    onDateChange(taskId, date);
+    e.stopPropagation();
+    if (isBefore(date, today) && !isToday(date)) return;
+    onDateChange(taskId, date); // Передаем taskId (строку)
   };
+  
+  const handleClearDate = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      onDateChange(taskId, null); // Передаем taskId (строку)
+  }
+  
+  const handleSelectToday = (e: React.MouseEvent) => {
+     e.stopPropagation();
+     handleSelectDate(today, e); // Вызывает handleSelectDate, который передаст taskId
+  }
   
   // Создаем компонент календаря, который будет изначально невидимым
   const calendarComponent = (
@@ -221,10 +237,7 @@ const DatePicker: React.FC<TaskDatePickerProps> = ({
       <div className="mt-4 border-t pt-3 flex justify-between">
         <button 
           className="text-xs text-gray-500 hover:text-gray-700 cursor-pointer"
-          onClick={(e) => {
-            e.stopPropagation();
-            onDateChange(taskId, null);
-          }}
+          onClick={handleClearDate}
         >
           Очистить
         </button>
@@ -233,10 +246,7 @@ const DatePicker: React.FC<TaskDatePickerProps> = ({
           style={{ color: 'var(--theme-color)', '--hover-color': 'var(--theme-color-dark)' } as React.CSSProperties}
           onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--hover-color)')}
           onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--theme-color)')}
-          onClick={(e) => {
-            e.stopPropagation();
-            handleSelectDate(today, e);
-          }}
+          onClick={handleSelectToday}
         >
           Сегодня
         </button>

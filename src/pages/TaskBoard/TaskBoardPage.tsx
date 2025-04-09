@@ -17,6 +17,7 @@ import {DeskService} from '../../services/desk/Desk'
 import {createPortal} from 'react-dom'
 import DatePicker from '../../components/DatePicker/DatePicker'
 import { AvatarService } from '../../services/Avatar/Avatar'
+import { addHours } from 'date-fns'
 
 // Убираем TaskBoardProps, если deskUsers приходит как проп
 interface TaskBoardPageProps {
@@ -29,12 +30,10 @@ const TaskBoardPage: React.FC<TaskBoardPageProps> = ({ deskId, deskUsers }) => {
   // Основные состояния
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedDate, setSelectedDate] = useState<Record<number, Date | null>>({});
   const [addingInColumn, setAddingInColumn] = useState<number | null>(null);
   const [newTaskTexts, setNewTaskTexts] = useState<Record<number, string>>({});
   const [hoveredCheckCircle, setHoveredCheckCircle] = useState<number | null>(null);
   const [hoveredCalendar, setHoveredCalendar] = useState<number | null>(null);
-  const [datePickerTaskId, setDatePickerTaskId] = useState<number | null>(null);
   const [taskToDelete, setTaskToDelete] = useState<number | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
@@ -44,6 +43,7 @@ const TaskBoardPage: React.FC<TaskBoardPageProps> = ({ deskId, deskUsers }) => {
   const currentDeskIdRef = useRef<number | null>(null);
   const [avatarsMap, setAvatarsMap] = useState<Record<string, string | null>>({});
   const previousAvatarsRef = useRef<Record<string, string | null>>({});
+  const [datePickerTarget, setDatePickerTarget] = useState<{ taskId: number; anchorEl: HTMLElement } | null>(null);
 
   const {
     draggedTask,
@@ -79,15 +79,6 @@ const TaskBoardPage: React.FC<TaskBoardPageProps> = ({ deskId, deskUsers }) => {
         
         // Сохраняем задачи
         setTasks(fetchedTasks || []);
-        
-        // Инициализируем даты
-        const datesMap: Record<number, Date | null> = {};
-        fetchedTasks.forEach(task => {
-          if (task.taskId && task.taskFinishDate) {
-            datesMap[task.taskId] = new Date(task.taskFinishDate);
-          }
-        });
-        setSelectedDate(datesMap);
         
         // Обновляем текущий идентификатор доски
         currentDeskIdRef.current = deskId;
@@ -160,71 +151,77 @@ const TaskBoardPage: React.FC<TaskBoardPageProps> = ({ deskId, deskUsers }) => {
   // Оптимистичное обновление задачи
   const updateTaskOptimistically = useCallback(async (
     taskId: number,
-    updates: Partial<Task> | { executorUsernames?: string[]; removeExecutorUsernames?: string[] },
-    originalTask?: Task
+    updates: Partial<Task> | { executorUsernames?: string[]; removeExecutorUsernames?: string[] }
   ) => {
-    console.log('[TaskBoardPage] Вызван updateTaskOptimistically для задачи:', taskId, 'с изменениями:', updates);
+    console.log(`[TaskBoardPage] updateTaskOptimistically для задачи: ${taskId} с изменениями:`, updates);
 
     const originalTasks = tasks;
-    const taskToUpdate = originalTask || tasks.find(t => t.taskId === taskId);
+    const taskToUpdate = tasks.find(t => t.taskId === taskId); // Находим задачу
     if (!taskToUpdate) {
       console.error('[ОПТИМИСТИЧНОЕ ОБНОВЛЕНИЕ] Задача не найдена:', taskId);
-      return;
+      return; // Выходим, если задачи нет
     }
 
     let updatedTaskPreview: Task;
 
-    // Обрабатываем добавление/удаление исполнителей для превью
+    // Обрабатываем обновление исполнителей для превью
     if ('executorUsernames' in updates && updates.executorUsernames) {
       const currentExecutors = taskToUpdate.executors || [];
-      const newExecutors = updates.executorUsernames.filter(u => !currentExecutors.includes(u));
-      updatedTaskPreview = {
-        ...taskToUpdate,
-        executors: [...currentExecutors, ...newExecutors]
-      };
+      // Используем Set для гарантии уникальности и правильного добавления
+      const newExecutors = [...new Set([...currentExecutors, ...updates.executorUsernames])];
+      updatedTaskPreview = { ...taskToUpdate, executors: newExecutors };
     } else if ('removeExecutorUsernames' in updates && updates.removeExecutorUsernames) {
       const currentExecutors = taskToUpdate.executors || [];
       const executorsToRemove = updates.removeExecutorUsernames;
-      updatedTaskPreview = {
-        ...taskToUpdate,
-        executors: currentExecutors.filter(u => !executorsToRemove.includes(u))
-      };
+      updatedTaskPreview = { ...taskToUpdate, executors: currentExecutors.filter(u => !executorsToRemove.includes(u)) };
     } else {
-      // Обычное обновление других полей
-      updatedTaskPreview = { ...taskToUpdate, ...updates };
+      // Обычное обновление других полей (статус, дата и т.д.)
+      updatedTaskPreview = { ...taskToUpdate, ...(updates as Partial<Task>) };
     }
 
     // 1. Обновляем UI немедленно
     setTasks(prev => prev.map(t => (t.taskId === taskId ? updatedTaskPreview : t)));
     if (selectedTask?.taskId === taskId) {
-      setSelectedTask(updatedTaskPreview);
+      setSelectedTask(updatedTaskPreview); // Обновляем и открытую задачу, если она совпадает
     }
 
     // 2. Отправляем запрос к API
     try {
-      // В API отправляем только нужный payload (executorUsernames или removeExecutorUsernames),
-      // а не весь объект task
-      const apiPayload = ('executorUsernames' in updates || 'removeExecutorUsernames' in updates)
-                         ? updates // Отправляем { executorUsernames: [...] } или { removeExecutorUsernames: [...] }
-                         : updates as Partial<Task>; // Отправляем обычные изменения
-
+      const apiPayload = updates; // Отправляем полученные updates напрямую
       const actualUpdatedTask = await updateTask(deskId, taskId, apiPayload);
 
-      // 3. Обновляем UI окончательными данными из API
+      // 3. Обновляем UI окончательными данными из API (на случай расхождений)
       setTasks(prev => prev.map(t => (t.taskId === taskId ? actualUpdatedTask : t)));
        if (selectedTask?.taskId === taskId) {
            setSelectedTask(actualUpdatedTask);
        }
-    } catch (error) {
+    } catch (error: any) { // Явно типизируем error
       console.error('[ОПТИМИСТИЧНОЕ ОБНОВЛЕНИЕ] Ошибка API:', error);
       // 4. Откат изменений в UI при ошибке API
       setTasks(originalTasks);
       if (selectedTask?.taskId === taskId && taskToUpdate) {
-         setSelectedTask(taskToUpdate);
+         setSelectedTask(taskToUpdate); // Возвращаем старую версию открытой задачи
       }
-      alert(`Не удалось обновить исполнителей задачи "${taskToUpdate.taskName}". Изменения отменены.`);
+      // Показываем сообщение об ошибке
+      const action = 'executorUsernames' in updates ? 'добавить' : ('removeExecutorUsernames' in updates ? 'удалить' : 'обновить');
+      const target = 'executorUsernames' in updates ? updates.executorUsernames.join(', ') : ('removeExecutorUsernames' in updates ? updates.removeExecutorUsernames.join(', ') : '');
+      // Проверяем на 401 ошибку
+      if (error.response?.status === 401) {
+         alert(`Ошибка авторизации при попытке ${action} исполнителей. Пожалуйста, войдите снова.`);
+      } else {
+        alert(`Не удалось ${action} ${target ? `"${target}"` : ''} для задачи "${taskToUpdate.taskName}". Изменения отменены.`);
+      }
     }
-  }, [tasks, deskId, selectedTask]);
+  }, [tasks, deskId, selectedTask]); // Зависимости
+
+  // Коллбэк для TaskCard и DatePicker - универсальный обработчик обновлений
+  const handleRequestTaskUpdate = useCallback((
+      taskId: number,
+      updates: Partial<Task> | { executorUsernames?: string[]; removeExecutorUsernames?: string[] } // Принимает любые апдейты
+  ) => {
+      console.log(`[TaskBoardPage] Получен запрос на обновление для задачи ${taskId} с изменениями:`, updates);
+      updateTaskOptimistically(taskId, updates); // Вызываем оптимистичное обновление
+  }, [updateTaskOptimistically]); // Зависимость от основной функции
 
   // Создание задачи
   const handleCreateTask = useCallback(async (statusId: number, taskText: string, statusType: string) => {
@@ -267,48 +264,6 @@ const TaskBoardPage: React.FC<TaskBoardPageProps> = ({ deskId, deskUsers }) => {
     const newStatus = task.statusType === StatusType.COMPLETED ? StatusType.BACKLOG : StatusType.COMPLETED;
     updateTaskOptimistically(taskId, { statusType: newStatus }, task);
   }, [tasks, updateTaskOptimistically]);
-
-  // Обновление даты задачи
-  const handleUpdateTaskDate = useCallback((taskId: number, date: Date | null) => {
-    let dateStringForApi: string | null = null;
-    if (date) {
-      // Клонируем дату, чтобы не изменять оригинальный объект в состоянии
-      const adjustedDate = new Date(date);
-
-      // Устанавливаем время на 00:00:00 ЛОКАЛЬНОГО времени выбранного дня
-      adjustedDate.setHours(0, 0, 0, 0);
-
-      // Корректируем время так, чтобы при конвертации в ISO (UTC)
-      // получилась строка, соответствующая 00:00:00 UTC ВЫБРАННОГО ДНЯ.
-      // Для этого вычитаем смещение временной зоны.
-      // adjustedDate.setMinutes(adjustedDate.getMinutes() - adjustedDate.getTimezoneOffset());
-      // --- ИЛИ --- Проще просто отправить YYYY-MM-DD, если бэкенд сможет это правильно
-      // обработать для LocalDateTime (что маловероятно без кастомной логики).
-      // Попробуем самый надежный вариант: отправить ISO строку, которая
-      // представляет полночь UTC для выбранного локального дня.
-      // Для этого, если getTimezoneOffset отрицательный (восточные зоны), мы должны
-      // по факту прибавить часы к UTC, чтобы попасть на нужный день.
-      // Если положительный (западные зоны), вычесть.
-      // date.toISOString() уже делает преобразование в UTC, нам нужно, чтобы
-      // результат был YYYY-MM-DDT00:00:00.000Z, где YYYY-MM-DD - выбранный день.
-
-      // Способ 1: Форматирование строки вручную (менее надежно)
-      // const year = adjustedDate.getFullYear();
-      // const month = (adjustedDate.getMonth() + 1).toString().padStart(2, '0');
-      // const day = adjustedDate.getDate().toString().padStart(2, '0');
-      // dateStringForApi = `${year}-${month}-${day}T00:00:00`; // Отправляем без Z
-
-      // Способ 2: Корректировка объекта Date перед toISOString (предпочтительнее)
-      // Устанавливаем время на 12:00:00 локальное, чтобы избежать проблем с переходом через полночь при конвертации в UTC
-      adjustedDate.setHours(12, 0, 0, 0);
-      dateStringForApi = adjustedDate.toISOString();
-
-    }
-
-    updateTaskOptimistically(taskId, { taskFinishDate: dateStringForApi });
-    setSelectedDate(prev => ({ ...prev, [taskId]: date })); // Обновляем локальное состояние даты для календаря
-    setDatePickerTaskId(null); // Закрываем календарь
-  }, [updateTaskOptimistically]);
 
   // Удаление задачи
   const handleDeleteTask = useCallback(async (taskId: number) => {
@@ -376,9 +331,38 @@ const TaskBoardPage: React.FC<TaskBoardPageProps> = ({ deskId, deskUsers }) => {
   }, [isClosingTaskDetails]);
 
   // Клик по иконке даты (открытие/закрытие календаря)
-  const handleDateClick = useCallback((taskId: number) => {
-    setDatePickerTaskId(prev => (prev === taskId ? null : taskId));
+  const handleDateClick = useCallback((taskId: number, event: React.MouseEvent<HTMLElement>) => {
+    // Сохраняем ID задачи и элемент, к которому привяжем DatePicker
+    setDatePickerTarget({ taskId, anchorEl: event.currentTarget });
   }, []);
+
+  const handleDatePickerClose = useCallback(() => {
+    setDatePickerTarget(null);
+  }, []);
+
+  // Обработка выбора даты в DatePicker
+  const handleDateSelect = useCallback((taskIdStr: string, newDate: Date | null) => {
+    const taskId = Number(taskIdStr);
+    console.log(`[TaskBoardPage] Выбрана дата для задачи ${taskId}:`, newDate);
+
+    let dateToSend : string | null = null; // Будем отправлять ISO строку или null
+
+    if (newDate instanceof Date && !isNaN(newDate.getTime())) {
+        // --- НАЧАЛО: Коррекция часового пояса +3 часа ---
+        // Добавляем 3 часа к выбранной дате, чтобы компенсировать UTC-смещение
+        const adjustedDate = addHours(newDate, 3);
+        dateToSend = adjustedDate.toISOString(); // Преобразуем скорректированную дату в ISO строку
+         console.log(`[TaskBoardPage] Исходная дата: ${newDate.toISOString()}, Скорректированная (+3ч) для API: ${dateToSend}`);
+        // --- КОНЕЦ: Коррекция часового пояса ---
+    } else {
+        console.log(`[TaskBoardPage] Дата сброшена или невалидна`);
+        dateToSend = null; // Если дата сброшена или невалидна
+    }
+
+    // Вызываем централизованную функцию обновления со скорректированной датой
+    handleRequestTaskUpdate(taskId, { taskFinishDate: dateToSend });
+    handleDatePickerClose(); // Закрываем DatePicker
+  }, [handleRequestTaskUpdate, handleDatePickerClose]); // Зависимости включают handleRequestTaskUpdate
 
   // Обработка ввода в поле новой задачи
   const handleInputChange = useCallback((columnId: number, text: string) => {
@@ -439,34 +423,18 @@ const TaskBoardPage: React.FC<TaskBoardPageProps> = ({ deskId, deskUsers }) => {
     // Состояние dropZoneHovered сбросится в dragend
   }, [draggedTask, setShowDropZone]); // Добавили setShowDropZone в зависимости
 
-  // Обработчик обновления задачи из дочерних компонентов
-  const handleTaskUpdateFromChild = useCallback((
-      updatedTaskFromChild: Task // Принимаем полный объект задачи, который вернул API дочернего компонента
-  ) => {
-      const taskId = updatedTaskFromChild.taskId;
-      console.log(`[TaskBoardPage] handleTaskUpdateFromChild: Обновляем состояние для задачи ${taskId} данными от дочернего компонента.`);
-
-      // 1. Обновляем список задач (setTasks)
+  // Коллбэк для TaskDetails (может остаться здесь, т.к. не зависит от других коллбэков в этом файле)
+  const handleTaskUpdateFromDetails = useCallback((updatedTaskFromApi: Task) => {
+      const taskId = updatedTaskFromApi.taskId;
+      console.log(`[TaskBoardPage] Получены финальные данные для задачи ${taskId} из TaskDetails.`);
+      // Просто обновляем состояние финальными данными, API вызов был ВНУТРИ TaskDetails
       setTasks(prevTasks =>
-          prevTasks.map(t => (t.taskId === taskId ? updatedTaskFromChild : t))
+          prevTasks.map(t => (t.taskId === taskId ? updatedTaskFromApi : t))
       );
-
-      // 2. Обновляем выбранную задачу, если она открыта в деталях (setSelectedTask)
       if (selectedTask?.taskId === taskId) {
-          setSelectedTask(updatedTaskFromChild);
+          setSelectedTask(updatedTaskFromApi); // Обновляем открытую задачу
       }
-
-      // 3. !!! НЕ ВЫЗЫВАЕМ updateTaskOptimistically ЗДЕСЬ !!!
-      //    API УЖЕ БЫЛ ВЫЗВАН В ДОЧЕРНЕМ КОМПОНЕНТЕ (TaskPriority, TaskDate и т.д.)
-      // const task = tasks.find(t => t.taskId === taskId);
-      // if (task) {
-      //   // ЭТОТ ВЫЗОВ БЫЛ ЛИШНИМ:
-      //   // updateTaskOptimistically(taskId, updatedTaskFromChild, task); 
-      // } else {
-      //   console.error('[handleTaskUpdateFromChild] Задача не найдена при попытке обновить состояние:', taskId);
-      // }
-
-  }, [tasks, selectedTask]); // Убрали updateTaskOptimistically из зависимостей
+  }, [selectedTask]); // Зависит только от selectedTask
 
   // Лог для рендера (оставляем для проверки)
   console.log(`[TaskBoardPage Render] showDropZone state from hook: ${showDropZone}`);
@@ -579,16 +547,13 @@ const TaskBoardPage: React.FC<TaskBoardPageProps> = ({ deskId, deskUsers }) => {
                 isAddingInColumn={addingInColumn}
                 hoveredCheckCircle={hoveredCheckCircle}
                 hoveredCalendar={hoveredCalendar}
-                datePickerTaskId={datePickerTaskId}
-                selectedDates={selectedDate}
                 onTaskComplete={handleCompleteTask}
                 onDateClick={handleDateClick}
                 setHoveredCheckCircle={setHoveredCheckCircle}
                 setHoveredCalendar={setHoveredCalendar}
                 onDragStart={handleDragStart}
-                onDateChange={(taskIdStr, date) => handleUpdateTaskDate(Number(taskIdStr), date)}
                 onTaskClick={handleTaskClick}
-                onTaskUpdate={handleTaskUpdateFromChild}
+                onTaskUpdate={handleRequestTaskUpdate}
                 setAddingInColumn={setAddingInColumn}
               />
             );
@@ -625,7 +590,7 @@ const TaskBoardPage: React.FC<TaskBoardPageProps> = ({ deskId, deskUsers }) => {
             deskUsers={deskUsers}
             avatarsMap={avatarsMap}
             onClose={handleCloseTaskDetails}
-            onTaskUpdate={handleTaskUpdateFromChild}
+            onTaskUpdate={handleTaskUpdateFromDetails}
             deskName={deskName}
             isClosing={isClosingTaskDetails}
             onAnimationEnd={handleDetailsAnimationEnd}
@@ -688,14 +653,31 @@ const TaskBoardPage: React.FC<TaskBoardPageProps> = ({ deskId, deskUsers }) => {
       )}
       
       {/* Рендеринг DatePicker */}
-      {datePickerTaskId !== null && (
-        <DatePicker
-          taskId={datePickerTaskId.toString()} // Преобразуем в строку, если нужно
-          selectedDate={selectedDate[datePickerTaskId] || null}
-          onDateChange={(taskIdStr, date) => handleUpdateTaskDate(Number(taskIdStr), date)}
-          onClose={() => setDatePickerTaskId(null)} // Закрываем при клике вне
-        />
-      )}
+      {datePickerTarget && (() => {
+          // Находим задачу, для которой открыт DatePicker
+          const taskForPicker = tasks.find(t => t.taskId === datePickerTarget.taskId);
+          // Получаем текущую дату из задачи или null
+          const currentTaskDate = taskForPicker?.taskFinishDate
+              ? new Date(taskForPicker.taskFinishDate) // Парсим строку ISO в Date
+              : null;
+          // Проверяем валидность после парсинга
+          const validDate = currentTaskDate && !isNaN(currentTaskDate.getTime()) ? currentTaskDate : null;
+
+          return (
+              <DatePicker
+                  // Используем taskId из datePickerTarget
+                  taskId={datePickerTarget.taskId.toString()}
+                  // Передаем текущую дату из найденной задачи (или null)
+                  selectedDate={validDate}
+                  // Передаем обработчик выбора даты
+                  onDateChange={handleDateSelect}
+                  // Передаем обработчик закрытия
+                  onClose={handleDatePickerClose}
+                  // Передаем anchorEl, если DatePicker его использует (опционально)
+                  // anchorEl={datePickerTarget.anchorEl}
+              />
+          );
+      })()}
     </div>
   );
 };
