@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {UserAvatar} from './components/UserAvatar'
 import {ProfileForm} from './components/ProfileForm'
+import {EmailChangeModal} from './components/EmailChangeModal'
 import {UserSettingsService} from '../../../../services/userSettings/UserSettings'
 import {UserProfile} from '../../../../services/userSettings/types'
 
@@ -8,6 +9,14 @@ export const ProfileSettings = () => {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
+
+  const openEmailModal = () => {
+    console.log('[ProfileSettings] openEmailModal called! Setting isEmailModalOpen to true.');
+    setIsEmailModalOpen(true);
+  };
+
+  const closeEmailModal = () => setIsEmailModalOpen(false);
 
   const loadUserProfile = useCallback(async () => {
     setIsLoading(true);
@@ -30,9 +39,9 @@ export const ProfileSettings = () => {
     loadUserProfile();
   }, [loadUserProfile]);
 
-  const handleProfileUpdate = (updatedProfileData?: UserProfile) => {
-    console.log("[ProfileSettings] Профиль успешно обновлен в форме.");
-    console.log("[ProfileSettings] Перезагружаем страницу для обновления всех данных...");
+  const handleUpdateSuccess = () => {
+    console.log("[ProfileSettings] Данные успешно обновлены (профиль или email). Перезагрузка страницы...");
+    setIsEmailModalOpen(false);
     window.location.reload();
   };
 
@@ -61,6 +70,8 @@ export const ProfileSettings = () => {
       );
   }
 
+  console.log('[ProfileSettings] Rendering. isEmailModalOpen:', isEmailModalOpen, 'userProfile.email:', userProfile?.email);
+
   return (
     <div className="bg-white rounded-2xl shadow px-5 py-4 max-w-[430px] -ml-2 -mt-2.5">
       <h1 className="text-[20px] font-medium mb-1 ">Профиль</h1>
@@ -74,8 +85,21 @@ export const ProfileSettings = () => {
       </div>
 
       <div>
-        <ProfileForm userProfile={userProfile} onUpdateSuccess={handleProfileUpdate} />
+        <ProfileForm
+            userProfile={userProfile}
+            onUpdateSuccess={handleUpdateSuccess}
+            onEmailChangeClick={openEmailModal}
+        />
       </div>
+
+      {userProfile?.email && (
+          <EmailChangeModal
+              isOpen={isEmailModalOpen}
+              onClose={closeEmailModal}
+              currentEmail={userProfile.email}
+              onSuccess={handleUpdateSuccess}
+          />
+      )}
     </div>
   )
 } 

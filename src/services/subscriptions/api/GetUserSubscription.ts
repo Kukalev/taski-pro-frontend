@@ -2,7 +2,6 @@ import api from '../../api'
 import {UserSubscriptionResponseDto} from '../types'
 
 const BASE_URL = '/api/v1/user/subscription';
-
 /**
  * Получает информацию о текущей подписке пользователя
  * @returns Promise с данными о подписке пользователя

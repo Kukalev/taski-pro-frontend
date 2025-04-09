@@ -1,7 +1,6 @@
 import axios from 'axios'
-import {getTokens, saveTokens, clearTokens} from './auth/utils/TokenStorage'
+import {getTokens, saveTokens} from './auth/utils/TokenStorage'
 import {jwtDecode} from 'jwt-decode'
-import {AuthService} from './auth/Auth'
 
 // Ожидаемая структура payload внутри JWT
 interface DecodedToken {

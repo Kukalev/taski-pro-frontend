@@ -114,7 +114,6 @@ export const ForgotPasswordPage = () => {
             await UserSettingsService.forgotPassword(email);
             console.log(`[ForgotPasswordPage] Запрос на сброс для ${email} успешно отправлен.`);
             setSuccessMessage('Код для сброса пароля отправлен. Введите его ниже вместе с новым паролем.');
-            setEmail(''); // Очищаем поле после успеха
             setFieldErrors({ ...fieldErrors, email: false });
             setPageStep('enterCodeAndPassword'); // Переключаем на следующий шаг
              // Делаем сообщение видимым
@@ -178,9 +177,10 @@ export const ForgotPasswordPage = () => {
             }
 
             // ---> ЕСЛИ КОД ВЕРНЫЙ, УСТАНАВЛИВАЕМ НОВЫЙ ПАРОЛЬ (Шаг 4) <---
-            console.log(`[ForgotPasswordPage] Код ${code} верный. Попытка сброса пароля...`);
-            // ВЫЗЫВАЕМ resetPassword (КОТОРУЮ НУЖНО СОЗДАТЬ И НАСТРОИТЬ!)
-            await resetPassword({ code, newPassword });
+            console.log(`[ForgotPasswordPage] Код ${code} верный. Попытка обновления пароля для email ${email}...`);
+            // ВЫЗЫВАЕМ НОВЫЙ СЕРВИС
+            await UserSettingsService.updatePasswordWithoutAuth({ email, newPassword });
+            console.log(`[ForgotPasswordPage] Пароль для ${email} успешно обновлен.`);
 
             setSuccessMessage('Пароль успешно изменен! Теперь вы можете войти с новым паролем.');
             // Очищаем все поля для безопасности

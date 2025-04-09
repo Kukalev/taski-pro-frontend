@@ -1,4 +1,4 @@
-import {useState} from 'react'
+import {useState, useEffect, useRef} from 'react'
 import {UserAvatarProps} from '../types/header.types'
 import {getUserInitials} from '../utils/userUtils'
 import {useNavigate} from 'react-router-dom'
@@ -6,7 +6,8 @@ import {useNavigate} from 'react-router-dom'
 export const UserAvatar = ({ username, email, onLogout, onSettingsClick }: UserAvatarProps) => {
 	const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
 	const navigate = useNavigate()
-	
+	const menuRef = useRef<HTMLDivElement>(null);
+
 	const handleSettingsClick = () => {
 		setIsUserMenuOpen(false)
 		if (onSettingsClick) {
@@ -16,8 +17,24 @@ export const UserAvatar = ({ username, email, onLogout, onSettingsClick }: UserA
 		}
 	}
 
+	useEffect(() => {
+		const handleClickOutside = (event: MouseEvent) => {
+			if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+				setIsUserMenuOpen(false);
+			}
+		};
+
+		if (isUserMenuOpen) {
+			document.addEventListener('mousedown', handleClickOutside);
+		}
+
+		return () => {
+			document.removeEventListener('mousedown', handleClickOutside);
+		};
+	}, [isUserMenuOpen]);
+
 	return (
-		<div className='relative'>
+		<div className='relative' ref={menuRef}>
 			<button onClick={() => setIsUserMenuOpen(!isUserMenuOpen)} className='cursor-pointer w-9 h-9 rounded-full bg-gradient-to-r from-pink-500 to-red-500 text-white flex items-center justify-center'>
 				{getUserInitials(username)}
 			</button>

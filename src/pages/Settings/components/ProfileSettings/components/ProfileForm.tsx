@@ -1,9 +1,11 @@
 import {ProfileFormProps} from '../types'
 import {useEffect, useState} from 'react'
-import {UserSettingsService} from '../../../../../services/userSettings/UserSettings'
+import {
+  UserSettingsService
+} from '../../../../../services/userSettings/UserSettings'
 import {UserProfile} from '../../../../../services/userSettings/types'
 
-export const ProfileForm: React.FC<ProfileFormProps> = ({userProfile, onUpdateSuccess}) => {
+export const ProfileForm: React.FC<ProfileFormProps> = ({userProfile, onUpdateSuccess, onEmailChangeClick}) => {
   const initialUsername = userProfile?.username || ''
   const initialFirstName = userProfile?.firstname || ''
   const initialLastName = userProfile?.lastname || ''
@@ -12,8 +14,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({userProfile, onUpdateSu
   const [username, setUsername] = useState(initialUsername)
   const [firstName, setFirstName] = useState(initialFirstName)
   const [lastName, setLastName] = useState(initialLastName)
-  const [bio, setBio] = useState('')
-  
+
   const [isDirty, setIsDirty] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
@@ -72,7 +73,7 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({userProfile, onUpdateSu
   }
   
   const inputStyle = "p-2 bg-gray-50 rounded-lg w-full focus:outline-none focus:ring-1 focus:ring-gray-300 border border-gray-200 placeholder-gray-400 disabled:opacity-50 disabled:cursor-not-allowed"
-  const disabledInputStyle = "p-2 bg-gray-100 rounded-lg w-full pr-10 border border-gray-200 text-gray-700 cursor-not-allowed"
+  const disabledInputStyle = "p-2 bg-gray-100 rounded-lg w-full border border-gray-200 text-gray-700 cursor-pointer"
 
   return (
     <form onSubmit={handleSubmit} className="w-full">
@@ -114,19 +115,29 @@ export const ProfileForm: React.FC<ProfileFormProps> = ({userProfile, onUpdateSu
 
       <div className="mb-4">
         <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">Электронная почта</label>
-        <div className="relative w-full">
+        <div
+            className="relative flex-grow cursor-pointer group"
+            style={{ zIndex: 10 }}
+            onClick={() => {
+                console.log('[ProfileForm] Email field wrapper clicked. isLoading:', isLoading);
+                if (!isLoading) {
+                    console.log('[ProfileForm] Calling onEmailChangeClick...');
+                    onEmailChangeClick();
+                } else {
+                     console.log('[ProfileForm] Click ignored because isLoading is true.');
+                }
+            }}
+            title="Нажмите, чтобы изменить email"
+        >
           <input
             id="email"
             type="email"
-            className={disabledInputStyle}
-            value={initialEmail}
+            className={`${disabledInputStyle} group-hover:bg-gray-200 transition-colors duration-150`}
+            value={userProfile?.email || ''}
             disabled
+            readOnly
+            style={{ pointerEvents: 'none' }}
           />
-          <div className="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none">
-            <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-            </svg>
-          </div>
         </div>
       </div>
       
