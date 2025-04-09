@@ -1,6 +1,6 @@
 import api from '../../api'
 
-const BASE_URL = '/api/v1/user/subscription';
+const BASE_URL = '/v1/user/subscription';
 
 
 export const cancelSubscription = async (): Promise<void> => {

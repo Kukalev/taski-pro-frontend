@@ -1,7 +1,7 @@
 import api from '../../api'
 import {UsersOnDeskResponseDto} from '../types/types'
 
-const BASE_URL = '/api/v1/desk';
+const BASE_URL = '/v1/desk';
 
 // Кэш для хранения пользователей по доскам
 const usersCache: Record<number, UsersOnDeskResponseDto[]> = {};

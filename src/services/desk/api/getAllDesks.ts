@@ -1,7 +1,7 @@
 import api from '../../api'
 import {DeskResponseDto} from '../types/desk.types'
 
-const BASE_URL = '/api/v1/desk'
+const BASE_URL = '/v1/desk'
 
 export const getAllDesks = async (): Promise<DeskResponseDto[]> => {
 	console.log('[getAllDesks] Запрос на получение всех досок...')

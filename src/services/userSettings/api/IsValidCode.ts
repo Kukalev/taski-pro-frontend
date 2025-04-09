@@ -8,7 +8,7 @@ import {CodeType} from '../types'
  * @returns {Promise<boolean>} True, если код валиден, иначе false.
  */
 
-const BASE_URL = 'api/v1/profile';
+const BASE_URL = '/v1/profile';
 
 export const isValidCode = async (code: string, type: CodeType): Promise<boolean> => {
     if (!code || !type) {

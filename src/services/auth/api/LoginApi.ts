@@ -2,7 +2,7 @@ import api from '../../api'
 import {AuthResponse, LoginRequest} from '../types/Auth.types'
 import {saveTokens} from '../utils/TokenStorage.ts'
 
-const BASE_URL = 'api/v1/auth'
+const BASE_URL = '/v1/auth'
 
 export const login = async (data: LoginRequest, authContextLogin: () => void): Promise<AuthResponse> => {
 	try {

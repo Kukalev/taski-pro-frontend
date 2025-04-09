@@ -10,7 +10,7 @@ import {DeleteUserPayload} from '../types'
  */
 
 
-const BASE_URL = 'api/v1/profile';
+const BASE_URL = '/v1/profile';
 
 export const deleteCurrentUser = async (payload: DeleteUserPayload): Promise<void> => {
     // Проверка, что payload и oldPassword существуют

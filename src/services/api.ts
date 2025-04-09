@@ -15,12 +15,9 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' }
 });
 
-// Публичные пути (эндпоинты, НЕ требующие токен авторизации)
-// Указываем пути ОТНОСИТЕЛЬНО baseURL (т.е. то, что Axios видит ДО proxy)
-// Важно: '/v1/auth/refresh_token' ДОЛЖЕН БЫТЬ здесь, если он не требует access token
-// НО! сам запрос на refresh в refreshTokenRequest идет напрямую через axios.post, так что это не так критично здесь.
-const PUBLIC_PATHS = ['/v1/auth/login', '/v1/auth/registration']; 
-// Путь для запроса цвета - ЗАЩИЩЕННЫЙ, НЕ ДОЛЖЕН быть в PUBLIC_PATHS
+
+const PUBLIC_PATHS = ['/v1/auth/login', '/v1/auth/registration'];
+
 const GET_USER_COLOR_PATH = '/v1/users/color'; // Определим путь цвета здесь для сравнения
 
 // Добавляем токен к запросам, КРОМЕ ПУБЛИЧНЫХ
@@ -200,18 +197,7 @@ api.interceptors.response.use(
   }
 );
 
-// --- Интерцептор ответа ---
-/* // <--- НАЧАЛО КОММЕНТАРИЯ
-api.interceptors.response.use(
-  response => {
-    // ... (обработка успешного ответа) ...
-    return response;
-  },
-  async error => {
-    // ... (вся логика обработки ошибок 401 и обновления токена) ...
-  }
-);
-*/ // <--- КОНЕЦ КОММЕНТАРИЯ
+
 
 export default api;
 

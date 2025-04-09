@@ -2,7 +2,7 @@ import api from '../../api'
 import {ThemeColorType} from '../../../styles/theme' // Убедись, что путь правильный
 
 // ПУТЬ ИЗ POSTMAN (правильный для фронтенда с учетом baseURL и proxy)
-const PUT_COLOR_PATH = 'api/v1/background-colors/color'; 
+const PUT_COLOR_PATH = '/v1/background-colors/color';
 
 /**
  * Сохраняет выбранный цвет темы пользователя на бэкенде.

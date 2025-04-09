@@ -6,7 +6,7 @@ import {UserProfile} from '../types'
  * @returns {Promise<UserProfile>} Данные профиля пользователя.
  */
 
-const BASE_URL = 'api/v1/profile';
+const BASE_URL = '/v1/profile';
 
 export const getCurrentUser = async (): Promise<UserProfile> => {
     try {

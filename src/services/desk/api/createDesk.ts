@@ -1,7 +1,7 @@
 import api from '../../api'
 import {DeskCreateDto, DeskResponseDto} from '../types/desk.types'
 
-const BASE_URL = '/api/v1/desk'
+const BASE_URL = '/v1/desk'
 
 
 export const createDesk = async (data: DeskCreateDto): Promise<DeskResponseDto> => {

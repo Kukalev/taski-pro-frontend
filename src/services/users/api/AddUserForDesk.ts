@@ -2,7 +2,7 @@ import api from '../../api'
 import {AddUserOnDeskDto} from '../types/types'
 import {invalidateDeskUsersCache} from './GetUsersOnDesk'
 
-const BASE_URL = '/api/v1/desk';
+const BASE_URL = '/v1/desk';
 
 export const addUserForDesk = async (deskId: number, addUserDto: AddUserOnDeskDto): Promise<void> => {
   try {

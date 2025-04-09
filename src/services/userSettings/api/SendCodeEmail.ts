@@ -1,7 +1,7 @@
 import api from '../../api'
 
 
-const BASE_URL = 'api/v1/profile';
+const BASE_URL = '/v1/profile';
 
 export const sendCodeForEmailChange = async (): Promise<void> => {
     try {

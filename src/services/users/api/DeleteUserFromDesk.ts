@@ -1,7 +1,7 @@
 import api from '../../api'
 import {invalidateDeskUsersCache} from './GetUsersOnDesk'
 
-const BASE_URL = '/api/v1/desk';
+const BASE_URL = '/v1/desk';
 
 
 export const deleteUserFromDesk = async (deskId: number, userId: number): Promise<void> => {

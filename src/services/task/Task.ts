@@ -2,7 +2,7 @@ import api from '../api'
 import {Task, TaskUpdate} from './types/task.types'
 
 // Базовый URL для API задач
-const BASE_URL = 'api/v1/desk';
+const BASE_URL = '/v1/desk';
 
 // Получить все задачи для конкретной доски
 export const getTasksByDeskId = async (deskId: number): Promise<Task[]> => {

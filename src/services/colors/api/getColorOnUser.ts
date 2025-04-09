@@ -1,7 +1,7 @@
 import api from '../../api'
-import {ThemeColorType, isThemeColor} from '../../../styles/theme' // Убедись, что путь правильный
+import {isThemeColor, ThemeColorType} from '../../../styles/theme' // Убедись, что путь правильный
 
-const GET_COLOR_PATH = 'api/v1/background-colors/color'; // УТОЧНИ ЭТОТ ПУТЬ
+const GET_COLOR_PATH = '/v1/background-colors/color'; // УТОЧНИ ЭТОТ ПУТЬ
 
 /**
  * Запрашивает сохраненный цвет темы пользователя с бэкенда.

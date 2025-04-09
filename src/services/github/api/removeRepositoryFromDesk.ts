@@ -1,7 +1,7 @@
 // src/services/github/api/removeRepositoryFromDesk.ts
 import api from '../../api'
 
-const BASE_URL = '/api/v1/desk/'; // Уточнен
+const BASE_URL = '/v1/desk/'; // Уточнен
 
 // Переименовано в camelCase
 export const removeRepositoryFromDesk = async (

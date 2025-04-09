@@ -5,7 +5,7 @@ interface UpdatePasswordWithoutAuthData {
   newPassword: string;
 }
 
-const BASE_URL = '/api/v1/profile'; // <<< ИЗМЕНЕНИЕ: Правильный базовый путь контроллера
+const BASE_URL = '//v1/profile'; // <<< ИЗМЕНЕНИЕ: Правильный базовый путь контроллера
 
 
 export const updatePasswordWithoutAuth = async (data: UpdatePasswordWithoutAuthData): Promise<void> => {

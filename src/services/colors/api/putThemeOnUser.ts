@@ -1,7 +1,7 @@
 import api from '../../api'
-import { ThemeMode } from './getThemeOnUser'; // Импортируем тип из getThemeOnUser
+import {ThemeMode} from './getThemeOnUser' // Импортируем тип из getThemeOnUser
 
-const PUT_THEME_PATH = 'api/v1/background-colors/theme'; // Путь из Postman
+const PUT_THEME_PATH = '/v1/background-colors/theme'; // Путь из Postman
 
 /**
  * Сохраняет выбранный режим темы ('light' или 'dark') пользователя на бэкенде.

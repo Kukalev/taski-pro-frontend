@@ -3,7 +3,7 @@ import {AuthResponse, RegisterRequest} from '../types/Auth.types'
 import {login} from './LoginApi'
 
 
-const BASE_URL = '/api/v1/auth'
+const BASE_URL = '/v1/auth'
 export const register = async (data: RegisterRequest, authContextLogin: () => void): Promise<AuthResponse> => {
 	try {
 		// Регистрация

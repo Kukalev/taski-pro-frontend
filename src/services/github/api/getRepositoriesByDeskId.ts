@@ -2,7 +2,7 @@
 import api from '../../api'
 import {GitRepositoryResponseDto} from '../types'
 
-const BASE_URL = '/api/v1/desk/'; // Уточнен
+const BASE_URL = '/v1/desk/'; // Уточнен
 
 // Переименовано в camelCase
 export const getRepositoriesByDeskId = async (

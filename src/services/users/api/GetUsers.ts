@@ -1,8 +1,8 @@
-import { UserService } from '../../../services/users/Users';
+import {UserService} from '../../../services/users/Users'
 import api from '../../api'
 import {UserResponseDto} from '../types/types'
 
-const BASE_URL = '/api/v1/desk';
+const BASE_URL = '/v1/desk';
 
 
 export const getAllUsers = async (): Promise<UserResponseDto[]> => {

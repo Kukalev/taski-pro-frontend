@@ -3,7 +3,7 @@ import api from '../../api'
 // Определяем тип для режима темы
 export type ThemeMode = 'light' | 'dark';
 
-const GET_THEME_PATH = 'api/v1/background-colors/theme'; // Путь из Postman
+const GET_THEME_PATH = '/v1/background-colors/theme'; // Путь из Postman
 
 /**
  * Запрашивает сохраненный режим темы пользователя ('light' или 'dark') с бэкенда.

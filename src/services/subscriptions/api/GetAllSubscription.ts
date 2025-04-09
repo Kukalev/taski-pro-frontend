@@ -1,7 +1,7 @@
 import api from '../../api'
 import {SubscriptionInfoDto} from '../types'
 
-const BASE_URL = '/api/v1/user/subscription';
+const BASE_URL = '/v1/user/subscription';
 
 
 export const getAllSubscriptionTypes = async (): Promise<SubscriptionInfoDto[]> => {

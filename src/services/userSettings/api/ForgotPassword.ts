@@ -6,7 +6,7 @@ import api from '../../api'
  * @returns {Promise<void>}
  */
 
-const BASE_URL = 'api/v1/profile';
+const BASE_URL = '/v1/profile';
 
 export const forgotPassword = async (email: string): Promise<void> => {
     try {

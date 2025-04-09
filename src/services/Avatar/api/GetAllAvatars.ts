@@ -1,7 +1,7 @@
 import api from '../../api'
 import {BatchAvatarResponse} from '../type' // Импортируем наш тип
 
-const BASE_URL = '/api/v1/storage';
+const BASE_URL = '/v1/storage';
 
 /**
  * Загружает аватары для списка пользователей в формате Base64 Data URI.
@@ -37,3 +37,4 @@ export const getAllAvatars = async (usernames: string[]): Promise<BatchAvatarRes
     throw error;
   }
 };
+

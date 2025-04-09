@@ -1,7 +1,7 @@
 import api from '../../api'
 import {UpdateUserData, UserProfile} from '../types' // Импортируем UserProfile на случай, если API вернет обновленный профиль
-import { saveTokens } from '../../auth/utils/TokenStorage'; // Пример импорта
-import { jwtDecode } from "jwt-decode";
+import {saveTokens} from '../../auth/utils/TokenStorage' // Пример импорта
+import {jwtDecode} from 'jwt-decode'
 
 /**
  * Обновляет данные профиля пользователя (имя, фамилия, username, пароль, email).
@@ -11,7 +11,7 @@ import { jwtDecode } from "jwt-decode";
  * @returns {Promise<void | UserProfile>} В зависимости от ответа API (на скрине был '1', что странно, может возвращать void или обновленный профиль)
  */
 
-const BASE_URL = 'api/v1/profile';
+const BASE_URL = '/v1/profile';
 
 /**
  * Ожидаемая структура ответа от API при обновлении, если возвращаются токены.
