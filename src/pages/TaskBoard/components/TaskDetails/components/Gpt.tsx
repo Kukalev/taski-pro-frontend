@@ -21,19 +21,27 @@ const Gpt: React.FC<GptProps> = ({ deskId, taskId, canRequestAiHelp }) => {
 	};
 
 	const fetchRecommendation = useCallback(async (isInitialRequest = false) => {
+		if (!deskId || !taskId) {
+			setError('ID доски или задачи не определены.');
+			setIsLoading(false);
+			return;
+		}
+
 		if (isInitialRequest) {
 			setRecommendation(null);
 			setIsLoading(true);
 			setIsPolling(false);
 			setError(null);
-		} else {
-			// При поллинге isLoading уже false, isPolling = true
 		}
-		
+
 		clearPollingTimer();
 
 		try {
-			const response = await GptService.getAiRecommendation(deskId, taskId);
+			const now = new Date().toISOString();
+			console.log(`[Gpt Component] Вызов fetchRecommendation с currentTime: ${now}`);
+
+			const response = await GptService.getAiRecommendation(deskId, taskId, now);
+
 			setRecommendation(response);
 			setIsLoading(false);
 
@@ -48,11 +56,11 @@ const Gpt: React.FC<GptProps> = ({ deskId, taskId, canRequestAiHelp }) => {
 			}
 		} catch (err: any) {
 			console.error("Ошибка при запросе AI рекомендации:", err);
-			setError(err.message || 'Не удалось получить рекомендацию от AI.');
+			setError(err.response?.data?.message || err.message || 'Не удалось получить рекомендацию от AI.');
 			setIsLoading(false);
 			setIsPolling(false);
 		}
-	}, [deskId, taskId, canRequestAiHelp]);
+	}, [deskId, taskId]);
 
 	useEffect(() => {
 		if (canRequestAiHelp && deskId && taskId) {
@@ -62,6 +70,9 @@ const Gpt: React.FC<GptProps> = ({ deskId, taskId, canRequestAiHelp }) => {
 			setIsPolling(false);
 			setError(null);
 			setRecommendation(null);
+			if (!canRequestAiHelp) {
+				console.log('[Gpt Component] Помощь AI недоступна.');
+			}
 		}
 
 		return () => {
@@ -98,7 +109,10 @@ const Gpt: React.FC<GptProps> = ({ deskId, taskId, canRequestAiHelp }) => {
 				</div>
 			);
 		}
-		return <div className="text-gray-500 italic">Не удалось получить ответ от AI.</div>;
+		if (recommendation?.status === 'waiting') {
+			return <div className="flex items-center text-blue-600"><FaSpinner className="animate-spin mr-2" /> Ожидание ответа AI...</div>;
+		}
+		return <div className="text-gray-500 italic">Не удалось получить ответ от AI или ответ пуст.</div>;
 	};
 
 	return (

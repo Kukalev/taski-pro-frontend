@@ -19,3 +19,4 @@ export interface GptRecommendationResponse {
 	status: GptRecommendationStatus;
 }
 
+

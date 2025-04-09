@@ -1,4 +1,4 @@
-import React, {useEffect, useRef, useState} from 'react'
+import React, {useEffect, useRef, useState, useCallback} from 'react'
 import {TaskService} from '../../../../../services/task/Task'
 import {Task} from '../../../../../services/task/types/task.types'
 import {Input} from '../../../../../components/ui/Input' // Предполагаем наличие Input
@@ -18,7 +18,6 @@ const PREDEFINED_STACK_TAGS = [...new Set([
 interface TaskStackProps {
 	deskId: number;
 	task: Task; // Передаем всю задачу, чтобы иметь доступ к taskId и taskStack
-	onTaskUpdate: (updatedTask: Task) => void; // Callback для обновления задачи в родительском компоненте
 	canEdit: boolean; // Флаг, можно ли редактировать
 }
 
@@ -45,16 +44,29 @@ const stackArrayToString = (stackArray: string[]): string | null => {
 	return uniqueCleanedArray.length > 0 ? uniqueCleanedArray.join(' ') : null;
 }
 
-export const TaskStack: React.FC<TaskStackProps> = ({ deskId, task, onTaskUpdate, canEdit }) => {
+export const TaskStack: React.FC<TaskStackProps> = ({ deskId, task,  canEdit }) => {
 	const [isOpen, setIsOpen] = useState(false);
 	const [searchTerm, setSearchTerm] = useState('');
-    // Инициализируем уникальным массивом
+    // Состояние для тегов ВНУТРИ редактора (выпадающего списка)
 	const [selectedStack, setSelectedStack] = useState<string[]>(stackStringToArray(task.taskStack));
+    // Состояние для тегов, ОТОБРАЖАЕМЫХ при закрытом списке
+    const [displayedStack, setDisplayedStack] = useState<string[]>(stackStringToArray(task.taskStack)); // <-- НОВОЕ СОСТОЯНИЕ
 	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 
 	// ---> НОВОЕ: Реф для ссылки на элемент дропдауна <---
 	const dropdownRef = useRef<HTMLDivElement>(null);
+
+    // Обернем handleCancel в useCallback для стабильности ссылки
+    const handleCancel = useCallback(() => {
+        setIsOpen(false);
+        setError(null);
+        setSearchTerm('');
+        // Сброс обоих состояний из актуального task.taskStack
+        const currentStackArray = stackStringToArray(task.taskStack);
+        setSelectedStack(currentStackArray);
+        setDisplayedStack(currentStackArray);
+    }, [task.taskStack]); // Зависит только от task.taskStack
 
 	// ---> НОВОЕ: useEffect для обработки кликов вне <---
 	useEffect(() => {
@@ -62,10 +74,7 @@ export const TaskStack: React.FC<TaskStackProps> = ({ deskId, task, onTaskUpdate
 		const handleClickOutside = (event: MouseEvent) => {
 			// Проверяем, открыт ли дропдаун и был ли клик вне элемента (ref.current)
 			if (isOpen && dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-				setIsOpen(false);
-				setError(null);
-				setSearchTerm('');
-				setSelectedStack(stackStringToArray(task.taskStack)); // Сброс к массиву из строки task.taskStack
+				handleCancel(); // Используем общую функцию отмены/сброса
 			}
 		};
 
@@ -82,40 +91,40 @@ export const TaskStack: React.FC<TaskStackProps> = ({ deskId, task, onTaskUpdate
 		return () => {
 			document.removeEventListener('mousedown', handleClickOutside);
 		};
-	}, [isOpen, task.taskStack]); // Добавляем task.taskStack в зависимости, чтобы сброс был корректным
+	}, [isOpen, handleCancel]); // Используем стабильную ссылку на handleCancel
 
-	// Обновляем локальное состояние, если изменилась строка task.taskStack в пропсах
+	// Обновляем локальные состояния при изменении пропа task.taskStack
 	useEffect(() => {
-		setSelectedStack(stackStringToArray(task.taskStack));
+        const currentStackArray = stackStringToArray(task.taskStack);
+		setSelectedStack(currentStackArray); // Синхронизируем редактор
+        setDisplayedStack(currentStackArray); // Синхронизируем отображение
 	}, [task.taskStack]);
 
 	const handleToggleDropdown = () => {
         if (!canEdit) return; // Не открываем, если нельзя редактировать
 		setIsOpen(!isOpen);
         if (!isOpen) {
-            // При открытии сбрасываем состояние и синхронизируем локальный стек
+            // При открытии синхронизируем состояния с текущим task.taskStack
+            const currentStackArray = stackStringToArray(task.taskStack);
+            setSelectedStack(currentStackArray);
+            setDisplayedStack(currentStackArray); // Важно синхронизировать и это
             setError(null);
             setSearchTerm('');
-            setSelectedStack(stackStringToArray(task.taskStack));
         }
+        // Если закрываем через toggle (маловероятно, обычно через Cancel/Save/ClickOutside)
+        // handleCancel позаботится о сбросе, если нужно
 	};
 
 	const handleTagToggle = (tag: string) => {
         const cleanedTag = cleanTag(tag);
+        // Обновляем только selectedStack (состояние редактора)
 		setSelectedStack(prev => {
-            const currentUniqueStack = [...new Set(prev)]; // Работаем с уникальным набором
+            const currentUniqueStack = [...new Set(prev)];
 			return currentUniqueStack.includes(cleanedTag)
                    ? currentUniqueStack.filter(t => t !== cleanedTag)
                    : [...currentUniqueStack, cleanedTag].sort()
         });
 	};
-
-	const handleCancel = () => {
-		setIsOpen(false);
-		setError(null);
-		setSearchTerm('');
-		setSelectedStack(stackStringToArray(task.taskStack));
-	}
 
 	const filteredTags = PREDEFINED_STACK_TAGS.filter(tag =>
 		tag.toLowerCase().includes(searchTerm.toLowerCase())
@@ -125,28 +134,34 @@ export const TaskStack: React.FC<TaskStackProps> = ({ deskId, task, onTaskUpdate
 		setIsLoading(true);
 		setError(null);
 		try {
-            // Вызываем новый сервис обновления стека
-			const stackString = stackArrayToString(selectedStack);
-			console.log(stackString, 'СТЭК ПРИ ОБНОВЛЕНИИ');
-			await TaskService.updateTaskStack(deskId, task.taskId, { taskStack: stackString ?? '' });
-			console.log('[TaskStack] Стек успешно обновлен');
-            // Вызываем колбэк для обновления данных задачи в родительском компоненте
-            // Имитируем обновленную задачу (в идеале, API должен ее вернуть)
-            onTaskUpdate({ ...task, taskStack: stackString });
-			setIsOpen(false); // Закрываем меню
-		} catch (err: any) { // Явно типизируем ошибку
-			console.error('[TaskStack] Ошибка при сохранении стека:', err.message);
-            // Попытка извлечь сообщение из ошибки API
+            // Используем selectedStack (состояние редактора) для сохранения
+            const stackString = stackArrayToString(selectedStack);
+            console.log(stackString, 'СТЭК ПРИ ОБНОВЛЕНИИ');
+            
+            // 1. Вызываем специализированный сервис
+            await TaskService.updateTaskStack(deskId, task.taskId, { taskStack: stackString ?? '' }); 
+            console.log('[TaskStack] Стек успешно обновлен');
+            
+            // ОБНОВЛЯЕМ ОТОБРАЖАЕМОЕ СОСТОЯНИЕ после успеха API
+            setDisplayedStack([...selectedStack]); // Копируем массив
+
+            
+            setIsOpen(false); // Закрываем меню
+
+        } catch (err: any) { 
+            console.error('[TaskStack] Ошибка при сохранении стека:', err);
             const message = err.response?.data?.message || err.message || 'Не удалось сохранить стек.';
-			setError(message);
-		} finally {
-			setIsLoading(false);
-		}
+            setError(message);
+        } finally {
+            setIsLoading(false);
+        }
 	};
 
 	const renderSelectedStack = () => {
-		const currentStackArray = stackStringToArray(task.taskStack);
-		if (currentStackArray.length === 0) {
+        // ЧИТАЕМ ИЗ displayedStack для отображения
+		const stackToRender = displayedStack;
+
+		if (stackToRender.length === 0) {
 			return (
                 <div className={`italic ${canEdit ? 'text-gray-500 cursor-pointer hover:text-gray-700' : 'text-gray-500'} px-2 py-1 rounded-md`}>
                     Выбрать...
@@ -156,7 +171,7 @@ export const TaskStack: React.FC<TaskStackProps> = ({ deskId, task, onTaskUpdate
 		return (
 			<div className={`${canEdit ? 'cursor-pointer' : 'cursor-default'} px-2 py-1 rounded-md flex flex-wrap gap-1`}>
 				{/* Сортируем для стабильного отображения */}
-                {currentStackArray.slice().sort().map(tag => (
+                {stackToRender.slice().sort().map(tag => (
 					<span key={tag} className="bg-gray-200 text-gray-800 text-xs font-medium px-2 py-0.5 rounded">
 						{tag}
 					</span>

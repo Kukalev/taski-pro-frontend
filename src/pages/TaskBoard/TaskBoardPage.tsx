@@ -440,15 +440,33 @@ const TaskBoardPage: React.FC<TaskBoardPageProps> = ({ deskId, deskUsers }) => {
   }, [draggedTask, setShowDropZone]); // Добавили setShowDropZone в зависимости
 
   // Обработчик обновления задачи из дочерних компонентов
-  const handleTaskUpdateFromChild = useCallback((taskId: number, updates: Partial<Task> | { executorUsernames?: string[]; removeExecutorUsernames?: string[] }) => {
-    console.log('[TaskBoardPage] Вызван handleTaskUpdateFromChild для задачи:', taskId, 'с изменениями:', updates);
-    const task = tasks.find(t => t.taskId === taskId);
-    if (task) {
-      updateTaskOptimistically(taskId, updates, task);
-    } else {
-      console.error('[handleTaskUpdateFromChild] Задача не найдена:', taskId);
-    }
-  }, [tasks, updateTaskOptimistically]);
+  const handleTaskUpdateFromChild = useCallback((
+      updatedTaskFromChild: Task // Принимаем полный объект задачи, который вернул API дочернего компонента
+  ) => {
+      const taskId = updatedTaskFromChild.taskId;
+      console.log(`[TaskBoardPage] handleTaskUpdateFromChild: Обновляем состояние для задачи ${taskId} данными от дочернего компонента.`);
+
+      // 1. Обновляем список задач (setTasks)
+      setTasks(prevTasks =>
+          prevTasks.map(t => (t.taskId === taskId ? updatedTaskFromChild : t))
+      );
+
+      // 2. Обновляем выбранную задачу, если она открыта в деталях (setSelectedTask)
+      if (selectedTask?.taskId === taskId) {
+          setSelectedTask(updatedTaskFromChild);
+      }
+
+      // 3. !!! НЕ ВЫЗЫВАЕМ updateTaskOptimistically ЗДЕСЬ !!!
+      //    API УЖЕ БЫЛ ВЫЗВАН В ДОЧЕРНЕМ КОМПОНЕНТЕ (TaskPriority, TaskDate и т.д.)
+      // const task = tasks.find(t => t.taskId === taskId);
+      // if (task) {
+      //   // ЭТОТ ВЫЗОВ БЫЛ ЛИШНИМ:
+      //   // updateTaskOptimistically(taskId, updatedTaskFromChild, task); 
+      // } else {
+      //   console.error('[handleTaskUpdateFromChild] Задача не найдена при попытке обновить состояние:', taskId);
+      // }
+
+  }, [tasks, selectedTask]); // Убрали updateTaskOptimistically из зависимостей
 
   // Лог для рендера (оставляем для проверки)
   console.log(`[TaskBoardPage Render] showDropZone state from hook: ${showDropZone}`);
@@ -607,7 +625,7 @@ const TaskBoardPage: React.FC<TaskBoardPageProps> = ({ deskId, deskUsers }) => {
             deskUsers={deskUsers}
             avatarsMap={avatarsMap}
             onClose={handleCloseTaskDetails}
-            onTaskUpdate={(updates) => handleTaskUpdateFromChild(updates.taskId, updates)}
+            onTaskUpdate={handleTaskUpdateFromChild}
             deskName={deskName}
             isClosing={isClosingTaskDetails}
             onAnimationEnd={handleDetailsAnimationEnd}

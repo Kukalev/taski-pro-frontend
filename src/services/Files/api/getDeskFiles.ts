@@ -1,27 +1,18 @@
-import api from '../../api';
-import { DeskFile } from '../types';
+import api from '../../api'
+import {DeskFile} from '../types'
 
 const BASE_URL = '/v1/storage';
 
-/**
- * Получает список файлов для указанной доски, ИСПОЛЬЗУЯ НЕЭФФЕКТИВНЫЙ
- * эндпоинт /desks/documents/batch, который загружает контент файлов.
- *
- * @param deskId ID доски
- * @returns Promise<DeskFile[]> Список файлов (только с полем filename, остальные будут undefined)
- */
+
 export const getDeskFiles = async (deskId: number): Promise<DeskFile[]> => {
   console.log(`[getDeskFiles] Запрос файлов для доски ${deskId} через /batch`);
   const url = `${BASE_URL}/desks/documents/batch`;
 
   try {
-    // Вызываем batch эндпоинт с одним ID в параметрах
     const response = await api.get<Record<string, Record<string, string>>>(url, {
       params: {
-        // Передаем ID как массив из одного элемента
         deskIds: [deskId]
       },
-      // Axios может потребовать указания, как сериализовать массив в параметрах
       paramsSerializer: params => {
           // Стандартный способ - несколько параметров с одинаковым именем
           return Object.entries(params)
