@@ -12,6 +12,7 @@ import TaskPriority from './components/TaskPriority'
 import { TaskStack } from './components/TaskStack'
 import TaskDescription from './components/TaskDescription'
 import Gpt from './components/Gpt'
+import { TaskFiles } from './components/Files'
 import '../../styles/animations.ts'
 import {AuthService} from '../../../../services/auth/Auth'
 import {
@@ -53,6 +54,7 @@ const TaskDetails: React.FC<TaskDetailsProps> = ({
   const canChangeExecutors = canManageExecutors(deskUsers, taskForPermissions);
   const canChangeStack = canEditTask(deskUsers, taskForPermissions);
   const canRequestAiHelp = true;
+  const canManageFiles = canEditTask(deskUsers, taskForPermissions);
 
   useEffect(() => {
     if (task) {
@@ -206,6 +208,13 @@ const TaskDetails: React.FC<TaskDetailsProps> = ({
             textareaRef={textareaRef}
             canEdit={canChangeDescription}
           />
+
+          <TaskFiles 
+            deskId={deskId}
+            taskId={task.taskId}
+            canEdit={canManageFiles}
+          />
+
         </div>
       </div>
     </div>

@@ -1,5 +1,5 @@
 import { StatusType } from '../../types';
-import { UserOnDesk } from '../../../../services/desk/types/desk.types';
+import { UserOnDesk } from '../../../../pages/DeskOverview/components/DeskParticipants/types';
 import { BatchAvatarResponse } from '../../../../services/Avatar/type';
 
 export interface Task {
@@ -12,6 +12,7 @@ export interface Task {
   priorityType: string;
   executors: string[];
   taskStack?: string[] | null;
+  userName?: string;
   [key: string]: any;
 }
 
@@ -34,7 +35,7 @@ export interface TaskNameProps {
   setIsEditingName: (value: boolean) => void;
   setTaskName: (value: string) => void;
   onSave: () => void;
-  inputRef: React.RefObject<HTMLInputElement>;
+  inputRef: React.RefObject<HTMLInputElement | null>;
   canEdit: boolean;
 }
 
@@ -60,7 +61,7 @@ export interface TaskDescriptionProps {
   setIsEditingDescription: (value: boolean) => void;
   setTaskDescription: (value: string) => void;
   onSave: () => void;
-  textareaRef: React.RefObject<HTMLTextAreaElement>;
+  textareaRef: React.RefObject<HTMLTextAreaElement | null>;
   canEdit: boolean;
 }
 

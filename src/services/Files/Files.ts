@@ -3,8 +3,9 @@ import {uploadDeskFile} from './api/uploadDeskFile'
 import {getDeskFiles} from './api/getDeskFiles'
 import {uploadTaskFile} from './api/uploadTaskFile'
 import {getTaskFiles} from './api/getTaskFiles'
-// Импортируем функцию удаления
+// Импортируем функции удаления
 import {deleteDeskFile} from './api/deleteDeskFile'
+import {deleteTaskFile} from './api/deleteTaskFile'
 
 
 const getDownloadUrl = (deskId: number, filename: string): string => {
@@ -26,6 +27,9 @@ export const FilesService = {
 
     // Добавляем метод удаления
     deleteDeskFile: deleteDeskFile,
+
+    // Добавляем метод удаления файла задачи
+    deleteTaskFile: deleteTaskFile,
 
     /** Формирует URL для скачивания файла */
     getDownloadUrl: getDownloadUrl,
