@@ -1,12 +1,12 @@
-import React, {useCallback} from 'react'
-import {FaCheck, FaRegCircle} from 'react-icons/fa'
-import {IoCalendarNumberOutline} from 'react-icons/io5'
-import {StatusType, TaskCardProps} from '../types'
-import {format} from 'date-fns'
-import {ru} from 'date-fns/locale'
-import TaskExecutors from './TaskExecutors'
-import {canEditTask, canEditTaskDate} from '../../../utils/permissionUtils'
-import {Task} from '../../../services/task/types/task.types'
+import React, { useCallback } from "react";
+import { FaCheck, FaRegCircle } from "react-icons/fa";
+import { IoCalendarNumberOutline } from "react-icons/io5";
+import { StatusType, TaskCardProps } from "../types";
+import { format } from "date-fns";
+import { ru } from "date-fns/locale";
+import TaskExecutors from "./TaskExecutors";
+import { canEditTask, canEditTaskDate } from "../../../utils/permissionUtils";
+import { Task } from "../../../services/task/types/task.types";
 
 // Форматирование даты для отображения в карточке
 const formatShortDate = (date: Date | string): string => {
@@ -16,14 +16,14 @@ const formatShortDate = (date: Date | string): string => {
 
     // Проверяем валидность
     if (isNaN(parsedDate.getTime())) {
-      return '';
+      return "";
     }
 
     // format из date-fns по умолчанию выводит дату в локальном часовом поясе пользователя.
-    return format(parsedDate, 'd MMM', { locale: ru });
+    return format(parsedDate, "d MMM", { locale: ru });
   } catch (error) {
     console.error("Ошибка форматирования даты:", error);
-    return '';
+    return "";
   }
 };
 
@@ -33,32 +33,32 @@ const formatShortDate = (date: Date | string): string => {
 // Возвращает Tailwind класс цвета фона для индикатора
 const getPriorityIndicatorClass = (priorityType?: string): string => {
   switch (priorityType) {
-    case 'HIGH':
-      return 'bg-red-500'; // Красный для высокого
-    case 'MEDIUM':
-      return 'bg-yellow-500'; // Желтый/Оранжевый для среднего
-    case 'LOW':
-      return 'bg-green-600'; // Зеленый для низкого
-    case 'FROZEN': // Предполагаем такой ключ для "замороженный"
-      return 'bg-blue-500'; // Синий для замороженного
+    case "HIGH":
+      return "bg-red-500"; // Красный для высокого
+    case "MEDIUM":
+      return "bg-yellow-500"; // Желтый/Оранжевый для среднего
+    case "LOW":
+      return "bg-green-600"; // Зеленый для низкого
+    case "FROZEN": // Предполагаем такой ключ для "замороженный"
+      return "bg-blue-500"; // Синий для замороженного
     default:
-      return 'hidden'; // Скрываем, если приоритет не задан или неизвестен
+      return "hidden"; // Скрываем, если приоритет не задан или неизвестен
   }
 };
 
 // Возвращает текстовое описание приоритета для title
 const getPriorityTitle = (priorityType?: string): string => {
   switch (priorityType) {
-    case 'HIGH':
-      return 'Высокий приоритет';
-    case 'MEDIUM':
-      return 'Средний приоритет';
-    case 'LOW':
-      return 'Низкий приоритет';
-    case 'FROZEN':
-      return 'Заморожен';
+    case "HIGH":
+      return "Высокий приоритет";
+    case "MEDIUM":
+      return "Средний приоритет";
+    case "LOW":
+      return "Низкий приоритет";
+    case "FROZEN":
+      return "Заморожен";
     default:
-      return '';
+      return "";
   }
 };
 // --- КОНЕЦ: Вспомогательные функции для приоритета ---
@@ -80,25 +80,25 @@ const TaskCard: React.FC<TaskCardProps> = ({
   onTaskUpdate,
   canEdit = true,
   isDatePickerOpen,
-  onDragEnd
+  onDragEnd,
 }) => {
   // Определяем, завершена ли задача
   const isCompleted = task.statusType === StatusType.COMPLETED;
-  
+
   // Проверяем, может ли текущий пользователь выполнять различные действия
   const canMoveOrCompleteTask = canEdit && canEditTask(deskUsers, task);
   const canChangeDate = canEdit && canEditTaskDate(deskUsers, task);
-  
+
   // Обработчик клика по карточке
   const handleCardClick = (e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
     // Проверяем клик по интерактивным элементам или по самой иконке/обертке галочки/календаря
     if (
-      target.closest('button') ||
-      target.closest('a') ||
-      target.closest('input') ||
-      target.closest('textarea') ||
-      target.closest('select') ||
+      target.closest("button") ||
+      target.closest("a") ||
+      target.closest("input") ||
+      target.closest("textarea") ||
+      target.closest("select") ||
       target.closest('[data-interactive-control="true"]') // Добавим атрибут оберткам иконок
     ) {
       return;
@@ -110,26 +110,42 @@ const TaskCard: React.FC<TaskCardProps> = ({
 
   // Создаем обертку для onTaskUpdate, которая будет передана в TaskExecutors
   // Она уже будет знать taskId и будет ожидать только updates
-  const handleExecutorUpdate = useCallback((updates: { executorUsernames?: string[]; removeExecutorUsernames?: string[] }) => {
-    console.log('[TaskCard] Вызван handleExecutorUpdate для задачи:', task?.taskId, 'с изменениями:', updates);
-    if (task?.taskId && onTaskUpdate) {
-      onTaskUpdate(task.taskId, updates);
-    } else {
-      console.error("[TaskCard] ID задачи или onTaskUpdate отсутствует в handleExecutorUpdate");
-    }
-  }, [task, onTaskUpdate]);
+  const handleExecutorUpdate = useCallback(
+    (updates: {
+      executorUsernames?: string[];
+      removeExecutorUsernames?: string[];
+    }) => {
+      console.log(
+        "[TaskCard] Вызван handleExecutorUpdate для задачи:",
+        task?.taskId,
+        "с изменениями:",
+        updates
+      );
+      if (task?.taskId && onTaskUpdate) {
+        onTaskUpdate(task.taskId, updates);
+      } else {
+        console.error(
+          "[TaskCard] ID задачи или onTaskUpdate отсутствует в handleExecutorUpdate"
+        );
+      }
+    },
+    [task, onTaskUpdate]
+  );
 
   // Определяем права на редактирование для передачи в TaskExecutors
   // Можно использовать переданный canEdit или вычислить здесь, если нужно
-  const canEditExecutors = canEdit // && canManageExecutors(deskUsers, task); // Проверка прав уже есть внутри TaskExecutors
+  const canEditExecutors = canEdit; // && canManageExecutors(deskUsers, task); // Проверка прав уже есть внутри TaskExecutors
 
   // Определяем дату для форматирования. Приоритет у свежевыбранного объекта Date.
-  const dateToFormat: Date | string | null = selectedDate instanceof Date
-    ? selectedDate // Используем объект Date напрямую
-    : task.taskFinishDate; // Иначе берем строку из данных задачи
+  const dateToFormat: Date | string | null =
+    selectedDate instanceof Date
+      ? selectedDate // Используем объект Date напрямую
+      : task.taskFinishDate; // Иначе берем строку из данных задачи
 
   // Форматируем полученное значение
-  const formattedFinishDate = dateToFormat ? formatShortDate(dateToFormat) : null;
+  const formattedFinishDate = dateToFormat
+    ? formatShortDate(dateToFormat)
+    : null;
 
   // Получаем класс и title для индикатора
   const indicatorClass = getPriorityIndicatorClass(task.priorityType);
@@ -150,37 +166,55 @@ const TaskCard: React.FC<TaskCardProps> = ({
       {/* === КОНЕЦ: Индикатор приоритета === */}
 
       <div className="mb-2">
-        <h3 className={`font-medium text-gray-900 ${indicatorClass !== 'hidden' ? 'mr-4' : ''} ${isCompleted ? 'line-through text-gray-500' : ''}`}>
+        <h3
+          className={`font-medium text-gray-900 truncate max-w-full block ${
+            indicatorClass !== "hidden" ? "mr-4" : ""
+          } ${isCompleted ? "line-through text-gray-500" : ""}`}
+        >
           {task.taskName}
         </h3>
         {task.taskDescription && (
-          <p className={`text-sm text-gray-600 mt-1 ${isCompleted ? 'line-through text-gray-400' : ''}`}>
+          <p
+            className={`text-sm text-gray-600 mt-1 ${
+              isCompleted ? "line-through text-gray-400" : ""
+            }`}
+          >
             {task.taskDescription}
           </p>
         )}
       </div>
-      
+
       {/* Компонент для управления исполнителями и кнопками */}
-      <div className={`mt-2 pt-2 border-t border-gray-100 ${isCompleted ? 'opacity-70' : ''} flex justify-between items-center`}>
+      <div
+        className={`mt-2 pt-2 border-t border-gray-100 ${
+          isCompleted ? "opacity-70" : ""
+        } flex justify-between items-center`}
+      >
         {/* Левая часть - исполнители */}
-        <TaskExecutors 
-          task={task} 
-          deskUsers={deskUsers} 
+        <TaskExecutors
+          task={task}
+          deskUsers={deskUsers}
           deskId={deskId || 0}
           avatarsMap={avatarsMap}
           onTaskUpdate={handleExecutorUpdate}
           canEdit={canEditExecutors}
         />
-        
+
         {/* Правая часть - дата и чекбокс */}
         <div className="flex items-center space-x-2">
           {/* Календарь - только для CREATOR и CONTRIBUTOR */}
-          <div 
-            className={`${canChangeDate ? 'cursor-pointer' : 'cursor-default'} ${
-              formattedFinishDate ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+          <div
+            className={`${
+              canChangeDate ? "cursor-pointer" : "cursor-default"
+            } ${
+              formattedFinishDate
+                ? "opacity-100"
+                : "opacity-0 group-hover:opacity-100"
             } transition-opacity duration-200`}
             data-task-id={task.taskId}
-            onMouseEnter={() => canChangeDate && setHoveredCalendar(task.taskId!)}
+            onMouseEnter={() =>
+              canChangeDate && setHoveredCalendar(task.taskId!)
+            }
             onMouseLeave={() => canChangeDate && setHoveredCalendar(null)}
             onClick={(e) => {
               e.stopPropagation();
@@ -189,26 +223,35 @@ const TaskCard: React.FC<TaskCardProps> = ({
             data-interactive-control="true"
           >
             {formattedFinishDate ? (
-              <div className="text-xs text-gray-500">
-                {formattedFinishDate}
-              </div>
+              <div className="text-xs text-gray-500">{formattedFinishDate}</div>
             ) : (
-              <IoCalendarNumberOutline 
-                className={`calendar-icon transition-colors duration-300 ${!canChangeDate && 'opacity-50'}`}
+              <IoCalendarNumberOutline
+                className={`calendar-icon transition-colors duration-300 ${
+                  !canChangeDate && "opacity-50"
+                }`}
                 style={{
-                  color: hoveredCalendar === task.taskId ? 'var(--theme-color)' : '#9ca3af',
-                  width: '16px',
-                  height: '16px'
+                  color:
+                    hoveredCalendar === task.taskId
+                      ? "var(--theme-color)"
+                      : "#9ca3af",
+                  width: "16px",
+                  height: "16px",
                 }}
               />
             )}
           </div>
-          
+
           {/* Кнопка выполнено - MEMBER может менять только если исполнитель */}
-          <div 
-            className={canMoveOrCompleteTask ? 'cursor-pointer' : 'cursor-default'}
-            onMouseEnter={() => canMoveOrCompleteTask && setHoveredCheckCircle(task.taskId!)}
-            onMouseLeave={() => canMoveOrCompleteTask && setHoveredCheckCircle(null)}
+          <div
+            className={
+              canMoveOrCompleteTask ? "cursor-pointer" : "cursor-default"
+            }
+            onMouseEnter={() =>
+              canMoveOrCompleteTask && setHoveredCheckCircle(task.taskId!)
+            }
+            onMouseLeave={() =>
+              canMoveOrCompleteTask && setHoveredCheckCircle(null)
+            }
             onClick={(e) => {
               e.stopPropagation();
               if (canMoveOrCompleteTask) {
@@ -219,21 +262,25 @@ const TaskCard: React.FC<TaskCardProps> = ({
             data-interactive-control="true"
           >
             <div className="relative">
-              <FaRegCircle 
-                className={`${isCompleted ? "text-green-200" : "text-gray-300"} ${!canMoveOrCompleteTask && 'opacity-50'}`} 
-                size={16} 
+              <FaRegCircle
+                className={`${
+                  isCompleted ? "text-green-200" : "text-gray-300"
+                } ${!canMoveOrCompleteTask && "opacity-50"}`}
+                size={16}
               />
-              
-              <FaCheck 
+
+              <FaCheck
                 className={`absolute top-0 left-0 transition-all duration-300
-                  ${isCompleted 
-                    ? 'text-green-500 opacity-100' 
-                    : hoveredCheckCircle === task.taskId && canMoveOrCompleteTask 
-                      ? 'text-gray-400 opacity-100' 
-                      : 'text-gray-400 opacity-0'
+                  ${
+                    isCompleted
+                      ? "text-green-500 opacity-100"
+                      : hoveredCheckCircle === task.taskId &&
+                        canMoveOrCompleteTask
+                      ? "text-gray-400 opacity-100"
+                      : "text-gray-400 opacity-0"
                   }`}
-                size={10} 
-                style={{ transform: 'translate(3px, 3px)' }}
+                size={10}
+                style={{ transform: "translate(3px, 3px)" }}
               />
             </div>
           </div>
