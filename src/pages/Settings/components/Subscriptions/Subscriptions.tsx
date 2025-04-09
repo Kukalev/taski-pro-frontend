@@ -4,6 +4,7 @@ import {
 } from '../../../../services/subscriptions/Subscriptions'
 import {
 	SubscriptionInfoDto,
+	SubscriptionType,
 	UserSubscriptionResponseDto
 } from '../../../../services/subscriptions/types'
 import {CurrentSubscriptionView} from './components/CurrentSubscriptionView'
@@ -71,8 +72,9 @@ export const Subscriptions: React.FC = () => {
 				if (currentUserSubData.reason?.message !== 'Пользователь не имеет подписок') {
 					console.error("Ошибка загрузки текущей подписки:", currentUserSubData.reason);
 					setError(prev => prev ? `${prev}\nНе удалось загрузить текущую подписку.` : 'Не удалось загрузить текущую подписку.');
+				} else {
+					setCurrentUserSubscription(null);
 				}
-				setCurrentUserSubscription(null);
 			}
 
 		} catch (err: any) {
@@ -94,7 +96,7 @@ export const Subscriptions: React.FC = () => {
 	};
 
 	const renderPageContent = () => {
-		if (error && (loadingAll || loadingCurrent)) {
+		if (error && !loadingAll && !loadingCurrent) {
 			return <div className="text-red-600 bg-red-100 p-4 rounded border border-red-300 m-4">{error}</div>;
 		}
 
@@ -117,44 +119,41 @@ export const Subscriptions: React.FC = () => {
 		}
 	};
 
-	const getTabClassName = (view: 'current' | 'all') => {
-		const base = 'py-1 px-3 font-medium cursor-pointer';
-		const active = 'text-[--theme-color]';
+	const getTabClassName = (isActive: boolean) => {
+		const base = 'py-1 px-3 font-medium cursor-pointer block';
 		const inactive = 'text-gray-600 hover:text-gray-900';
-		return `${base} ${activeView === view ? active : inactive}`;
+		return `${base} ${!isActive ? inactive : ''}`;
 	};
 
 	return (
-		<div className="w-full h-full overflow-hidden flex flex-col">
-			<div className='bg-white border-b border-gray-200 py-1 px-4 flex-shrink-0'>
-				<div className='flex items-center'>
-					<div className='flex items-center'>
-						<div className='w-7 h-7 rounded-md flex items-center justify-center bg-[--theme-color] text-white mr-3'>
-							<svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-								<path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-							</svg>
-						</div>
-						<span className='font-medium text-gray-900'>Подписки</span>
-					</div>
-
-					<div className='flex ml-4'>
-            <span
+		<div className="w-full overflow-hidden flex flex-col -ml-2 -mt-2.5">
+			<div className="absolute ">
+				<div className='inline-block bg-white rounded-t-md overflow-hidden'>
+					<div className='flex'>
+						<span
 							onClick={() => setActiveView('current')}
-							className={getTabClassName('current')}
+							className={getTabClassName(activeView === 'current')}
+							style={activeView === 'current' ? { color: 'var(--theme-color)' } : {}}
 						>
-              Текущий тариф
-            </span>
+							Текущий тариф
+						</span>
 						<span
 							onClick={() => setActiveView('all')}
-							className={getTabClassName('all')}
+							className={getTabClassName(activeView === 'all')}
+							style={activeView === 'all' ? { color: 'var(--theme-color)' } : {}}
 						>
-              Все подписки
-            </span>
+							Все подписки
+						</span>
 					</div>
 				</div>
 			</div>
 
-			<div className='flex-1 overflow-auto p-4 md:p-6'>
+			<div
+				className={`
+					px-4 md:px-6 pb-4 md:pb-6 bg-white  w-full rounded-b-md mb-4 mt-8
+					${activeView === 'current' ? 'max-w-[370px]' : 'max-w-5xl'}
+				`}
+			>
 				{renderPageContent()}
 			</div>
 		</div>

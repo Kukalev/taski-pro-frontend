@@ -84,19 +84,18 @@ export const AllSubscriptionsView: React.FC<AllSubscriptionsViewProps> = ({
   }
 
   return (
-    <>
-      {buyError && <div className="text-red-600 bg-red-100 p-4 rounded border border-red-300 mb-4">{buyError}</div>}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+    <div>
+      {buyError && <div className="text-red-600 bg-red-100 p-4 rounded border border-red-300 mb-4 flex-shrink-0">{buyError}</div>}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-5">
           {allPlans.map((sub) => {
               const styles = getSubscriptionCardStyles(sub.subscriptionType);
               const isFree = sub.price === 0;
               const isCurrentPlan = currentPlanType === sub.subscriptionType;
               const isBuyingThisPlan = buyingPlan === sub.subscriptionType;
 
-              // Определяем текст кнопки
               let buttonText = 'Купить';
               if (isCurrentPlan) {
-                 buttonText = 'Продлить подписку'; // Текст для текущего плана
+                 buttonText = 'Продлить подписку';
               } else if (currentPlanType !== null) {
                  const currentVal = currentPlanType === 'COMMON' ? 1 : (currentPlanType === 'PRO' ? 2 : 3);
                  const targetVal = sub.subscriptionType === 'COMMON' ? 1 : (sub.subscriptionType === 'PRO' ? 2 : 3);
@@ -106,11 +105,10 @@ export const AllSubscriptionsView: React.FC<AllSubscriptionsViewProps> = ({
               return (
                 <div
                   key={sub.subscriptionType}
-                  className={`border rounded-lg  shadow-md p-6 flex flex-col ${styles.borderColor} ${styles.bgColor} ${isBuyingThisPlan ? 'opacity-70' : ''}`}
+                  className={`border rounded-lg shadow-md p-6 flex flex-col ${styles.borderColor} ${styles.bgColor} ${isBuyingThisPlan ? 'opacity-70' : ''}`}
                 >
-                  {/* Верхняя часть карточки */}
                   <h3 className={`text-2xl font-semibold mb-3 ${styles.titleColor}`}>{sub.subscriptionType}</h3>
-                   <p className="text-gray-600 mb-4 flex-grow">
+                   <p className="text-gray-600 mb-4">
                      {sub.subscriptionType === SubscriptionType.COMMON ? 'Базовый план для старта' : (isFree ? 'Бесплатный доступ' : `План ${sub.subscriptionType}`)}
                    </p>
                    <div className="mb-4">
@@ -119,16 +117,15 @@ export const AllSubscriptionsView: React.FC<AllSubscriptionsViewProps> = ({
                    </div>
                    <ul className="space-y-2 text-sm text-gray-700 mb-6">
                     <li className="flex items-center">
-                      <svg className="w-4 h-4 mr-2 text-green-500" /* ... */><path d="M5 13l4 4L19 7"></path></svg>
+                      <svg className="w-4 h-4 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
                       Лимит участников: {sub.deskLimit}
                     </li>
                      <li className="flex items-center">
-                       <svg className="w-4 h-4 mr-2 text-blue-500" /* ... */><path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                       <svg className="w-4 h-4 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                        Длительность: {sub.daysLimit} дней
                      </li>
                   </ul>
 
-                  {/* Кнопка покупки/обновления/продления */}
                   <ThemedButton
                       onClick={() => handleBuyOrUpdatePlan(sub.subscriptionType)}
                       disabled={buyingPlan !== null}
@@ -156,6 +153,6 @@ export const AllSubscriptionsView: React.FC<AllSubscriptionsViewProps> = ({
               );
           })}
       </div>
-    </>
+    </div>
   );
 }; 

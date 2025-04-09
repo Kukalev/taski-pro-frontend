@@ -32,7 +32,6 @@ export const CurrentSubscriptionView: React.FC<CurrentSubscriptionViewProps> = (
       await SubscriptionService.cancelSubscription();
       onSubscriptionChange();
       setIsModalOpen(false);
-      alert('Подписка успешно отменена!');
     } catch (err: unknown) {
       console.error("Ошибка отмены подписки:", err);
       throw err;
@@ -60,6 +59,44 @@ export const CurrentSubscriptionView: React.FC<CurrentSubscriptionViewProps> = (
       });
   }
 
+  const formatShortDate = (dateString?: string) => {
+    if (!dateString) return '?';
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return 'Invalid Date';
+      return date.toLocaleDateString('ru-RU', {
+        day: 'numeric', month: 'long' // Только день и месяц
+      });
+    } catch (e) {
+        console.error("Ошибка форматирования короткой даты:", e);
+        return '?';
+    }
+  }
+
+  const calculateRemainingDays = (finishDateString?: string): number | null => {
+      if (!finishDateString) return null;
+      try {
+          const finishDate = new Date(finishDateString);
+          const now = new Date();
+
+          // Устанавливаем время на начало дня для корректного сравнения
+          finishDate.setHours(0, 0, 0, 0);
+          now.setHours(0, 0, 0, 0);
+
+          if (isNaN(finishDate.getTime())) return null;
+
+          // Если дата окончания уже прошла, возвращаем 0
+          if (finishDate < now) return 0;
+
+          const diffTime = finishDate.getTime() - now.getTime();
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); // Округляем вверх
+          return diffDays;
+      } catch (e) {
+          console.error("Ошибка расчета оставшихся дней:", e);
+          return null;
+      }
+  }
+
   const isCurrentlyActive = (sub: UserSubscriptionResponseDto | null): boolean => {
       if (!sub || !sub.startDate || !sub.finishDate) {
           return false;
@@ -83,7 +120,7 @@ export const CurrentSubscriptionView: React.FC<CurrentSubscriptionViewProps> = (
 
   if (!subscription) {
     return (
-        <div className="p-6 bg-gray-100 rounded-lg text-left">
+        <div className="p-6 bg-white rounded-lg text-left">
             <p className="text-gray-600">У вас нет активной подписки.</p>
             {/* Можно добавить кнопку "Выбрать подписку", которая переключит таб */}
         </div>
@@ -91,27 +128,30 @@ export const CurrentSubscriptionView: React.FC<CurrentSubscriptionViewProps> = (
   }
 
   const isActive = isCurrentlyActive(subscription);
+  const remainingDays = calculateRemainingDays(subscription.finishDate);
 
   return (
-    <>
-      <div className="p-6 border rounded-lg shadow-md bg-white max-w-[320px]">
+    <div className="pt-5">
+      <div className="p-6 border rounded-lg  shadow-md bg-white max-w-[320px] ">
         <h3 className="text-xl font-semibold mb-4 text-left text-gray-800">Ваш текущий тариф: {subscription.subscriptionType}</h3>
         <div className="space-y-2 text-gray-700 mb-5 text-left">
           {/* Используем вычисленный статус */}
           <p><strong>Статус:</strong> {isActive ? <span className="text-green-600">Активна</span> : <span className="text-red-600">Неактивна</span>}</p>
-          {/* Используем правильные имена полей */}
-          <p><strong>Дата начала:</strong> {formatDate(subscription.startDate)}</p>
-          <p><strong>Дата окончания:</strong> {formatDate(subscription.finishDate)}</p>
+          {/* Новое отображение дат */}
+          <p>
+            <strong>Дата:</strong> c {formatShortDate(subscription.startDate)} до {formatShortDate(subscription.finishDate)}
+          </p>
+          {/* Отображение оставшихся дней (только если активна и есть дни) */}
+          {isActive && remainingDays !== null && remainingDays >= 0 && (
+            <p><strong>Осталось дней:</strong> {remainingDays}</p>
+          )}
           {/* Убираем поля, которых нет в ответе API */}
           {/* <p><strong>Лимит досок:</strong> {subscription.maxDesks ?? 'N/A'}</p> */}
           {/* <p><strong>Цена:</strong> {subscription.price ?? 0} ₽</p> */}
           {/* <p><strong>Описание:</strong> {subscription.description || '-'}</p> */}
         </div>
 
-        {/* Общая ошибка действия (если не хотим показывать в модалке) */}
-        {/* {actionError && <p className="text-red-600 text-sm mb-3 text-center">{actionError}</p>} */}
 
-        {/* Показываем кнопку отмены, если статус ВЫЧИСЛЕН как активный */}
         {isActive && (
           <ThemedButton
             onClick={handleCancelClick}
@@ -130,6 +170,6 @@ export const CurrentSubscriptionView: React.FC<CurrentSubscriptionViewProps> = (
         onConfirm={confirmCancelSubscription}
         isLoading={isLoadingAction}
       />
-    </>
+    </div>
   );
 }; 
