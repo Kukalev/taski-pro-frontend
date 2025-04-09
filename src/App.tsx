@@ -8,10 +8,11 @@ import {LoginPage} from './pages/Auth/LoginPage'
 import {RegisterPage} from './pages/Auth/RegisterPage'
 import {ForgotPasswordPage} from './pages/Auth/ForgotPasswordPage'
 import {Desk} from './pages/desk/Desk'
-import {DeskDetails} from './pages/desk/deskDetails/DeskDetails.tsx'
+import {DeskDetails} from './pages/desk/deskDetails/DeskDetails'
 import {DeskBoard} from './pages/desk/deskDetails/DeskBoard'
 import {DeskOverview} from './pages/desk/deskDetails/DeskOverview'
 import {GitHubPage} from './pages/gitHub/GitHubPage'
+import {FilesPage} from './pages/Files/FilesPage'
 import {AllTasks} from './pages/tasks/AllTasks'
 import {MyTasks} from './pages/tasks/MyTasks'
 import {Team} from './pages/welcome/team/Team'
@@ -34,7 +35,6 @@ import {
 } from './pages/Settings/components/Subscriptions/Subscriptions'
 
 const ProtectedRoute = ({ redirectPath = '/register' }: { redirectPath?: string }) => {
-	// ... (код ProtectedRoute без изменений) ...
 	const { isAuthenticated, isLoadingAuth } = useAuth()
 
 	if (isLoadingAuth) {
@@ -52,7 +52,6 @@ const ProtectedRoute = ({ redirectPath = '/register' }: { redirectPath?: string 
 };
 
 const RootRedirect = () => {
-	// ... (код RootRedirect без изменений) ...
 	const { isAuthenticated, isLoadingAuth } = useAuth()
 	console.log(`[RootRedirect] Проверка авторизации из AuthContext: isAuthenticated = ${isAuthenticated}, isLoadingAuth = ${isLoadingAuth}`)
 
@@ -100,7 +99,8 @@ function App() {
 									<Route path="overview" element={<DeskOverview />} />
 									<Route path="board" element={<DeskBoard />} />
 									<Route path="github" element={<GitHubPage />} />
-									<Route index element={<Navigate to="board" replace />} />
+									<Route path="files" element={<FilesPage />} />
+									<Route index element={<Navigate to="overview" replace />} />
 								</Route>
 								<Route
 									path='/desk/myTasks'

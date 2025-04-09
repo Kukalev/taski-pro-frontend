@@ -33,10 +33,34 @@ export const createTask = async (deskId: number, taskName: string, statusType: s
 // Обновить задачу - одна общая функция для любых обновлений
 export const updateTask = async (deskId: number, taskId: number, updateData: Partial<TaskUpdate>): Promise<Task> => {
 	try {
-		console.log(`[TaskService.updateTask] Обновляем задачу ${taskId} в доске ${deskId}:`, updateData);
-		const response = await api.put<Task>(`${BASE_URL}/${deskId}/tasks/${taskId}`, updateData);
+		// Создаем объект Date для текущего времени
+		const now = new Date();
+
+		// Создаем объект с изменениями, включая обязательный updateTime как Date
+		const dataWithUpdateTime: Partial<TaskUpdate> & { updateTime: Date } = {
+			...updateData,
+			updateTime: now // Присваиваем объект Date
+		};
+
+		// ---> ВАЖНО: Преобразуем Date в ISO строку перед отправкой <---
+		// Создаем новый объект payload для API, где все Date будут строками
+		const payloadForApi = { ...dataWithUpdateTime };
+		// Явно преобразуем updateTime в строку ISO
+		payloadForApi.updateTime = dataWithUpdateTime.updateTime.toISOString();
+
+		// Если taskFinishDate тоже может быть Date, преобразуем и его
+		if (payloadForApi.taskFinishDate instanceof Date) {
+			payloadForApi.taskFinishDate = payloadForApi.taskFinishDate.toISOString();
+		} else if (payloadForApi.taskFinishDate === null) {
+			// Убедимся, что null остается null
+			payloadForApi.taskFinishDate = null;
+		}
+
+		console.log(`[TaskService.updateTask] Обновляем задачу ${taskId} в доске ${deskId} с payload для API:`, payloadForApi);
+		// Отправляем на API объект, где все даты - строки ISO
+		const response = await api.put<Task>(`${BASE_URL}/${deskId}/tasks/${taskId}`, payloadForApi);
 		console.log('[TaskService.updateTask] Ответ сервера:', response.data);
-		return response.data; // Возвращаем обновленную задачу
+		return response.data;
 	} catch (error) {
 		console.error(`[TaskService.updateTask] Ошибка при обновлении задачи ${taskId}:`, error);
 		throw error;

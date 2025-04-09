@@ -20,11 +20,10 @@ export interface TaskUpdate {
 	executorUsernames?: string[];
 	removeExecutorUsernames?: string[];
 	taskStack?: string;
+	updateTime: Date;
 }
 
-/**
- * Данные для запроса на обновление стека задачи (эндпоинт /stack).
- */
+
 export interface UpdateTaskStackData {
 	taskStack: string;
 }

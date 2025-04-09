@@ -11,6 +11,7 @@ import TaskDate from './components/TaskDate'
 import TaskPriority from './components/TaskPriority'
 import { TaskStack } from './components/TaskStack'
 import TaskDescription from './components/TaskDescription'
+import Gpt from './components/Gpt'
 import '../../styles/animations.ts'
 import {AuthService} from '../../../../services/auth/Auth'
 import {
@@ -19,7 +20,7 @@ import {
   canEditTaskDescription, 
   canEditTaskDate, 
   canEditTaskPriority, 
-  canManageExecutors
+  canManageExecutors,
 } from '../../../../utils/permissionUtils'
 import { TaskDetailsProps, Task } from './types'
 
@@ -51,6 +52,7 @@ const TaskDetails: React.FC<TaskDetailsProps> = ({
   const canChangePriority = canEditTaskPriority(deskUsers, taskForPermissions);
   const canChangeExecutors = canManageExecutors(deskUsers, taskForPermissions);
   const canChangeStack = canEditTask(deskUsers, taskForPermissions);
+  const canRequestAiHelp = true;
 
   useEffect(() => {
     if (task) {
@@ -186,6 +188,13 @@ const TaskDetails: React.FC<TaskDetailsProps> = ({
               onTaskUpdate={onTaskUpdate}
               canEdit={canChangeStack}
             />
+
+            <Gpt 
+              deskId={deskId} 
+              taskId={task.taskId} 
+              canRequestAiHelp={canRequestAiHelp} 
+            />
+
           </div>
 
           <TaskDescription 

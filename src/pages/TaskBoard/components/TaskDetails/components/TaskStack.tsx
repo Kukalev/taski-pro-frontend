@@ -6,13 +6,14 @@ import {Button} from '../../../../../components/ui/Button' // И кнопки
 import {FaTimes} from 'react-icons/fa' // Иконка для очистки поиска
 import {BsStack} from 'react-icons/bs'
 
-// Список предопределенных тегов
-const PREDEFINED_STACK_TAGS = [
+// Список предопределенных тегов (без запятых!)
+const PREDEFINED_STACK_TAGS = [...new Set([
 	'PHP', 'Ruby', 'Python', 'Java', 'C#', 'Laravel', 'Django', 'Spring',
 	'Ruby on Rails', 'Meteor', 'Node.js', 'Angular', 'React', 'Vue', 'Redux',
 	'MongoDB', 'MySQL', 'Oracle', 'PostgreSQL', 'JavaScript', 'TypeScript',
-	'HTML', 'CSS', 'Docker', 'Kubernetes', 'AWS', 'Azure', 'GCP'
-].sort();
+	'HTML', 'CSS', 'Docker', 'Kubernetes', 'AWS', 'Azure', 'GCP', // Добавим SQL, если его не было
+    'SQL'
+])].sort();
 
 interface TaskStackProps {
 	deskId: number;
@@ -21,20 +22,33 @@ interface TaskStackProps {
 	canEdit: boolean; // Флаг, можно ли редактировать
 }
 
-// Вспомогательная функция для преобразования строки в массив (или пустой массив)
-const stackStringToArray = (stackString: string | null | undefined): string[] => {
-	return stackString ? stackString.split(' ').filter(tag => tag.trim() !== '') : [];
+// ---> ИЗМЕНЕНИЕ: Функция очистки тега <---
+const cleanTag = (tag: string): string => {
+    // Убираем пробелы по краям и удаляем запятые (и другие неалфанумерики в конце, кроме #+.)
+    return tag.trim().replace(/[^a-zA-Z0-9#+.]$/, '');
 }
 
-// Вспомогательная функция для преобразования массива в строку (или null)
+// ---> ИЗМЕНЕНИЕ: Преобразование строки в чистый массив <---
+const stackStringToArray = (stackString: string | null | undefined): string[] => {
+	if (!stackString) return [];
+    const cleanedTags = stackString.split(' ')
+                                   .map(cleanTag)
+                                   .filter(tag => tag !== '');
+    // Возвращаем массив с уникальными значениями
+	return [...new Set(cleanedTags)];
+}
+
+// ---> ИЗМЕНЕНИЕ: Преобразование массива в чистую строку <---
 const stackArrayToString = (stackArray: string[]): string | null => {
-	return stackArray.length > 0 ? stackArray.join(' ') : null;
+    // Убираем дубликаты и очищаем на всякий случай
+	const uniqueCleanedArray = [...new Set(stackArray.map(cleanTag).filter(tag => tag !== ''))];
+	return uniqueCleanedArray.length > 0 ? uniqueCleanedArray.join(' ') : null;
 }
 
 export const TaskStack: React.FC<TaskStackProps> = ({ deskId, task, onTaskUpdate, canEdit }) => {
 	const [isOpen, setIsOpen] = useState(false);
 	const [searchTerm, setSearchTerm] = useState('');
-	// Локальное состояние для выбранных тегов в выпадающем меню
+    // Инициализируем уникальным массивом
 	const [selectedStack, setSelectedStack] = useState<string[]>(stackStringToArray(task.taskStack));
 	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
@@ -87,9 +101,13 @@ export const TaskStack: React.FC<TaskStackProps> = ({ deskId, task, onTaskUpdate
 	};
 
 	const handleTagToggle = (tag: string) => {
-		setSelectedStack(prev =>
-			prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag].sort() // Сортируем для консистентности
-		);
+        const cleanedTag = cleanTag(tag);
+		setSelectedStack(prev => {
+            const currentUniqueStack = [...new Set(prev)]; // Работаем с уникальным набором
+			return currentUniqueStack.includes(cleanedTag)
+                   ? currentUniqueStack.filter(t => t !== cleanedTag)
+                   : [...currentUniqueStack, cleanedTag].sort()
+        });
 	};
 
 	const handleCancel = () => {
@@ -194,13 +212,13 @@ export const TaskStack: React.FC<TaskStackProps> = ({ deskId, task, onTaskUpdate
 									key={tag}
 									onClick={() => handleTagToggle(tag)}
 									className={`px-2 py-1 text-sm rounded cursor-pointer flex items-center justify-between ${
-										selectedStack.includes(tag)
+										selectedStack.includes(cleanTag(tag))
 											? 'bg-blue-100 text-blue-700 font-semibold'
 											: 'hover:bg-gray-100 text-gray-800'
 									}`}
 								>
 									{tag}
-                                    {selectedStack.includes(tag) && (
+                                    {selectedStack.includes(cleanTag(tag)) && (
                                         <span className="text-blue-600 font-bold text-lg leading-none">✓</span>
                                     )}
 								</li>
