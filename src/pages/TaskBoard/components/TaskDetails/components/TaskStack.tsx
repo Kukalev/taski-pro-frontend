@@ -127,6 +127,7 @@ export const TaskStack: React.FC<TaskStackProps> = ({ deskId, task, onTaskUpdate
 		try {
             // Вызываем новый сервис обновления стека
 			const stackString = stackArrayToString(selectedStack);
+			console.log(stackString, 'СТЭК ПРИ ОБНОВЛЕНИИ');
 			await TaskService.updateTaskStack(deskId, task.taskId, { taskStack: stackString ?? '' });
 			console.log('[TaskStack] Стек успешно обновлен');
             // Вызываем колбэк для обновления данных задачи в родительском компоненте
@@ -134,7 +135,7 @@ export const TaskStack: React.FC<TaskStackProps> = ({ deskId, task, onTaskUpdate
             onTaskUpdate({ ...task, taskStack: stackString });
 			setIsOpen(false); // Закрываем меню
 		} catch (err: any) { // Явно типизируем ошибку
-			console.error('[TaskStack] Ошибка при сохранении стека:', err);
+			console.error('[TaskStack] Ошибка при сохранении стека:', err.message);
             // Попытка извлечь сообщение из ошибки API
             const message = err.response?.data?.message || err.message || 'Не удалось сохранить стек.';
 			setError(message);

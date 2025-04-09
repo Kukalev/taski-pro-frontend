@@ -44,3 +44,4 @@ export const getAiRecommendation = async (
 export const GptService = {
 	getAiRecommendation,
 };
+

@@ -33,27 +33,30 @@ export const createTask = async (deskId: number, taskName: string, statusType: s
 // Обновить задачу - одна общая функция для любых обновлений
 export const updateTask = async (deskId: number, taskId: number, updateData: Partial<TaskUpdate>): Promise<Task> => {
 	try {
-		// Создаем объект Date для текущего времени
 		const now = new Date();
 
-		// Создаем объект с изменениями, включая обязательный updateTime как Date
-		const dataWithUpdateTime: Partial<TaskUpdate> & { updateTime: Date } = {
-			...updateData,
-			updateTime: now // Присваиваем объект Date
+		// Определим тип для объекта, который пойдет на API
+		// Он похож на TaskUpdate, но даты должны быть строками или null
+		type TaskUpdatePayload = Omit<Partial<TaskUpdate>, 'updateTime' | 'taskFinishDate'> & {
+			updateTime: string; // Обязательная строка
+			taskFinishDate?: string | null; // Необязательная строка или null
 		};
 
-		// ---> ВАЖНО: Преобразуем Date в ISO строку перед отправкой <---
-		// Создаем новый объект payload для API, где все Date будут строками
-		const payloadForApi = { ...dataWithUpdateTime };
-		// Явно преобразуем updateTime в строку ISO
-		payloadForApi.updateTime = dataWithUpdateTime.updateTime.toISOString();
+		// Создаем объект payloadForApi с правильным типом
+		const payloadForApi: TaskUpdatePayload = {
+			...updateData, // Копируем все поля, кроме дат
+			updateTime: now.toISOString(), // Сразу преобразуем updateTime в строку ISO
+			// taskFinishDate будет обработан ниже, если он есть в updateData
+		};
 
-		// Если taskFinishDate тоже может быть Date, преобразуем и его
-		if (payloadForApi.taskFinishDate instanceof Date) {
-			payloadForApi.taskFinishDate = payloadForApi.taskFinishDate.toISOString();
-		} else if (payloadForApi.taskFinishDate === null) {
-			// Убедимся, что null остается null
-			payloadForApi.taskFinishDate = null;
+		// Обрабатываем taskFinishDate, если он был передан в updateData
+		if (updateData.taskFinishDate !== undefined) {
+			if (updateData.taskFinishDate instanceof Date) {
+				payloadForApi.taskFinishDate = updateData.taskFinishDate.toISOString();
+			} else {
+				// Если пришло null или уже строка, присваиваем как есть
+				payloadForApi.taskFinishDate = updateData.taskFinishDate;
+			}
 		}
 
 		console.log(`[TaskService.updateTask] Обновляем задачу ${taskId} в доске ${deskId} с payload для API:`, payloadForApi);

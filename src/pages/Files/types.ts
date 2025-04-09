@@ -24,3 +24,4 @@ export interface DeskOutletContext {
     avatarsMap: Record<string, string | null>;
 }
 
+
