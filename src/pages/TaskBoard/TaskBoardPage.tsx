@@ -16,8 +16,8 @@ import {Task} from '../../services/task/types/task.types'
 import {DeskService} from '../../services/desk/Desk'
 import {createPortal} from 'react-dom'
 import DatePicker from '../../components/DatePicker/DatePicker'
-import { AvatarService } from '../../services/Avatar/Avatar'
-import { addHours } from 'date-fns'
+import {AvatarService} from '../../services/Avatar/Avatar'
+import {addHours} from 'date-fns'
 
 // Убираем TaskBoardProps, если deskUsers приходит как проп
 interface TaskBoardPageProps {
@@ -518,7 +518,16 @@ const TaskBoardPage: React.FC<TaskBoardPageProps> = ({ deskId, deskUsers }) => {
 
   // РЕНДЕРИНГ
   return (
-    <div className="flex-1 p-4 overflow-x-auto h-full">
+    <div
+      className="flex-1 p-4 overflow-x-auto h-full"
+      style={{
+        backgroundImage: 'var(--app-background-image, none)',
+        backgroundSize: 'var(--app-background-size, cover)',
+        backgroundPosition: 'var(--app-background-position, center)',
+        backgroundRepeat: 'var(--app-background-repeat, no-repeat)',
+        minHeight: 'calc(100vh - 64px)'
+      }}
+    >
       {loading ? (
         <div className="flex justify-center items-center h-full">
           <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>

@@ -1,19 +1,21 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { getAllMyTasks } from '../../../services/desk/api/GetAllMyTasks'; // Импортируем функцию загрузки
-import { Task, TaskGroupKey, GroupedTasks } from './types'; // Импортируем типы
-import { isToday, isTomorrow, isYesterday, parseISO, differenceInCalendarDays, startOfDay } from 'date-fns';
-import { formatShortDate } from '../../../utils/dateUtils'; // Предполагаем наличие такой утилиты
-import { getPriorityDisplay, getPriorityClass } from '../../../utils/priorityUtils'; // Предполагаем наличие утилит для приоритета
-import { getStatusDisplay } from '../../../utils/statusUtils'; // Предполагаем наличие утилиты для статуса
-// --- TanStack Table Imports ---
+import React, {useEffect, useState} from 'react'
+import {getAllMyTasks} from '../../../services/desk/api/GetAllMyTasks'
+import {GroupedTasks, Task, TaskGroupKey} from './types'
+import {differenceInCalendarDays, parseISO, startOfDay} from 'date-fns'
+import {formatShortDate} from '../../../utils/dateUtils'
 import {
+	getPriorityClass,
+	getPriorityDisplay
+} from '../../../utils/priorityUtils'
+import {getStatusDisplay} from '../../../utils/statusUtils'
+import {
+	ColumnDef,
 	createColumnHelper,
 	flexRender,
 	getCoreRowModel,
-	useReactTable,
-	ColumnDef, // Import ColumnDef type
-} from '@tanstack/react-table';
-import { FaChevronDown, FaChevronRight, FaPlus } from 'react-icons/fa'; // Импортируем из react-icons/fa
+	useReactTable
+} from '@tanstack/react-table'
+import {FaChevronDown, FaChevronRight, FaPlus} from 'react-icons/fa'
 
 // --- Вспомогательная функция для группировки задач ---
 const groupTasksByDate = (tasks: Task[]): GroupedTasks => {
@@ -32,7 +34,7 @@ const groupTasksByDate = (tasks: Task[]): GroupedTasks => {
 			grouped.nodate.push(task);
 		} else {
 			try {
-				const finishDate = startOfDay(parseISO(task.taskFinishDate)); // Используем parseISO для UTC/ISO строк
+				const finishDate = startOfDay(parseISO(task.taskFinishDate));
 				const diffDays = differenceInCalendarDays(finishDate, today);
 
 				if (diffDays === 0) {
@@ -43,27 +45,23 @@ const groupTasksByDate = (tasks: Task[]): GroupedTasks => {
 					grouped.yesterday.push(task);
 				} else if (diffDays < -1) {
 					grouped.overdue.push(task);
-				} else { // diffDays > 1
+				} else {
 					grouped.upcoming.push(task);
 				}
 			} catch (e) {
 				console.error("Ошибка парсинга даты для задачи:", task.taskId, task.taskFinishDate, e);
-				grouped.nodate.push(task); // Если дата не парсится, считаем без даты
+				grouped.nodate.push(task);
 			}
 		}
 	});
 
-	// Сортировка внутри групп (опционально, например, по приоритету или дате)
-	// Object.values(grouped).forEach(group => group.sort(...));
-
 	return grouped;
 };
 
-// Определяем тип для данных строки (наша задача)
+// Определяем тип для данных строки
 type TaskRow = Task;
 
-// --- Определение колонок с помощью хелпера ---
-// Выносим это за пределы компонента, т.к. структура колонок не меняется
+// --- Определение колонок ---
 const columnHelper = createColumnHelper<TaskRow>();
 
 const columns = [
@@ -76,7 +74,7 @@ const columns = [
 				</span>
 			</div>
 		),
-		size: 280, // УМЕНЬШИЛИ начальную ширину
+		size: 280,
 		minSize: 150,
 	}),
 	columnHelper.accessor('taskId', {
@@ -95,18 +93,24 @@ const columns = [
 		size: 150,
 		minSize: 100,
 	}),
-	columnHelper.accessor('deskName', { // Предполагаем, что deskName это Проект
+	// --- ИСПРАВЛЕНИЕ ОШИБОК ЛИНТЕРА ---
+	// Предполагаем, что поле для проекта есть в типе Task и называется deskName (уточни, если это не так)
+	// Если такого поля нет, нужно его добавить в тип Task или убрать эти колонки
+	columnHelper.accessor(row => row.deskName, { // Используем accessorFn, если поле существует
+		id: 'projectName', // Уникальный ID для колонки проекта
 		header: () => <span>Проект</span>,
 		cell: info => <span className='text-gray-500 truncate'>{info.getValue() || '-'}</span>,
 		size: 150,
 		minSize: 100,
 	}),
-	columnHelper.accessor('deskName', { // Предполагаем, что deskName это и Доска тоже? Уточни, если поле другое
+	columnHelper.accessor(row => row.deskName, { // Используем accessorFn для доски тоже (если поле то же)
+		id: 'deskName', // Уникальный ID для колонки доски
 		header: () => <span>Доска</span>,
 		cell: info => <span className='text-gray-500 truncate'>{info.getValue() || '-'}</span>,
 		size: 150,
 		minSize: 100,
 	}),
+	// --- КОНЕЦ ИСПРАВЛЕНИЙ ---
 	columnHelper.accessor('statusType', {
 		header: () => <span>Колонка</span>,
 		cell: info => <span className='text-gray-500 truncate'>{getStatusDisplay(info.getValue())}</span>,
@@ -143,24 +147,17 @@ const columns = [
 				))}
 			</div>
 		),
-		size: 180, // Оставляем или немного увеличиваем, если нужно
-		minSize: 140, // УБЕДИМСЯ, что минимальная ширина достаточна
+		size: 180,
+		minSize: 140,
 	}),
-	// Добавь остальные колонки по аналогии
 ];
 
 // --- Основной компонент ---
 export const MyTasks = () => {
-	// Состояние вкладок
-	const [activeTab, setActiveTab] = useState<'assigned' | 'delegated' | 'private'>('assigned');
-	// Состояние загрузки
+	// УДАЛЕНО: Состояние вкладок
 	const [isLoading, setIsLoading] = useState(true);
-	// Состояние для хранения сгруппированных задач
 	const [groupedTasks, setGroupedTasks] = useState<GroupedTasks | null>(null);
-	// Состояние ошибки
 	const [error, setError] = useState<string | null>(null);
-
-	// Состояние раскрытых групп
 	const [expandedGroups, setExpandedGroups] = useState<Record<TaskGroupKey, boolean>>({
 		today: true,
 		tomorrow: true,
@@ -169,72 +166,58 @@ export const MyTasks = () => {
 		nodate: true,
 		overdue: true,
 	});
+	const [columnResizeMode, setColumnResizeMode] = useState<'onChange' | 'onEnd'>('onChange');
+	const [columnVisibility, setColumnVisibility] = useState({});
+	const [columnSizing, setColumnSizing] = useState({});
 
-	// Состояние для хранения размеров колонок
-	const [columnResizeMode, setColumnResizeMode] = useState<'onChange' | 'onEnd'>('onChange'); // Режим изменения размера
-	const [columnVisibility, setColumnVisibility] = useState({}); // Для возможного скрытия колонок в будущем
-	const [columnSizing, setColumnSizing] = useState({}); // Состояние для хранения размеров колонок
-
-	// Загрузка задач при монтировании
+	// УПРОЩЕННЫЙ useEffect для загрузки задач
 	useEffect(() => {
 		const fetchTasks = async () => {
 			setIsLoading(true);
 			setError(null);
 			try {
+				console.log("[MyTasks] Загрузка задач 'Назначенные мне'..."); // Добавлен лог
 				const fetchedTasks = await getAllMyTasks();
+				console.log("[MyTasks] Задачи загружены:", fetchedTasks.length); // Добавлен лог
 				setGroupedTasks(groupTasksByDate(fetchedTasks));
 			} catch (err) {
 				setError('Не удалось загрузить задачи.');
-				console.error(err);
+				console.error("[MyTasks] Ошибка загрузки задач:", err); // Добавлен лог ошибки
 			} finally {
 				setIsLoading(false);
 			}
 		};
 
-		// Пока загружаем только "Назначенные мне"
-		if (activeTab === 'assigned') {
-			fetchTasks();
-		} else {
-			// Для других вкладок пока просто сбрасываем
-			setGroupedTasks(null);
-			setIsLoading(false);
-		}
-	}, [activeTab]); // Перезагружаем при смене вкладки
+		fetchTasks();
+	}, []); // Пустой массив зависимостей - загрузка только при монтировании
 
-	// Функция для переключения состояния группы
 	const toggleGroup = (group: TaskGroupKey) => {
 		setExpandedGroups(prev => ({ ...prev, [group]: !prev[group] }));
 	};
 
-	// --- Инстанс таблицы для заголовков ---
-	// Важно: Создаем его *до* RenderTaskTable, чтобы получить доступ к размерам
 	const headerTable = useReactTable({
-		data: [], // Пустые данные для заголовков
+		data: [],
 		columns: columns as ColumnDef<TaskRow, any>[],
 		columnResizeMode,
 		state: {
 			columnVisibility,
-			columnSizing, // Передаем состояние размеров
+			columnSizing,
 		},
 		onColumnVisibilityChange: setColumnVisibility,
-		onColumnSizingChange: setColumnSizing, // Обновляем состояние размеров
+		onColumnSizingChange: setColumnSizing,
 		enableColumnResizing: true,
 		getCoreRowModel: getCoreRowModel(),
 	});
 
-	// --- Компонент для рендеринга таблицы группы ---
-	// Принимает TaskRow[] и использует headerTable для получения размеров
 	const RenderTaskTable = ({ tasks }: { tasks: TaskRow[] }) => {
 		const table = useReactTable({
 			data: tasks,
 			columns: columns as ColumnDef<TaskRow, any>[],
-			columnResizeMode, // Используем тот же режим
+			columnResizeMode,
 			getCoreRowModel: getCoreRowModel(),
 			state: {
-				columnVisibility, // Используем общее состояние видимости
-				// Размеры строк должны определяться заголовком, не храним их здесь
+				columnVisibility,
 			},
-			// Не передаем onColumn... обработчики, т.к. управляем через headerTable
 		});
 
 		if (tasks.length === 0) {
@@ -242,7 +225,6 @@ export const MyTasks = () => {
 		}
 
 		return (
-			// Обертка не нужна, так как <tbody> рендерится внутри основной таблицы
 			<>
 				{table.getRowModel().rows.map(row => (
 					<tr key={row.id} className="hover:bg-gray-50 border-b border-gray-100">
@@ -250,7 +232,6 @@ export const MyTasks = () => {
 							<td
 								key={cell.id}
 								className="py-2 px-2 align-middle"
-								// Используем размер из соответствующего заголовка headerTable
 								style={{ width: headerTable.getHeaderGroups()[0]?.headers[cell.column.getIndex()]?.getSize() ?? 'auto' }}
 							>
 								{flexRender(cell.column.columnDef.cell, cell.getContext())}
@@ -262,7 +243,6 @@ export const MyTasks = () => {
 		);
 	};
 
-	// --- Рендеринг группы задач (заголовок + строки) ---
 	const renderTaskGroup = (title: string, groupKey: TaskGroupKey) => {
 		if (!groupedTasks) return null;
 		const isExpanded = expandedGroups[groupKey];
@@ -270,8 +250,7 @@ export const MyTasks = () => {
 
 		return (
 			<React.Fragment key={groupKey}>
-				{/* Заголовок группы как строка таблицы */}
-				<tr className='sticky top-10 bg-gray-100 z-10 group-header-row'> {/* Используем top-10 из-за sticky thead */}
+				<tr className='sticky top-10 bg-gray-100 z-10 group-header-row'>
 					<td colSpan={columns.length} className="py-1 px-2 border-b border-gray-200">
 						<div
 							className='flex items-center cursor-pointer'
@@ -288,89 +267,69 @@ export const MyTasks = () => {
 						</div>
 					</td>
 				</tr>
-				{/* Строки задач группы (рендерятся компонентом RenderTaskTable) */}
 				{isExpanded && <RenderTaskTable tasks={groupTasks} />}
 			</React.Fragment>
 		);
 	};
 
 	return (
-		// Главный контейнер с верт. скроллом
 		<div className='flex-1 overflow-y-auto' style={{ maxHeight: 'calc(100vh - 64px)' }}>
 			<div className='p-6'>
 				<div className='max-w-full mx-auto'>
-					{/* Заголовок страницы и вкладки */}
 					<div className='flex justify-between items-center mb-4'>
 						<h1 className='text-xl font-semibold'>Мои задачи</h1>
-						<div className='flex space-x-1'>
-							{/* Кнопки вкладок */}
-							{(['assigned', 'delegated', 'private'] as const).map(tab => (
-								<button
-									key={tab}
-									className={`px-3 py-1.5 text-sm rounded-md ${activeTab === tab ? 'bg-blue-100 text-blue-700 font-medium' : 'text-gray-600 hover:bg-gray-100'}`}
-									onClick={() => setActiveTab(tab)}>
-									{tab === 'assigned' ? 'Назначенные мне' : tab === 'delegated' ? 'Порученные' : 'Личные'}
-								</button>
-							))}
-						</div>
+						{/* УДАЛЕН блок с кнопками вкладок */}
 					</div>
 
-					{/* Обертка для горизонтального скролла таблицы */}
 					<div className="overflow-x-auto">
-						{/* Основная таблица */}
 						<table className="w-full border-separate border-spacing-0" style={{ minWidth: headerTable.getTotalSize() }}>
-							{/* Заголовок таблицы */}
 							<thead className='bg-gray-50 sticky top-0 z-20'>
-								{headerTable.getHeaderGroups().map(headerGroup => (
-									<tr key={headerGroup.id}>
-										{headerGroup.headers.map(header => (
-											<th
-												key={header.id}
-												colSpan={header.colSpan}
-												className="py-2 px-2 text-left font-medium text-gray-600 relative border-b border-gray-200 cursor-default"
-												style={{ width: header.getSize() }}
-											>
-												<div className='flex items-center justify-between'>
-													{header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
-													{/* Ручка для изменения размера */}
-													{header.column.getCanResize() && (
-														<div
-															onMouseDown={header.getResizeHandler()}
-															onTouchStart={header.getResizeHandler()}
-															className={`resizer ${header.column.getIsResizing() ? 'isResizing' : ''}`}
-														/>
-													)}
-												</div>
-											</th>
-										))}
-									</tr>
-								))}
+							{headerTable.getHeaderGroups().map(headerGroup => (
+								<tr key={headerGroup.id}>
+									{headerGroup.headers.map(header => (
+										<th
+											key={header.id}
+											colSpan={header.colSpan}
+											className="py-2 px-2 text-left font-medium text-gray-600 relative border-b border-gray-200 cursor-default"
+											style={{ width: header.getSize() }}
+										>
+											<div className='flex items-center justify-between'>
+												{header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+												{header.column.getCanResize() && (
+													<div
+														onMouseDown={header.getResizeHandler()}
+														onTouchStart={header.getResizeHandler()}
+														className={`resizer ${header.column.getIsResizing() ? 'isResizing' : ''}`}
+													/>
+												)}
+											</div>
+										</th>
+									))}
+								</tr>
+							))}
 							</thead>
-
-							{/* Тело таблицы с группами */}
 							<tbody>
-								{isLoading ? (
-									<tr><td colSpan={columns.length}><div className="flex justify-center items-center h-32"><div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div></div></td></tr>
-								) : error ? (
-									<tr><td colSpan={columns.length} className="text-center text-red-600 py-4">{error}</td></tr>
-								) : !groupedTasks || Object.values(groupedTasks).every(g => g.length === 0) ? (
-									<tr><td colSpan={columns.length} className="text-center text-gray-500 py-6">Нет задач для отображения.</td></tr>
-								) : (
-									<>
-										{renderTaskGroup('Просрочено', 'overdue')}
-										{renderTaskGroup('Сегодня', 'today')}
-										{renderTaskGroup('Завтра', 'tomorrow')}
-										{renderTaskGroup('Предстоящие', 'upcoming')}
-										{renderTaskGroup('Без даты', 'nodate')}
-										{renderTaskGroup('Вчера', 'yesterday')}
-									</>
-								)}
+							{isLoading ? (
+								<tr><td colSpan={columns.length}><div className="flex justify-center items-center h-32"><div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div></div></td></tr>
+							) : error ? (
+								<tr><td colSpan={columns.length} className="text-center text-red-600 py-4">{error}</td></tr>
+							) : !groupedTasks || Object.values(groupedTasks).every(g => g.length === 0) ? (
+								<tr><td colSpan={columns.length} className="text-center text-gray-500 py-6">Нет задач для отображения.</td></tr>
+							) : (
+								<>
+									{renderTaskGroup('Просрочено', 'overdue')}
+									{renderTaskGroup('Сегодня', 'today')}
+									{renderTaskGroup('Завтра', 'tomorrow')}
+									{renderTaskGroup('Предстоящие', 'upcoming')}
+									{renderTaskGroup('Без даты', 'nodate')}
+									{renderTaskGroup('Вчера', 'yesterday')}
+								</>
+							)}
 							</tbody>
 						</table>
 					</div>
 				</div>
 			</div>
-			{/* Стили для ручки изменения размера */}
 			<style>{`
 				.resizer { position: absolute; top: 0; right: 0; width: 5px; height: 100%; background: transparent; cursor: col-resize; user-select: none; touch-action: none; opacity: 0; border-right: 2px solid transparent; }
 				th:hover .resizer { opacity: 1; border-right: 2px solid #cbd5e1; }

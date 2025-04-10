@@ -4,5 +4,22 @@
   --theme-color-light: var(--teal-400);
   --theme-color-dark: var(--teal-600);
   --theme-color-bg: var(--teal-50);
+
+  /* --- ДЕФОЛТНЫЕ ЗНАЧЕНИЯ ДЛЯ ФОНА --- */
+  --app-background-image: url('/default.png'); /* << Важно: дефолтное значение */
+  --app-background-size: cover;
+  --app-background-position: center;
+  --app-background-repeat: no-repeat;
+  /* --- --- */
+}
+
+/* Опционально, но рекомендуется: применить к body или главному контейнеру */
+body { /* или другой селектор, например, #root */
+  /* ... другие стили ... */
+  background-image: var(--app-background-image);
+  background-size: var(--app-background-size);
+  background-position: var(--app-background-position);
+  background-repeat: var(--app-background-repeat);
+  min-height: 100vh; /* Для растягивания фона */
 }
 
