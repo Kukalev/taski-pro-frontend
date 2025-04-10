@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { DeskUpdateEvents } from '../renameDeskModal/RenameDeskModal'
+import {useState} from 'react'
+import {DeskUpdateEvents} from '../renameDeskModal/RenameDeskModal'
 
 interface DeleteDeskModalProps {
 	isOpen: boolean
@@ -18,10 +18,8 @@ export const DeleteDeskModal = ({ isOpen, deskId, deskName, onClose, onConfirm, 
 
 		setError('')
 		try {
-			// Вызываем колбэк для удаления
 			await onConfirm(deskId)
 			
-			// Оповещаем о возможных изменениях данных доски
 			if (deskId) {
 				DeskUpdateEvents.notify(deskId)
 			}

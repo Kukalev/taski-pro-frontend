@@ -265,7 +265,7 @@ export const RegisterPage = () => {
 			console.log(response)
 
 			// Перенаправляем после успешной регистрации
-			navigate('/welcome')
+			navigate('/desk')
 		} catch (err: any) {
 			// Показываем ошибку с сервера
 			const errorMessage = err.response?.data?.message || err.message || 'Произошла ошибка при регистрации.'
@@ -280,7 +280,12 @@ export const RegisterPage = () => {
 
 	return (
 		<div className='min-h-screen flex items-center justify-center px-4'>
+
 			<div className='w-full max-w-[350px] -mt-64'>
+				<a className="font-bold block text-center mb-6" href="#">
+					<span className="text-blue-600 text-2xl -mr-1">Taski</span> {/* Используем цвет indigo-600 как аналог #3f51b5 */}
+					<span className="text-gray-800 text-2xl">Pro</span>   {/* Используем цвет gray-800 как аналог #333 */}
+				</a>
 				<div className='text-left mb-0.5 flex justify-between px-2'>
 					<h1 className='text-[19px] font-semibold text-[#4d505e]'>Создайте аккаунт</h1>
 					<WiStars className='text-[38px] text-gray-300' />

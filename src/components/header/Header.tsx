@@ -1,4 +1,3 @@
-import {AuthService} from '../../services/auth/Auth'
 import {HeaderButtons} from './components/HeaderButtons'
 import {HeaderIcons} from './components/HeaderIcons'
 import {HeaderLogo} from './components/HeaderLogo'
@@ -24,9 +23,7 @@ export const Header = () => {
 		navigate('/settings/subscriptions');
 	}
 
-	const handleInviteClick = () => {
-		console.log('Открыть окно приглашения команды')
-	}
+
 	
 	const handleSettingsClick = () => {
 		navigate('/settings')
@@ -34,19 +31,14 @@ export const Header = () => {
 
 	return (
 		<header className='w-full h-14 bg-white border-b border-gray-200 flex items-center justify-between px-4'>
-			{/* Левая часть с логотипом и названием */}
 			<HeaderLogo onToggleSidebar={toggleSidebar} />
 
-			{/* Правая часть с кнопками и аватаром */}
 			<div className='flex items-center'>
-				{/* Кнопки */}
-				<HeaderButtons onProClick={handleProClick} onInviteClick={handleInviteClick} />
+				<HeaderButtons onProClick={handleProClick}  />
 
-				{/* Иконки */}
 				<HeaderIcons />
 
-				{/* Аватар пользователя */}
-				<UserAvatar 
+				<UserAvatar
 					username={username} 
 					email={email}
 					avatarUrl={avatarObjectUrl}

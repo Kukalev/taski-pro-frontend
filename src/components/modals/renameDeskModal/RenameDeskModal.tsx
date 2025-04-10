@@ -3,7 +3,6 @@ import {DeskService} from '../../../services/desk/Desk'
 import {DeskData} from '../../../contexts/DeskContext'
 import {ThemedButton} from '../../ui/ThemedButton'
 
-// Создаем более надежный механизм для оповещения об обновлении доски
 export const DeskUpdateEvents = {
 	listeners: new Map<number, Set<() => void>>(),
 	
@@ -12,7 +11,6 @@ export const DeskUpdateEvents = {
 		callbacks.add(callback);
 		DeskUpdateEvents.listeners.set(deskId, callbacks);
 		
-		// Возвращаем функцию для отписки
 		return () => {
 			const callbacks = DeskUpdateEvents.listeners.get(deskId);
 			if (callbacks) {
@@ -50,11 +48,8 @@ interface RenameDeskModalProps {
 	onSuccess: (updatedDeskData: Partial<DeskData>) => void
 }
 
-export const RenameDeskModal = ({ isOpen, deskId, initialDeskName, /* initialDeskDescription, */ onClose, onSuccess }: RenameDeskModalProps) => {
-	// Гарантируем, что deskName инициализируется строкой
+export const RenameDeskModal = ({ isOpen, deskId, initialDeskName, onClose, onSuccess }: RenameDeskModalProps) => {
 	const [deskName, setDeskName] = useState(initialDeskName || '')
-	// Убираем состояние описания
-	// const [deskDescription, setDeskDescription] = useState(initialDeskDescription)
 	const [error, setError] = useState<string | null>(null)
 	const [isLoading, setIsLoading] = useState(false)
 	const modalRef = useRef<HTMLDivElement>(null)
@@ -62,7 +57,6 @@ export const RenameDeskModal = ({ isOpen, deskId, initialDeskName, /* initialDes
 	useEffect(() => {
 		if (isOpen) {
 			setError(null)
-			// Гарантируем, что deskName устанавливается в строку при открытии
 			setDeskName(initialDeskName || '')
 		}
 	}, [isOpen, initialDeskName])
@@ -109,8 +103,7 @@ export const RenameDeskModal = ({ isOpen, deskId, initialDeskName, /* initialDes
 		setIsLoading(true)
 
 		try {
-			// Отправляем только deskName
-			const payload = { deskName }; 
+			const payload = { deskName };
 			console.log(`[RenameDeskModal] Отправка данных для ID ${deskId}:`, payload)
 
 			const response = await DeskService.updateDesk(deskId, payload)
@@ -118,8 +111,7 @@ export const RenameDeskModal = ({ isOpen, deskId, initialDeskName, /* initialDes
 
 			if (response.status === 200) {
 				console.log('[RenameDeskModal] Успешное обновление (статус 200)')
-				// Передаем только ID и имя
-				onSuccess({ 
+				onSuccess({
 					id: deskId, 
 					deskName: deskName 
 				} as Partial<DeskData>); 
@@ -155,11 +147,9 @@ export const RenameDeskModal = ({ isOpen, deskId, initialDeskName, /* initialDes
 
 	if (!isOpen) return null
 
-	// Логика isChanged теперь только для имени
-	const isChanged = typeof initialDeskName === 'string' && 
+	const isChanged = typeof initialDeskName === 'string' &&
 					  deskName.trim() !== initialDeskName.trim() && 
 					  deskName.trim() !== '';
-	// console.log('[RenameDeskModal] Значение isChanged перед рендером:', { isChanged });
 
 	return (
 		<div
@@ -168,13 +158,12 @@ export const RenameDeskModal = ({ isOpen, deskId, initialDeskName, /* initialDes
 			aria-labelledby="modal-title"
 			role="dialog"
 			aria-modal="true"
-			onClick={onClose} // Закрытие по клику на фон
+			onClick={onClose}
 		>
-			{/* Внутренний div с stopPropagation */}
 			<div
 				ref={modalRef}
 				className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md transform transition-all duration-300"
-				onClick={(e) => e.stopPropagation()} // Предотвращаем закрытие при клике внутри
+				onClick={(e) => e.stopPropagation()}
 			>
 				<div className="flex justify-between items-center mb-4">
 					<h2 id="modal-title" className="text-lg font-semibold text-gray-900">
@@ -193,14 +182,12 @@ export const RenameDeskModal = ({ isOpen, deskId, initialDeskName, /* initialDes
 					</button>
 				</div>
 
-				{/* Форма без верхней границы */}
 				<form onSubmit={handleSubmit}>
 					{error && <p className='text-red-500 text-sm mb-4'>{error}</p>}
 					<div className='mb-4'>
 						<label htmlFor='deskNameInput' className="block text-sm font-medium text-gray-700 mb-2">
 							Название проекта
 						</label>
-						{/* Убираем бордер, добавляем фон и скругление */}
 						<input
 							type="text"
 							id='deskNameInput'
@@ -212,8 +199,7 @@ export const RenameDeskModal = ({ isOpen, deskId, initialDeskName, /* initialDes
 							className="w-full px-3 py-2 bg-gray-100 rounded-lg shadow-sm focus:outline-none focus:ring-1 focus:border-[var(--theme-color)] focus:ring-[var(--theme-color)] sm:text-sm disabled:bg-gray-50"
 						/>
 					</div>
-					{/* Описание удалено */}
-					{/* Кнопка Сохранить справа */}
+
 					<div className='flex justify-end space-x-3 mt-6'> 
 						<ThemedButton 
 							type='submit' 

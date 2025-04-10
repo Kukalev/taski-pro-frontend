@@ -127,7 +127,7 @@ export const LoginPage = () => {
 				console.log('Ошибка')
 			}
 
-			navigate('/welcome')
+			navigate('/desk')
 		} catch (err: unknown) {
 			const apiError = err as ApiError
 			console.error('[LoginPage] Ошибка при попытке входа:', apiError);
@@ -140,50 +140,58 @@ export const LoginPage = () => {
 
 	return (
 		<div className='min-h-screen flex items-center justify-center px-4'>
+
 			<div className='w-full max-w-[350px] -mt-64'>
+				<a className="font-bold block text-center mb-6" href="#">
+					<span className="text-blue-600 text-2xl -mr-1">Taski</span> {/* Используем цвет indigo-600 как аналог #3f51b5 */}
+					<span className="text-gray-800 text-2xl">Pro</span>   {/* Используем цвет gray-800 как аналог #333 */}
+				</a>
 				<div className='text-left mb-2.5 flex justify-between px-2'>
 					<h1 className='text-[19px] font-semibold text-[#4d505e]'>Вход</h1>
-					<Link to='/forgot-password' className='text-[15px] font-medium text-gray-400 decoration-gray-300 underline decoration-[1.5px] underline-offset-[3.5px] decoration-text-gray-400 hover:text-[#4d505e] transition-all duration-200 hover:decoration-[#4d505e]'>
+					<Link to='/forgot-password'
+						className='text-[15px] font-medium text-gray-400 decoration-gray-300 underline decoration-[1.5px] underline-offset-[3.5px] decoration-text-gray-400 hover:text-[#4d505e] transition-all duration-200 hover:decoration-[#4d505e]'>
 						Забыли пароль?
 					</Link>
 				</div>
 
-				<form onSubmit={handleSubmit} className='bg-gray-100 rounded-xl p-5 shadow-sm'>
+				<form onSubmit={handleSubmit}
+					className='bg-gray-100 rounded-xl p-5 shadow-sm'>
 					<div className='space-y-4'>
-						<Input 
-							type='text' 
-							placeholder='Имя пользователя' 
-							value={formData.username} 
-							onChange={handleUsernameChange} 
-							icon={<IoPersonOutline />} 
-							error={fieldErrors.username} 
+						<Input
+							type='text'
+							placeholder='Имя пользователя'
+							value={formData.username}
+							onChange={handleUsernameChange}
+							icon={<IoPersonOutline/>}
+							error={fieldErrors.username}
 						/>
-						<Input 
-							type='password' 
-							placeholder='Пароль' 
-							value={formData.password} 
-							onChange={handlePasswordChange} 
-							icon={<SlLock />} 
-							error={fieldErrors.password} 
+						<Input
+							type='password'
+							placeholder='Пароль'
+							value={formData.password}
+							onChange={handlePasswordChange}
+							icon={<SlLock/>}
+							error={fieldErrors.password}
 						/>
 					</div>
 
 					{validationError && (
-						<div className={`mt-3 flex items-start space-x-2 text-red-500 text-sm transition-opacity duration-300 ease-in-out ${isErrorVisible ? 'opacity-100' : 'opacity-0'}`}>
-							<MdOutlineInfo className='text-xl flex-shrink-0 mt-2.5' />
+						<div
+							className={`mt-3 flex items-start space-x-2 text-red-500 text-sm transition-opacity duration-300 ease-in-out ${isErrorVisible ? 'opacity-100' : 'opacity-0'}`}>
+							<MdOutlineInfo className='text-xl flex-shrink-0 mt-2.5'/>
 							<p className='text-sm text-left'>
 								Необходимо заполнить все подсвеченные
-								<br />
+								<br/>
 								поля
 							</p>
 						</div>
 					)}
 
-					{/* Сообщение об ошибке аутентификации */}
 					{authError && (
-						<div className={`mt-3.5 flex items-start space-x-2 text-red-500 text-sm transition-opacity duration-300 ease-in-out ${isErrorVisible ? 'opacity-100' : 'opacity-0'}`}>
-							<MdOutlineInfo className='text-xl flex-shrink-0 mt-0' />
-							<p className='text-sm text-left'>{authError}</p>
+						<div
+							className={`mt-3.5 flex items-start space-x-2 text-red-500 text-sm transition-opacity duration-300 ease-in-out ${isErrorVisible ? 'opacity-100' : 'opacity-0'}`}>
+							<MdOutlineInfo className='text-xl flex-shrink-0 mt-0'/>
+							<p className='text-sm text-left'>Неверный логин или пароль</p>
 						</div>
 					)}
 
@@ -196,7 +204,8 @@ export const LoginPage = () => {
 
 				<p className='text-center text-xm text-gray-500 mt-4'>
 					У вас ещё нет аккаунта?{' '}
-					<Link to='/register' className='font-medium text-blue-300 underline underline-offset-[3.5px] decoration-[1.5px] decoration-blue-200 hover:text-blue-600 hover:decoration-blue-500 transition-all duration-200'>
+					<Link to='/register'
+						className='font-medium text-blue-300 underline underline-offset-[3.5px] decoration-[1.5px] decoration-blue-200 hover:text-blue-600 hover:decoration-blue-500 transition-all duration-200'>
 						Зарегистрируйтесь бесплатно
 					</Link>
 				</p>

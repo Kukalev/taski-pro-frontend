@@ -1,4 +1,4 @@
-import React, {useCallback, useEffect, useState} from 'react'
+import React, {useEffect, useState} from 'react'
 import AddUserModal from '../AddUserModal/AddUserModal'
 import {DeskParticipantsProps, UserOnDesk} from './types'
 import EmptyState from './components/EmptyState'
@@ -18,8 +18,7 @@ import {
   DeleteUserModal
 } from '../../../../components/modals/deleteUserModal/DeleteUserModal'
 import {getUserName} from './utilities'
-import { getTasksByDeskId, updateTask } from '../../../../services/task/Task'
-import { UserAvatar } from '../../../../components/header/components/UserAvatar'
+import {getTasksByDeskId, updateTask} from '../../../../services/task/Task'
 
 const DeskParticipants: React.FC<DeskParticipantsProps> = ({ desk, deskUsers, hasEditPermission = true, refreshDeskUsers, updateLocalUsers, avatarsMap }) => {
   const deskId = desk?.id;
@@ -137,11 +136,19 @@ const DeskParticipants: React.FC<DeskParticipantsProps> = ({ desk, deskUsers, ha
   };
 
   const hasParticipants = deskUsers && deskUsers.length > 0;
+  const participantCount = deskUsers ? deskUsers.length : 0;
+  // Получаем лимит пользователей из объекта desk
+  const userLimit = desk?.userLimit;
 
   return (
     <div className='w-full mb-6'>
       <div className='flex justify-between items-center mb-2'>
-        <h3 className='text-lg font-medium'>Участники</h3>
+        <h3 className='text-lg font-medium'>
+          Участники {/* Добавляем span для стилизации счетчика */}
+          <span className="ml-1 text-sm text-gray-500">
+             ({participantCount}{userLimit !== undefined ? `/${userLimit}` : ''})
+          </span>
+        </h3>
         {hasManagePermission && (
           <button
             className='text-sm bg-gray-50 rounded-full px-4 py-1.5 hover:bg-gray-100 cursor-pointer'

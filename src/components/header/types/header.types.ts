@@ -1,13 +1,10 @@
-import { ReactNode } from 'react'
+import {ReactNode} from 'react'
 
 export interface HeaderButtonsProps {
 	onProClick?: () => void
-	onInviteClick?: () => void
 }
 
-export interface HeaderIconsProps {
-	
-}
+
 
 export interface HeaderLogoProps {
 	onToggleSidebar?: () => void

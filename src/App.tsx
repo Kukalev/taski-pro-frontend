@@ -1,4 +1,3 @@
-import React from 'react'
 import {BrowserRouter, Navigate, Outlet, Route, Routes} from 'react-router-dom'
 import {NotFound} from './components/NotFound'
 import {DeskProvider} from './contexts/DeskContext'
@@ -15,8 +14,7 @@ import {GitHubPage} from './pages/gitHub/GitHubPage'
 import {FilesPage} from './pages/Files/FilesPage'
 import {AllTasks} from './pages/tasks/AllTasks'
 import {MyTasks} from './pages/tasks/MyTasks/MyTasks.tsx'
-import {Team} from './pages/welcome/team/Team'
-import {Welcome} from './pages/welcome/Welcome'
+
 import {SidebarProvider} from './contexts/SidebarContext'
 import {SettingsLayout} from './layouts/SettingsLayout'
 import {Settings} from './pages/Settings/Settings'
@@ -70,16 +68,12 @@ function App() {
 				<DeskProvider>
 					<SidebarProvider>
 						<Routes>
-							{/* Публичные роуты */}
 							<Route path='/login' element={<LoginPage />} />
 							<Route path='/register' element={<RegisterPage />} />
 							<Route path='/forgot-password' element={<ForgotPasswordPage />} />
 
-							{/* Обертка для защищенных роутов */}
-							<Route element={<ProtectedRoute redirectPath="/register" />}>
-								{/* ... (Welcome, Desk, Desk/:id, MyTasks, AllTasks роуты без изменений) ... */}
-								<Route path='/welcome' element={<Welcome />} />
-								<Route path='/welcome/team' element={<Team />} />
+							<Route element={<ProtectedRoute redirectPath="/login" />}>
+
 								<Route
 									path='/desk'
 									element={
@@ -119,35 +113,26 @@ function App() {
 									}
 								/>
 
-								{/* --- Маршруты для страницы настроек --- */}
 								<Route
-									path='/settings' // Базовый путь
+									path='/settings'
 									element={
 										<SettingsLayout>
 											<Settings />
 										</SettingsLayout>
 									}
 								>
-									{/* Вложенные роуты для конкретных вкладок */}
 									<Route path="profile" element={<ProfileSettings />} />
 									<Route path="appearance" element={<AppearanceSettings />} />
 									<Route path="security" element={<SecuritySettings />} />
-									{/* --- НАЧАЛО ИЗМЕНЕНИЯ: ВОТ ТАК ДОЛЖНО БЫТЬ --- */}
-									<Route path="subscriptions" element={<Subscriptions />} /> {/* Или SubscriptionsPage, если используешь его */}
-									{/* Редирект по умолчанию для /settings */}
+									<Route path="subscriptions" element={<Subscriptions />} />
 									<Route index element={<Navigate to="profile" replace />} />
-									{/* --- КОНЕЦ ИЗМЕНЕНИЯ --- */}
-								</Route> {/* <-- ЗАКРЫВАЮЩИЙ ТЕГ ДЛЯ /settings */}
-								{/* --- Конец маршрутов настроек --- */}
+								</Route>
 
-								{/* Старый отдельный роут для подписок УДАЛЕН */}
 
-							</Route> {/* <-- Закрывающий тег для ProtectedRoute */}
+							</Route>
 
-							{/* Редирект с главной */}
 							<Route path='/' element={<RootRedirect />} />
 
-							{/* Глобальный 404 */}
 							<Route path='*' element={<NotFound />} />
 						</Routes>
 					</SidebarProvider>

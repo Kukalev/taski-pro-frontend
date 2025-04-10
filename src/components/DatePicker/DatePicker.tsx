@@ -2,28 +2,22 @@ import React, {useEffect, useRef, useState} from 'react'
 import {TaskDatePickerProps} from './types.ts'
 import {
   addMonths,
+  format,
   isBefore,
+  isSameDay,
   isSameMonth,
   isToday,
   startOfMonth,
-  subMonths,
-  format,
-  isSameDay
+  subMonths
 } from 'date-fns'
 import ReactDOM from 'react-dom'
-import CalendarHeader from './components/CalendarHeader.tsx'
-import WeekdaysHeader from './components/WeekdaysHeader.tsx'
-import CalendarGrid from './components/CalendarGrid.tsx'
-import CalendarFooter from './components/CalendarFooter.tsx'
-import { ru } from 'date-fns/locale'
+import {ru} from 'date-fns/locale'
 
-// Убедимся, что интерфейс ожидает taskId как строку
 interface TaskDatePickerProps {
   taskId: string; // <-- Тип string
   selectedDate: Date | null;
   onDateChange: (taskId: string, date: Date | null) => void;
   onClose: () => void;
-  // anchorEl?: HTMLElement; // Можно добавить, если хочешь использовать для позиционирования
 }
 
 const DatePicker: React.FC<TaskDatePickerProps> = ({
@@ -33,11 +27,9 @@ const DatePicker: React.FC<TaskDatePickerProps> = ({
   onClose
 }) => {
   const today = new Date();
-  today.setHours(0, 0, 0, 0); // Устанавливаем время на начало дня для корректного сравнения
+  today.setHours(0, 0, 0, 0);
   
-  // Всегда инициализируем на текущий месяц, независимо от выбранной даты
   const [currentMonth, setCurrentMonth] = useState(startOfMonth(selectedDate || today));
-  // Начальное состояние - невидимый календарь
   const [isVisible, setIsVisible] = useState(false);
   const [calendarPosition, setCalendarPosition] = useState({ top: 0, left: 0 });
   const calendarRef = useRef<HTMLDivElement>(null);
@@ -45,21 +37,18 @@ const DatePicker: React.FC<TaskDatePickerProps> = ({
   
   const daysOfWeek = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
   
-  // Находим иконку календаря и рассчитываем позицию ДО показа календаря
   useEffect(() => {
     const findTriggerAndPosition = () => {
       const triggerElement = document.querySelector(`[data-task-id="${taskId}"]`);
       if (triggerElement instanceof HTMLElement) {
         triggerRef.current = triggerElement;
         
-        // Рассчитываем позицию сразу
         const rect = triggerElement.getBoundingClientRect();
         setCalendarPosition({ 
           top: rect.bottom + 5, 
           left: rect.left 
         });
         
-        // Показываем календарь только после установки позиции
         setTimeout(() => setIsVisible(true), 50);
         return true;
       }
@@ -72,7 +61,6 @@ const DatePicker: React.FC<TaskDatePickerProps> = ({
     }
   }, [taskId]);
   
-  // Обработчик клика вне календаря
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       const clickedElement = e.target as HTMLElement;
@@ -92,37 +80,36 @@ const DatePicker: React.FC<TaskDatePickerProps> = ({
   }, [onClose, taskId]);
   
   const prevMonth = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Останавливаем всплытие
-    // Проверяем, не пытаемся ли мы перейти к месяцу раньше текущего
+    e.stopPropagation();
+
     const prevMonthDate = subMonths(currentMonth, 1);
     if (isBefore(prevMonthDate, startOfMonth(today)) && !isSameMonth(prevMonthDate, today)) {
-      return; // Не позволяем переходить к месяцам раньше текущего
+      return;
     }
     setCurrentMonth(prevMonthDate);
   };
   
   const nextMonth = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Останавливаем всплытие
+    e.stopPropagation();
     setCurrentMonth(addMonths(currentMonth, 1));
   };
   
   const handleSelectDate = (date: Date, e: React.MouseEvent) => {
     e.stopPropagation();
     if (isBefore(date, today) && !isToday(date)) return;
-    onDateChange(taskId, date); // Передаем taskId (строку)
+    onDateChange(taskId, date);
   };
   
   const handleClearDate = (e: React.MouseEvent) => {
       e.stopPropagation();
-      onDateChange(taskId, null); // Передаем taskId (строку)
+      onDateChange(taskId, null);
   }
   
   const handleSelectToday = (e: React.MouseEvent) => {
      e.stopPropagation();
-     handleSelectDate(today, e); // Вызывает handleSelectDate, который передаст taskId
+     handleSelectDate(today, e);
   }
   
-  // Создаем компонент календаря, который будет изначально невидимым
   const calendarComponent = (
     <div 
       ref={calendarRef}
@@ -156,7 +143,6 @@ const DatePicker: React.FC<TaskDatePickerProps> = ({
         </button>
       </div>
       
-      {/* Дни недели */}
       <div className="grid grid-cols-7 gap-1 mb-2">
         {daysOfWeek.map(day => (
           <div key={day} className="text-center text-xs text-gray-500 font-medium py-1">
@@ -165,37 +151,28 @@ const DatePicker: React.FC<TaskDatePickerProps> = ({
         ))}
       </div>
       
-      {/* Дни месяца */}
       <div className="grid grid-cols-7 gap-1">
         {(() => {
-          // Вычисляем первый день месяца
           const firstDayOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
-          // День недели первого дня (0 - воскресенье, 1 - понедельник и т.д.)
           let firstDayWeekday = firstDayOfMonth.getDay();
-          // Переводим в формат 0 - понедельник, 6 - воскресенье
           firstDayWeekday = firstDayWeekday === 0 ? 6 : firstDayWeekday - 1;
           
-          // Вычисляем последний день месяца
           const lastDayOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
           const daysInMonth = lastDayOfMonth.getDate();
           
-          // Массив для всех дней, которые будем отображать
           const calendarDays = [];
           
-          // Дни предыдущего месяца
           const prevMonthLastDay = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 0).getDate();
           for (let i = 0; i < firstDayWeekday; i++) {
             const day = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, prevMonthLastDay - firstDayWeekday + i + 1);
             calendarDays.push(day);
           }
           
-          // Дни текущего месяца
           for (let i = 1; i <= daysInMonth; i++) {
             const day = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), i);
             calendarDays.push(day);
           }
           
-          // Дни следующего месяца (добавляем столько, чтобы общее число было кратно 7)
           const remainingDays = 7 - (calendarDays.length % 7);
           if (remainingDays < 7) {
             for (let i = 1; i <= remainingDays; i++) {
@@ -204,7 +181,6 @@ const DatePicker: React.FC<TaskDatePickerProps> = ({
             }
           }
           
-          // Рендерим все дни
           return calendarDays.map((day, index) => {
             const isCurrentMonth = day.getMonth() === currentMonth.getMonth();
             const isSelectedDay = selectedDate ? isSameDay(day, selectedDate) : false;
@@ -254,7 +230,6 @@ const DatePicker: React.FC<TaskDatePickerProps> = ({
     </div>
   );
   
-  // Рендерим через портал в body
   return ReactDOM.createPortal(calendarComponent, document.body);
 };
 

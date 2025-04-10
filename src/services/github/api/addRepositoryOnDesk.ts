@@ -1,10 +1,8 @@
-// src/services/github/api/addRepositoryOnDesk.ts
 import api from '../../api'
 import {AddGitRepositoryDto, GitRepositoryResponseDto} from '../types'
 
 const BASE_URL = '/v1/desk/'; // Уточнен
 
-// Переименовано в camelCase
 export const addRepositoryOnDesk = async (
 	deskId: number,
 	repositoryData: AddGitRepositoryDto
@@ -20,6 +18,6 @@ export const addRepositoryOnDesk = async (
 		return response.data;
 	} catch (error) {
 		console.error('[addRepositoryOnDesk] Ошибка при добавлении репозитория:', error);
-		throw error; // Перебрасываем для обработки выше
+		throw error;
 	}
 };

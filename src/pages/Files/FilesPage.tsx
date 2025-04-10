@@ -11,7 +11,9 @@ import {
 } from 'react-icons/fa'
 import {DeskFile, FilesService} from '../../services/Files/Files'
 import {DeskOutletContext} from './types'
-import { DeleteFileModal } from '../../components/modals/DeleteFileModal/DeleteFileModal'
+import {
+    DeleteFileModal
+} from '../../components/modals/DeleteFileModal/DeleteFileModal'
 
 export const FilesPage: React.FC = () => {
     const { desk, hasEditPermission } = useOutletContext<DeskOutletContext>();
@@ -192,7 +194,7 @@ export const FilesPage: React.FC = () => {
                                             <button
                                                 onClick={() => handleDeleteClick(file.filename)}
                                                 disabled={isUploading || isDeleting}
-                                                className={`text-gray-400 hover:text-red-600 transition-colors duration-150 ${(isUploading || isDeleting) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                className={`text-gray-400 hover:text-red-600 transition-colors duration-150 ${(isUploading || isDeleting) ? 'opacity-50 cursor-pointer' : 'cursor-pointer'}`}
                                                 title="Удалить"
                                             >
                                                 <FaTrash size="1.1em"/>

@@ -1,7 +1,7 @@
 // src/pages/gitHub/components/Commits/Commits.tsx
 import React from 'react'
 import {CommitsListProps} from './types'
-import { ThemedButton } from '../../../../components/ui/ThemedButton'
+import {ThemedButton} from '../../../../components/ui/ThemedButton'
 
 // Функция для определения тега/типа коммита на основе текста сообщения
 const getCommitTag = (message?: string): { text: string; color: string } => {
@@ -135,9 +135,9 @@ export const CommitsList: React.FC<CommitsListProps> = ({
 									rel="noopener noreferrer"
 									className={`block snap-start ${commitUrl ? 'cursor-pointer' : 'cursor-default'}`}
 								>
-									<div className="border rounded shadow-sm hover:shadow-md transition-all duration-200 bg-white overflow-hidden h-40 flex flex-col justify-between hover:border-blue-400">
+									<div className="border rounded shadow-sm hover:shadow-md transition-all duration-200 h-50 bg-white overflow-hidden h-40 flex flex-col justify-between hover:border-blue-400">
 										<div className="px-4 py-3 border-b">
-											<div className="flex items-center mb-2">
+											<div className="flex items-center mb-2 flex-grow">
 												{commit.authorAvatarUrl ? (
 													<img 
 														src={commit.authorAvatarUrl} 
@@ -159,11 +159,11 @@ export const CommitsList: React.FC<CommitsListProps> = ({
 											</div>
 										</div>
 										
-										<div className="p-4 flex flex-col justify-between flex-grow">
+										<div className="p-4 flex flex-col flex-grow">
 											<h4 className="text-sm font-medium mb-1 line-clamp-2" title={title}>
 												{title}
 											</h4>
-											<div className="mt-2 flex justify-between items-center text-xs text-gray-500">
+											<div className="mt-auto flex justify-between items-center text-xs text-gray-500 pt-2">
 												<div>{commit.commitDate ? new Date(commit.commitDate).toLocaleDateString() + ' ' + new Date(commit.commitDate).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'Дата неизвестна'}</div>
 												<div className="font-mono bg-gray-100 px-2 py-1 rounded">{formatCommitHash(commit.commitHash)}</div>
 											</div>

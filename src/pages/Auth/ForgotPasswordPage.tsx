@@ -1,5 +1,11 @@
 import React, {useEffect, useState} from 'react'
-import {MdLockReset, MdOutlineEmail, MdOutlineInfo, MdPassword, MdCheckCircleOutline} from 'react-icons/md' // Добавили иконки
+import {
+    MdCheckCircleOutline,
+    MdLockReset,
+    MdOutlineEmail,
+    MdOutlineInfo,
+    MdPassword
+} from 'react-icons/md' // Добавили иконки
 import {SlLock} from 'react-icons/sl'
 import {Link, useNavigate} from 'react-router-dom'
 import {Button} from '../../components/ui/Button'
@@ -102,7 +108,6 @@ export const ForgotPasswordPage = () => {
         }
     };
 
-    // --- Шаг 2: Ввод Кода ---
 
     const validateCodeForm = (): boolean => {
         const isCodeEmpty = !code.trim();
@@ -117,14 +122,13 @@ export const ForgotPasswordPage = () => {
         setCode(value);
         if (value.trim()) setFieldErrors({ ...fieldErrors, code: false });
         if (error) setError(null);
-        if (successMessage) setSuccessMessage(null); // Убираем сообщение об отправке кода при вводе
+        if (successMessage) setSuccessMessage(null);
     };
 
-    // НОВЫЙ ОБРАБОТЧИК для проверки кода
     const handleVerifyCodeSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         setError(null);
-        setSuccessMessage(null); // Сброс предыдущих сообщений
+        setSuccessMessage(null);
         setIsMessageVisible(false);
 
         if (!validateCodeForm()) {
@@ -148,7 +152,6 @@ export const ForgotPasswordPage = () => {
                 return; // Остаемся на этом шаге
             }
 
-            // Код верный!
             console.log(`[ForgotPasswordPage] Код ${code} верный для email ${email}.`);
             setSuccessMessage('Код подтвержден. Теперь введите новый пароль.'); // Сообщение об успехе шага
             setPageStep('enterNewPassword'); // ---> Переключаем на шаг ВВОДА ПАРОЛЯ <---
@@ -163,7 +166,6 @@ export const ForgotPasswordPage = () => {
     };
 
 
-    // --- Шаг 3: Ввод Нового пароля ---
 
     const validatePasswordForm = (): boolean => {
         const errors = {

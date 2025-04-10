@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import {useState} from 'react'
 
 interface DeleteUserModalProps {
   isOpen: boolean;
@@ -26,7 +26,6 @@ export const DeleteUserModal = ({
 
     setError('');
     try {
-      // Вызываем колбэк для удаления
       await onConfirm(userId);
       onClose();
     } catch (error: any) {

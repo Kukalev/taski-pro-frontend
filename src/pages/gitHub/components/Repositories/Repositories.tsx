@@ -1,9 +1,9 @@
 // src/pages/gitHub/components/Repositories/Repositories.tsx
-import React, { useState } from "react";
-import { RepositoriesListProps } from "./types";
-import { ThemedButton } from "../../../../components/ui/ThemedButton";
-import { SlReload } from "react-icons/sl";
-import { IoClose } from "react-icons/io5";
+import React, {useState} from 'react'
+import {RepositoriesListProps} from './types'
+import {ThemedButton} from '../../../../components/ui/ThemedButton'
+import {SlReload} from 'react-icons/sl'
+import {IoClose} from 'react-icons/io5'
 
 export const RepositoriesList: React.FC<RepositoriesListProps> = ({
   repositories,
@@ -11,12 +11,12 @@ export const RepositoriesList: React.FC<RepositoriesListProps> = ({
   error,
   onSelectRepo,
   onSyncRepo,
-  onDeleteRepo,
+  onDeleteRepo, 
   onAddRepoClick,
   hasEditPermission,
 }) => {
   const [syncingRepoId, setSyncingRepoId] = useState<number | null>(null);
-  const [deletingRepoId, setDeletingRepoId] = useState<number | null>(null);
+
 
   const handleSync = async (repoId: number, e: React.MouseEvent) => {
     e.stopPropagation(); // Предотвращаем переход к коммитам
@@ -32,31 +32,20 @@ export const RepositoriesList: React.FC<RepositoriesListProps> = ({
     }
   };
 
-  const handleDelete = async (repoId: number, e: React.MouseEvent) => {
+  // УПРОЩАЕМ handleDelete
+  const handleDelete = (repoId: number, e: React.MouseEvent) => {
     e.stopPropagation(); // Предотвращаем переход к коммитам
-    // Добавить подтверждение перед удалением!
-    if (
-      !window.confirm(
-        `Вы уверены, что хотите удалить репозиторий ID: ${repoId}?`
-      )
-    ) {
-      return;
-    }
-    setDeletingRepoId(repoId);
-    try {
-      await onDeleteRepo(repoId);
-      // Можно добавить уведомление об успехе
-    } catch (err) {
-      console.error("Delete error in component", err);
-    } finally {
-      setDeletingRepoId(null);
-    }
+    // Больше не нужно подтверждение здесь
+    // Просто вызываем колбэк, который откроет модалку в GitHubPage
+    onDeleteRepo(repoId);
+    // Логика с setDeletingRepoId и try/catch удалена
   };
 
   if (loading) {
     return (
       <div className="flex justify-center items-center h-40">
         <div className="animate-pulse flex flex-col items-center">
+          {/* ... SVG и текст загрузки ... */}
           <svg
             className="h-8 w-8 text-gray-400"
             viewBox="0 0 24 24"
@@ -80,6 +69,7 @@ export const RepositoriesList: React.FC<RepositoriesListProps> = ({
   return (
     <div>
       <div className="flex justify-between items-center mb-4">
+        {/* ... Заголовок и кнопка Добавить ... */}
         <h3 className="text-lg font-medium">Привязанные репозитории</h3>
         {hasEditPermission && (
           <ThemedButton
@@ -99,6 +89,7 @@ export const RepositoriesList: React.FC<RepositoriesListProps> = ({
               className="border rounded shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden cursor-pointer bg-white hover:border-blue-400"
               onClick={() => onSelectRepo(repo.id)}
             >
+              {/* ... Содержимое карточки репозитория ... */}
               <div className="p-3">
                 <div className="flex items-center mb-2">
                   <svg
@@ -129,12 +120,12 @@ export const RepositoriesList: React.FC<RepositoriesListProps> = ({
                   )}
                 </div>
               </div>
-
               {hasEditPermission && (
                 <div className="flex justify-end border-t bg-gray-50 px-2 py-1">
+                  {/* ... Кнопка синхронизации ... */}
                   <button
                     onClick={(e) => handleSync(repo.id, e)}
-                    className="p-1 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-full mr-1 transition-colors"
+                    className="p-1 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-full mr-1 transition-colors cursor-pointer"
                     disabled={syncingRepoId === repo.id}
                     title="Синхронизировать"
                   >
@@ -146,15 +137,15 @@ export const RepositoriesList: React.FC<RepositoriesListProps> = ({
                       }`}
                     />
                   </button>
+                  {/* ОБНОВЛЕННАЯ КНОПКА УДАЛЕНИЯ */}
                   <button
                     onClick={(e) => handleDelete(repo.id, e)}
-                    className="p-1 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
-                    disabled={deletingRepoId === repo.id}
+                    className="p-1 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors cursor-pointer"
+                    // УДАЛЯЕМ disabled={deletingRepoId === repo.id}
                     title="Удалить"
                   >
                     <IoClose
-                      className={`w-4 h-4 ${
-                        deletingRepoId === repo.id ? "text-red-600" : ""
+                      className={`w-4 h-4 ${'' // УДАЛЯЕМ условие для text-red-600
                       }`}
                     />
                   </button>
@@ -165,6 +156,7 @@ export const RepositoriesList: React.FC<RepositoriesListProps> = ({
         </div>
       ) : (
         <div className="text-center py-8 bg-gray-50 rounded-lg">
+          {/* ... Состояние, когда нет репозиториев ... */}
           <svg
             className="h-12 w-12 text-gray-400 mx-auto mb-3"
             viewBox="0 0 24 24"

@@ -10,11 +10,11 @@ export const AddRepositoryModal: React.FC<AddRepositoryModalProps> = ({
 	onRepoAdded,
 }) => {
 	const [repositoryUrl, setRepositoryUrl] = useState('');
-	const [branchName, setBranchName] = useState(''); // По умолчанию пустая строка
+	const [branchName, setBranchName] = useState('');
 	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [isPartialSuccess, setIsPartialSuccess] = useState(false);
-	const modalRef = useRef<HTMLDivElement>(null); // <-- Добавляем ref для модального окна
+	const modalRef = useRef<HTMLDivElement>(null);
 
 	const resetForm = () => {
 		setRepositoryUrl('');
@@ -24,7 +24,6 @@ export const AddRepositoryModal: React.FC<AddRepositoryModalProps> = ({
 		setIsPartialSuccess(false);
 	};
 
-	// handleClose теперь вызывается только при клике на крестик или вне окна
 	const handleClose = useCallback(() => {
 		resetForm();
 		onClose();
@@ -40,22 +39,21 @@ export const AddRepositoryModal: React.FC<AddRepositoryModalProps> = ({
 
 		const repoData: AddGitRepositoryDto = {
 			repositoryUrl,
-			branchName: branchName.trim() || undefined, // Отправляем undefined если пустая строка
+			branchName: branchName.trim() || undefined,
 		};
 
 		try {
 			console.log("[AddRepositoryModal] Отправка данных:", repoData, "для deskId:", deskId);
 			const newRepo = await GitHubService.addRepositoryOnDesk(deskId, repoData);
 			console.log("[AddRepositoryModal] Репозиторий успешно добавлен:", newRepo);
-			onRepoAdded(newRepo); // Вызываем callback родителя
-			handleClose(); // Закрываем модалку после успеха
+			onRepoAdded(newRepo);
+			handleClose();
 		} catch (err) {
 			console.error("[AddRepositoryModal] Ошибка добавления:", err);
 			const errorMessage = GitHubService.handleError(err);
 			setError(errorMessage);
 			
-			// Если ошибка касается только синхронизации, но репозиторий добавлен
-			if (errorMessage.includes("Невозможно синхронизировать") || 
+			if (errorMessage.includes("Невозможно синхронизировать") ||
 				errorMessage.includes("Сервис недоступен")) {
 				setIsPartialSuccess(true);
 			}
@@ -64,14 +62,12 @@ export const AddRepositoryModal: React.FC<AddRepositoryModalProps> = ({
 		}
 	}, [deskId, repositoryUrl, branchName, isLoading, onRepoAdded, handleClose]); // Добавил handleClose в зависимости
 
-	// Обработчик клика вне модального окна
 	const handleOutsideClick = useCallback((event: MouseEvent) => {
 		if (modalRef.current && !modalRef.current.contains(event.target as Node)) {
 			handleClose();
 		}
 	}, [handleClose]);
 
-	// Добавляем/удаляем слушатель клика вне окна
 	useEffect(() => {
 		if (isOpen) {
 			document.addEventListener('mousedown', handleOutsideClick);
@@ -83,12 +79,10 @@ export const AddRepositoryModal: React.FC<AddRepositoryModalProps> = ({
 		};
 	}, [isOpen, handleOutsideClick]);
 
-	// Не рендерим ничего, если модалка закрыта
 	if (!isOpen || deskId === null) {
 		return null;
 	}
 
-	// Стили для кнопки Добавить
 	const submitButtonStyle: React.CSSProperties = {
 		backgroundColor: 'var(--theme-color)',
 		color: 'white',
@@ -98,8 +92,8 @@ export const AddRepositoryModal: React.FC<AddRepositoryModalProps> = ({
 		backgroundColor: 'var(--theme-color-dark)',
 	};
 	const submitButtonDisabledStyle: React.CSSProperties = {
-		backgroundColor: '#e5e7eb', // Цвет для disabled (пример Tailwind bg-gray-200)
-		color: '#9ca3af', // Цвет текста для disabled (пример Tailwind text-gray-400)
+		backgroundColor: '#e5e7eb',
+		color: '#9ca3af',
 		cursor: 'default'
 	};
 
