@@ -70,7 +70,7 @@ export const DeleteRepositoryModal: React.FC<DeleteRepositoryModalProps> = ({
 					>
 						Отмена
 					</button>
-					<ThemedButton c
+					<ThemedButton
 						onClick={onConfirm}
 						isLoading={isLoading}
 

@@ -11,7 +11,7 @@ export const RepositoriesList: React.FC<RepositoriesListProps> = ({
   error,
   onSelectRepo,
   onSyncRepo,
-  onDeleteRepo, 
+  onDeleteRepo,
   onAddRepoClick,
   hasEditPermission,
 }) => {
@@ -69,9 +69,9 @@ export const RepositoriesList: React.FC<RepositoriesListProps> = ({
   return (
     <div>
       <div className="flex justify-between items-center mb-4">
-        {/* ... Заголовок и кнопка Добавить ... */}
         <h3 className="text-lg font-medium">Привязанные репозитории</h3>
-        {hasEditPermission && (
+        {/* Кнопка "Добавить" в заголовке остается, если есть репозитории И права */}
+        {hasEditPermission && repositories.length > 0 && (
           <ThemedButton
             onClick={onAddRepoClick}
             className="py-1 px-3 rounded text-sm"
@@ -79,6 +79,7 @@ export const RepositoriesList: React.FC<RepositoriesListProps> = ({
             Добавить репозиторий
           </ThemedButton>
         )}
+        {/* Если репозиториев нет, кнопка будет ниже, по центру */}
       </div>
 
       {repositories.length > 0 ? (
