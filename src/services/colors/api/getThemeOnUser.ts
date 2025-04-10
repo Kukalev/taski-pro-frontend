@@ -5,10 +5,7 @@ export type ThemeMode = 'light' | 'dark';
 
 const GET_THEME_PATH = '/v1/background-colors/theme'; // Путь из Postman
 
-/**
- * Запрашивает сохраненный режим темы пользователя ('light' или 'dark') с бэкенда.
- * @returns {Promise<ThemeMode>} Режим темы ('light' или 'dark'). Возвращает 'light' по умолчанию при ошибках.
- */
+
 export const getThemeOnUser = async (): Promise<ThemeMode> => {
   try {
     console.log(`[getThemeOnUser] Запрос темы пользователя на путь: ${GET_THEME_PATH}`);
