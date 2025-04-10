@@ -10,18 +10,27 @@ import {
 } from 'react-icons/fa'
 
 const POLLING_INTERVAL = 1500; // Интервал поллинга в миллисекундах (1.5 секунды)
+const REFETCH_DEBOUNCE_DELAY = 1000; // Задержка перед перезапросом (1 секунда)
 
-const Gpt: React.FC<GptProps> = ({ deskId, taskId, canRequestAiHelp }) => {
+const Gpt: React.FC<GptProps> = ({ deskId, taskId, canRequestAiHelp, taskName, taskDescription, taskStack }) => {
 	const [recommendation, setRecommendation] = useState<GptRecommendationResponse | null>(null);
 	const [isLoading, setIsLoading] = useState(true);
 	const [isPolling, setIsPolling] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const pollingTimerRef = useRef<NodeJS.Timeout | null>(null);
+	const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
 	const clearPollingTimer = () => {
 		if (pollingTimerRef.current) {
 			clearTimeout(pollingTimerRef.current);
 			pollingTimerRef.current = null;
+		}
+	};
+
+	const clearDebounceTimer = () => {
+		if (debounceTimerRef.current) {
+			clearTimeout(debounceTimerRef.current);
+			debounceTimerRef.current = null;
 		}
 	};
 
@@ -33,6 +42,7 @@ const Gpt: React.FC<GptProps> = ({ deskId, taskId, canRequestAiHelp }) => {
 		}
 
 		if (isInitialRequest) {
+			console.log('[Gpt fetchRecommendation] Initial request, resetting state.');
 			setRecommendation(null);
 			setIsLoading(true);
 			setIsPolling(false);
@@ -43,14 +53,14 @@ const Gpt: React.FC<GptProps> = ({ deskId, taskId, canRequestAiHelp }) => {
 
 		try {
 			const now = new Date().toISOString();
-			console.log(`[Gpt Component] Вызов fetchRecommendation с currentTime: ${now}`);
-
+			console.log(`[Gpt fetchRecommendation] Вызов API с currentTime: ${now}`);
 			const response = await GptService.getAiRecommendation(deskId, taskId, now);
-
+			console.log('[Gpt fetchRecommendation] Получен ответ API:', response);
 			setRecommendation(response);
 			setIsLoading(false);
 
 			if (response.status === 'waiting') {
+				console.log('[Gpt fetchRecommendation] Статус waiting, запускаем поллинг.');
 				setIsPolling(true);
 				pollingTimerRef.current = setTimeout(() => fetchRecommendation(false), POLLING_INTERVAL);
 			} else {
@@ -60,7 +70,7 @@ const Gpt: React.FC<GptProps> = ({ deskId, taskId, canRequestAiHelp }) => {
 				}
 			}
 		} catch (err: any) {
-			console.error("Ошибка при запросе AI рекомендации:", err);
+			console.error("[Gpt fetchRecommendation] Ошибка API:", err);
 			setError(err.response?.data?.message || err.message || 'Не удалось получить рекомендацию от AI.');
 			setIsLoading(false);
 			setIsPolling(false);
@@ -68,22 +78,33 @@ const Gpt: React.FC<GptProps> = ({ deskId, taskId, canRequestAiHelp }) => {
 	}, [deskId, taskId]);
 
 	useEffect(() => {
+		console.log('[Gpt useEffect] Запуск. Зависимости:', { deskId, taskId, canRequestAiHelp, taskName, taskDescription, taskStack });
+		clearDebounceTimer();
+
 		if (canRequestAiHelp && deskId && taskId) {
-			fetchRecommendation(true);
+			console.log('[Gpt useEffect] Установка таймера debounce...');
+			debounceTimerRef.current = setTimeout(() => {
+				console.log('[Gpt setTimeout] Таймер сработал! Вызов fetchRecommendation.');
+				fetchRecommendation(true);
+			}, REFETCH_DEBOUNCE_DELAY);
 		} else {
+			console.log('[Gpt useEffect] Пропуск/сброс состояния AI.');
 			setIsLoading(false);
 			setIsPolling(false);
 			setError(null);
 			setRecommendation(null);
+			clearPollingTimer();
 			if (!canRequestAiHelp) {
 				console.log('[Gpt Component] Помощь AI недоступна.');
 			}
 		}
 
 		return () => {
+			console.log('[Gpt useEffect] Очистка таймеров.');
 			clearPollingTimer();
+			clearDebounceTimer();
 		};
-	}, [deskId, taskId, canRequestAiHelp, fetchRecommendation]);
+	}, [deskId, taskId, canRequestAiHelp, taskName, taskDescription, taskStack, fetchRecommendation]);
 
 	const renderContent = () => {
 		if (!canRequestAiHelp) {

@@ -327,10 +327,13 @@ const TaskDetails: React.FC<TaskDetailsProps> = ({
               onStackChange={handleStackChange}
             />
 
-            <Gpt 
-              deskId={deskId} 
-              taskId={currentTask.taskId} 
-              canRequestAiHelp={canRequestAiHelp} 
+            <Gpt
+              deskId={deskId}
+              taskId={currentTask.taskId}
+              canRequestAiHelp={canRequestAiHelp}
+              taskName={currentTask.taskName || ''}
+              taskDescription={currentTask.taskDescription || null}
+              taskStack={currentTask.taskStack || null}
             />
 
           </div>

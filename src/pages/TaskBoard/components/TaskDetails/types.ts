@@ -94,3 +94,12 @@ export interface TaskStackProps {
   onStackChange: (newStackArray: string[]) => void;
   canEdit: boolean;
 }
+
+export interface GptProps {
+  deskId: number;
+  taskId: number;
+  canRequestAiHelp: boolean;
+  taskName: string;
+  taskDescription: string | null;
+  taskStack: string | null;
+}
