@@ -91,6 +91,6 @@ export interface TaskExecutorsProps {
 export interface TaskStackProps {
   deskId: number;
   task: Task;
-  onTaskUpdate: (updatedTask: Task) => void;
+  onStackChange: (newStackArray: string[]) => void;
   canEdit: boolean;
 }

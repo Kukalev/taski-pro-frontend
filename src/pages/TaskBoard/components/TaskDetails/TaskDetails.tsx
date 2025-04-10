@@ -26,6 +26,15 @@ import {
 import { TaskDetailsProps, Task as LocalTask } from './types'
 import { addHours } from 'date-fns';
 
+// --- ДОБАВЛЯЕМ ФУНКЦИЮ КОНВЕРТАЦИИ МАССИВА В СТРОКУ ---
+// Скопируем ее сюда или импортируем, если вынесли в utils
+const cleanTag = (tag: string): string => tag.trim().replace(/[^a-zA-Z0-9#+.]$/, '');
+const stackArrayToString = (stackArray: string[]): string | null => {
+	const uniqueCleanedArray = [...new Set(stackArray.map(cleanTag).filter(tag => tag !== ''))];
+	return uniqueCleanedArray.length > 0 ? uniqueCleanedArray.join(' ') : null;
+};
+// ---------------------------------------------------------
+
 const TaskDetails: React.FC<TaskDetailsProps> = ({
   task: initialTask,
   deskId,
@@ -82,8 +91,9 @@ const TaskDetails: React.FC<TaskDetailsProps> = ({
     ) => {
     if (!currentTask?.taskId) return null;
 
-    const previousTaskState = currentTask;
+    const previousTaskState = { ...currentTask }; // Сохраняем предыдущее состояние
 
+    // Рассчитываем предсказанное состояние (как и раньше)
     let updatedTaskPreview: LocalTask;
     if ('executorUsernames' in changes && changes.executorUsernames) {
         const currentExecutors = currentTask.executors || [];
@@ -96,11 +106,8 @@ const TaskDetails: React.FC<TaskDetailsProps> = ({
         updatedTaskPreview = { ...currentTask, ...(changes as Partial<LocalTask>) };
     }
 
-    console.log('[TaskDetails] Оптимистично обновляем локальное состояние:', updatedTaskPreview);
-    setCurrentTask(updatedTaskPreview);
-
-    console.log('[TaskDetails] Вызываем onTaskUpdateProp (TaskBoardPage) с ОПТИМИСТИЧНЫМ состоянием');
-    onTaskUpdateProp(updatedTaskPreview);
+    console.log('[TaskDetails] Оптимистично обновляем ЛОКАЛЬНОЕ состояние:', updatedTaskPreview);
+    setCurrentTask(updatedTaskPreview); // Обновляем локальное состояние СРАЗУ
 
     try {
       console.log('[TaskDetails] Отправляем API запрос:', changes);
@@ -108,22 +115,29 @@ const TaskDetails: React.FC<TaskDetailsProps> = ({
       const finalUpdatedTask = updatedServiceTask as LocalTask;
       console.log('[TaskDetails] API успешно ответил:', finalUpdatedTask);
 
-      if (JSON.stringify(finalUpdatedTask) !== JSON.stringify(updatedTaskPreview)) {
-          console.warn('[TaskDetails] Ответ API отличается от оптимистичного предсказания. Обновляем состояние финальными данными.');
-          setCurrentTask(finalUpdatedTask);
-          onTaskUpdateProp(finalUpdatedTask);
-      } else {
-           setCurrentTask(finalUpdatedTask);
-      }
+      // ---- ДОБАВЛЯЕМ ЛОГ ДЛЯ ПРОВЕРКИ ----
+      console.log('[TaskDetails] Проверка finalUpdatedTask.taskStack от API:', finalUpdatedTask.taskStack);
+      // -----------------------------------
+
+      // Обновляем локальное состояние окончательными данными API
+      console.log('[TaskDetails] Обновляем локальное состояние финальными данными API.');
+      setCurrentTask(finalUpdatedTask);
+
+      // Уведомляем родителя только после успеха API
+      console.log('[TaskDetails] Вызываем onTaskUpdateProp (TaskBoardPage) с ФИНАЛЬНЫМИ данными API.');
+      onTaskUpdateProp(finalUpdatedTask);
 
       return finalUpdatedTask;
 
     } catch (error: any) {
       console.error('[TaskDetails] Ошибка при обновлении задачи через API:', error);
 
-      console.log('[TaskDetails] Откатываем изменения из-за ошибки API. Предыдущее состояние:', previousTaskState);
-      setCurrentTask(previousTaskState);
-      onTaskUpdateProp(previousTaskState);
+      console.log('[TaskDetails] Откатываем ЛОКАЛЬНЫЕ изменения из-за ошибки API:', previousTaskState);
+      setCurrentTask(previousTaskState); // Откатываем локальное состояние
+
+      // ---- УВЕДОМЛЯЕМ РОДИТЕЛЯ ОБ ОШИБКЕ/ОТКАТЕ ----
+      console.log('[TaskDetails] Вызываем onTaskUpdateProp (TaskBoardPage) с ОТКАТАННЫМ состоянием.');
+      onTaskUpdateProp(previousTaskState); // <<< ОТПРАВЛЯЕМ ОТКАТАННОЕ СОСТОЯНИЕ
 
       const action = 'executorUsernames' in changes ? 'добавить' : ('removeExecutorUsernames' in changes ? 'удалить' : 'обновить');
       const target = 'executorUsernames' in changes ? changes.executorUsernames.join(', ') : ('removeExecutorUsernames' in changes ? changes.removeExecutorUsernames.join(', ') : '');
@@ -196,6 +210,54 @@ const TaskDetails: React.FC<TaskDetailsProps> = ({
      saveTaskChanges(updates);
   }, [saveTaskChanges]);
 
+  // --- ОБНОВЛЕННЫЙ ОБРАБОТЧИК ДЛЯ СТЕКА ---
+  const handleStackChange = useCallback(async (newStackArray: string[]) => {
+      if (!currentTask?.taskId) return;
+
+      console.log('[TaskDetails] Получен новый стек (массив) из TaskStack:', newStackArray);
+      const newStackString = stackArrayToString(newStackArray);
+      console.log('[TaskDetails] Конвертирован в строку для API:', newStackString);
+
+      const previousTaskState = { ...currentTask }; // Сохраняем старое состояние
+      const updatedTaskPreview: LocalTask = { ...currentTask, taskStack: newStackString }; // Предсказанное состояние
+
+      // 1. Оптимистично обновляем ЛОКАЛЬНОЕ состояние
+      console.log('[TaskDetails] Оптимистично обновляем локальное состояние (стек):', updatedTaskPreview);
+      setCurrentTask(updatedTaskPreview);
+
+      try {
+          // 2. Вызываем СПЕЦИАЛИЗИРОВАННЫЙ сервис updateTaskStack
+          console.log(`[TaskDetails] Вызов TaskService.updateTaskStack для задачи ${currentTask.taskId} с payload:`, { taskStack: newStackString ?? '' });
+          // Важно: updateTaskStack, как мы видели, не возвращает обновленную задачу.
+          // Поэтому мы не можем использовать его ответ для финального обновления.
+          // Мы просто ждем успеха или ошибки.
+          await TaskService.updateTaskStack(deskId, currentTask.taskId, { taskStack: newStackString ?? '' });
+          console.log('[TaskDetails] TaskService.updateTaskStack успешно выполнен.');
+
+          // 3. После УСПЕХА API, уведомляем родителя ОПТИМИСТИЧНЫМ состоянием,
+          //    так как API не вернул финальное состояние.
+          console.log('[TaskDetails] Вызываем onTaskUpdateProp (TaskBoardPage) с ОПТИМИСТИЧНЫМ состоянием (стек).');
+          onTaskUpdateProp(updatedTaskPreview);
+
+      } catch (error: any) {
+          console.error('[TaskDetails] Ошибка при вызове TaskService.updateTaskStack:', error);
+
+          // 4. Откатываем ЛОКАЛЬНОЕ состояние при ошибке
+          console.log('[TaskDetails] Откатываем ЛОКАЛЬНЫЕ изменения стека из-за ошибки API:', previousTaskState);
+          setCurrentTask(previousTaskState);
+
+          // 5. Уведомляем родителя ОБ ОТКАТЕ
+          console.log('[TaskDetails] Вызываем onTaskUpdateProp (TaskBoardPage) с ОТКАТАННЫМ состоянием (стек).');
+          onTaskUpdateProp(previousTaskState);
+
+          // Показываем сообщение об ошибке
+          const message = error.response?.data?.message || error.message || 'Не удалось сохранить стек.';
+          alert(`Ошибка сохранения стека: ${message}`);
+      }
+
+  }, [currentTask, deskId, onTaskUpdateProp]);
+  // --------------------------------------------
+
   const isCompleted = currentTask?.statusType === StatusType.COMPLETED;
 
   return (
@@ -262,6 +324,7 @@ const TaskDetails: React.FC<TaskDetailsProps> = ({
               deskId={deskId}
               task={currentTask}
               canEdit={canChangeStack}
+              onStackChange={handleStackChange}
             />
 
             <Gpt 

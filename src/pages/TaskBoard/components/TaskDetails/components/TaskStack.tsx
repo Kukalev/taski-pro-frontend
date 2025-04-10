@@ -1,10 +1,10 @@
 import React, {useEffect, useRef, useState, useCallback} from 'react'
-import {TaskService} from '../../../../../services/task/Task'
 import {Task} from '../../../../../services/task/types/task.types'
 import {Input} from '../../../../../components/ui/Input' // Предполагаем наличие Input
 import {Button} from '../../../../../components/ui/Button' // И кнопки
 import {FaTimes} from 'react-icons/fa' // Иконка для очистки поиска
 import {BsStack} from 'react-icons/bs'
+import {TaskStackProps} from '../types'
 
 // Список предопределенных тегов (без запятых!)
 const PREDEFINED_STACK_TAGS = [...new Set([
@@ -14,12 +14,6 @@ const PREDEFINED_STACK_TAGS = [...new Set([
 	'HTML', 'CSS', 'Docker', 'Kubernetes', 'AWS', 'Azure', 'GCP', // Добавим SQL, если его не было
     'SQL'
 ])].sort();
-
-interface TaskStackProps {
-	deskId: number;
-	task: Task; // Передаем всю задачу, чтобы иметь доступ к taskId и taskStack
-	canEdit: boolean; // Флаг, можно ли редактировать
-}
 
 // ---> ИЗМЕНЕНИЕ: Функция очистки тега <---
 const cleanTag = (tag: string): string => {
@@ -44,15 +38,13 @@ const stackArrayToString = (stackArray: string[]): string | null => {
 	return uniqueCleanedArray.length > 0 ? uniqueCleanedArray.join(' ') : null;
 }
 
-export const TaskStack: React.FC<TaskStackProps> = ({ deskId, task,  canEdit }) => {
+export const TaskStack: React.FC<TaskStackProps> = ({ deskId, task, canEdit, onStackChange }) => {
 	const [isOpen, setIsOpen] = useState(false);
 	const [searchTerm, setSearchTerm] = useState('');
     // Состояние для тегов ВНУТРИ редактора (выпадающего списка)
 	const [selectedStack, setSelectedStack] = useState<string[]>(stackStringToArray(task.taskStack));
     // Состояние для тегов, ОТОБРАЖАЕМЫХ при закрытом списке
     const [displayedStack, setDisplayedStack] = useState<string[]>(stackStringToArray(task.taskStack)); // <-- НОВОЕ СОСТОЯНИЕ
-	const [isLoading, setIsLoading] = useState(false);
-	const [error, setError] = useState<string | null>(null);
 
 	// ---> НОВОЕ: Реф для ссылки на элемент дропдауна <---
 	const dropdownRef = useRef<HTMLDivElement>(null);
@@ -60,13 +52,12 @@ export const TaskStack: React.FC<TaskStackProps> = ({ deskId, task,  canEdit }) 
     // Обернем handleCancel в useCallback для стабильности ссылки
     const handleCancel = useCallback(() => {
         setIsOpen(false);
-        setError(null);
         setSearchTerm('');
         // Сброс обоих состояний из актуального task.taskStack
         const currentStackArray = stackStringToArray(task.taskStack);
         setSelectedStack(currentStackArray);
         setDisplayedStack(currentStackArray);
-    }, [task.taskStack]); // Зависит только от task.taskStack
+    }, [task.taskStack]);
 
 	// ---> НОВОЕ: useEffect для обработки кликов вне <---
 	useEffect(() => {
@@ -108,7 +99,6 @@ export const TaskStack: React.FC<TaskStackProps> = ({ deskId, task,  canEdit }) 
             const currentStackArray = stackStringToArray(task.taskStack);
             setSelectedStack(currentStackArray);
             setDisplayedStack(currentStackArray); // Важно синхронизировать и это
-            setError(null);
             setSearchTerm('');
         }
         // Если закрываем через toggle (маловероятно, обычно через Cancel/Save/ClickOutside)
@@ -131,29 +121,18 @@ export const TaskStack: React.FC<TaskStackProps> = ({ deskId, task,  canEdit }) 
 	);
 
 	const handleSave = async () => {
-		setIsLoading(true);
-		setError(null);
 		try {
-            // Используем selectedStack (состояние редактора) для сохранения
-            const stackString = stackArrayToString(selectedStack);
-            console.log(stackString, 'СТЭК ПРИ ОБНОВЛЕНИИ');
-            
-            // 1. Вызываем специализированный сервис
-            await TaskService.updateTaskStack(deskId, task.taskId, { taskStack: stackString ?? '' }); 
-            console.log('[TaskStack] Стек успешно обновлен');
-            
-            // ОБНОВЛЯЕМ ОТОБРАЖАЕМОЕ СОСТОЯНИЕ после успеха API
-            setDisplayedStack([...selectedStack]); // Копируем массив
+            // Вызываем коллбэк родителя, передавая МАССИВ строк
+            console.log('[TaskStack] Вызов onStackChange с массивом:', selectedStack);
+            onStackChange([...selectedStack]); // Передаем копию массива
 
-            
+            // Оптимистично обновляем локальное отображение
+            setDisplayedStack([...selectedStack]);
             setIsOpen(false); // Закрываем меню
 
-        } catch (err: any) { 
-            console.error('[TaskStack] Ошибка при сохранении стека:', err);
-            const message = err.response?.data?.message || err.message || 'Не удалось сохранить стек.';
-            setError(message);
-        } finally {
-            setIsLoading(false);
+        } catch (err: any) {
+            // Ошибка будет обработана в родительском компоненте (TaskDetails)
+            console.error('[TaskStack] Ошибка при вызове onStackChange (неожиданно):', err);
         }
 	};
 
@@ -246,14 +225,12 @@ export const TaskStack: React.FC<TaskStackProps> = ({ deskId, task,  canEdit }) 
 						)}
 					</ul>
 
-                    {error && <p className="text-xs text-red-600 mb-2">{error}</p>}
-
 					<div className="flex justify-end space-x-2">
 						<Button variant="secondary" size="sm" onClick={handleCancel}>
 							Отмена
 						</Button>
-						<Button size="sm" onClick={handleSave} disabled={isLoading}>
-							{isLoading ? 'Сохранение...' : 'Сохранить'}
+						<Button size="sm" onClick={handleSave}>
+							Сохранить
 						</Button>
 					</div>
 				</div>
